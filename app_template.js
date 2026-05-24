@@ -465,6 +465,9 @@ function correctSpelling(text, ctx) {
         "mettal": "metal",
         "videocard": "video card",
         "hoka": "hookah",
+        "biosparc": "biospark",
+        "biosparck": "biospark",
+        "biosparke": "biospark",
         "batry": "battery",
         "battries": "battery",
         "battres": "battery",
@@ -2194,7 +2197,7 @@ function detectCategory(text) {
         "tuning", "suspension", "transmission", "brakes", "tires",
         "inventory", "inventry", "inventories", "booster", "shot", "shots",
         "rod", "rods", "case", "cases", "crate", "crates",
-        "sim", "sim card", "sim cards", "card", "cards"
+        "sim", "sim card", "sim cards", "card", "cards", "biospark", "biosparks"
     ];
     if (otherKeywords.some(keyword => lower.includes(keyword))) {
         // If the keyword is a tuning part keyword, but it ALSO contains a matched vehicle,
@@ -3642,6 +3645,9 @@ function itemRequiresArticle(itemStr, isFirst, ctx) {
     if (lower.includes("inventory")) {
         return false;
     }
+    if (lower.includes("biospark")) {
+        return false;
+    }
     if (lower.includes("pickaxe") && (lower.includes("quality") || lower.includes("lvl") || lower.includes("level"))) {
         return false;
     }
@@ -4173,6 +4179,15 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         let name = isPlural ? "inventories" : "inventory";
         
         return `${qtyText}${quality}${name}`;
+    }
+    
+    // Biospark check
+    if (cleanLower.includes("biospark") || cleaned.includes("biospark")) {
+        let qty = parseQuantity(rawItem);
+        let qtyText = qty ? `${qty} ` : "";
+        let isPlural = cleanLower.includes("biosparks") || (qty && qty > 1) || hasEach;
+        let name = isPlural ? "Biosparks" : "Biospark";
+        return `${qtyText}${name}`;
     }
     
     // 1.9. Power booster shot check
@@ -4791,7 +4806,7 @@ function initFloatingClipboard() {
                                 </button>
                             </div>
                             <div class="processed-text-wrapper">
-                                <div id="pip-processed-text" class="processed-text placeholder">Processed ad will appear here...</div>
+                                <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                             </div>
                         </div>
                         
@@ -4869,7 +4884,9 @@ function initFloatingClipboard() {
                 const mainLogs = document.getElementById("audit-logs-list");
 
                 // Text
-                pipText.textContent = mainProcessedText.textContent;
+                if (pipText.textContent !== mainProcessedText.textContent) {
+                    pipText.textContent = mainProcessedText.textContent;
+                }
                 if (mainProcessedText.classList.contains("placeholder")) {
                     pipText.classList.add("placeholder");
                 } else {
@@ -4936,6 +4953,16 @@ function initFloatingClipboard() {
                 mainRaw.dispatchEvent(new Event("input"));
                 updatePipDisplay();
             });
+
+            const pipTextElement = pipWindow.document.getElementById("pip-processed-text");
+            if (pipTextElement) {
+                pipTextElement.addEventListener("input", () => {
+                    const mainProcessedText = document.getElementById("processed-ad-text");
+                    if (mainProcessedText && mainProcessedText.textContent !== pipTextElement.textContent) {
+                        mainProcessedText.textContent = pipTextElement.textContent;
+                    }
+                });
+            }
 
             pipCategory.addEventListener("change", () => {
                 mainOverride.value = pipCategory.value;
@@ -5010,7 +5037,7 @@ function initFloatingClipboard() {
                 fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify({ action: "get_history", limit: 30 })
+                    body: JSON.stringify({ action: "get_history", limit: 25 })
                 })
                 .then(r => r.json())
                 .then(data => {
@@ -5631,6 +5658,7 @@ function initAdminPanel() {
         if (panelContent) panelContent.classList.remove("hide");
         renderCustomSpelling();
         renderCustomTemplates();
+        refreshMainHistory();
     }
 
     // Handle Authentication Click
@@ -5643,6 +5671,7 @@ function initAdminPanel() {
             if (panelContent) panelContent.classList.remove("hide");
             renderCustomSpelling();
             renderCustomTemplates();
+            refreshMainHistory();
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -5917,7 +5946,7 @@ function refreshMainHistory() {
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "get_history", limit: 50 })
+        body: JSON.stringify({ action: "get_history", limit: 200 })
     })
     .then(r => r.json())
     .then(data => {

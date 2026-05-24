@@ -1,4 +1,4 @@
-const CACHE_NAME = 'li-ad-editor-v48';
+const CACHE_NAME = 'li-ad-editor-v49';
 const ASSETS = [
   './',
   './index.html',

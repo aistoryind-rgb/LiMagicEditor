@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeInvader EN3 Advertisement Editor</title>
+    <meta name="description" content="Official EN3 LifeInvader Internal Advertisement processing and validation tool for GTA 5 Grand RP.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+</head>
+<body>
+    <!-- Access Control Gate Overlay -->
+    <div id="access-gate" class="access-gate-overlay">
+        <div class="access-gate-card">
+            <div class="access-gate-header">
+                <div class="li-logo pulsing">
+                    <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
+                </div>
+                <div class="access-gate-badge">GRP Security Gate</div>
+            </div>
+            
+            <!-- Screen 1: Request Access -->
+            <div id="access-screen-request" class="access-screen active">
+                <h3>Request Access Credentials</h3>
+                <p class="access-desc">This system is restricted to authorized employees. Please fill out the form below to request access approval.</p>
+                
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="access-firstname">First Name</label>
+                        <input type="text" id="access-firstname" placeholder="John" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="access-lastname">Last Name</label>
+                        <input type="text" id="access-lastname" placeholder="Doe" required>
+                    </div>
+                </div>
+                
+                <div class="form-row" style="margin-top: 15px;">
+                    <div class="form-group col-6">
+                        <label for="access-id">In-Game ID</label>
+                        <input type="text" id="access-id" placeholder="e.g. 12345" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="access-email">Email ID</label>
+                        <input type="email" id="access-email" placeholder="name@domain.com" required>
+                    </div>
+                </div>
+                
+                <button type="button" id="btn-access-request-submit" class="btn-action">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Access Request
+                </button>
+
+                <div class="access-footer">
+                    <span id="access-settings-toggle" class="access-settings-toggle">
+                        <i class="fa-solid fa-gears"></i> Developer Settings
+                    </span>
+                    <div id="access-settings-drawer" class="access-settings-drawer hide">
+                        <label for="access-script-url">Google Apps Script Web App URL</label>
+                        <input type="text" id="access-script-url" placeholder="https://script.google.com/macros/s/.../exec">
+                        <button type="button" id="btn-save-script-url" class="btn-preset" style="margin-top: 5px; width: 100%;">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screen 2: Awaiting Approval / Enter Passcode -->
+            <div id="access-screen-approve" class="access-screen">
+                <h3>Awaiting Admin Approval</h3>
+                <p class="access-desc">Your request has been submitted to the administrator. Please enter the approval key provided by the admin to unlock the system.</p>
+                
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="access-unlock-code">Enter Approval Key</label>
+                    <input type="text" id="access-unlock-code" placeholder="Paste the key provided by admin here" required>
+                </div>
+                
+                <button type="button" id="btn-access-unlock-submit" class="btn-action glow-green">
+                    <i class="fa-solid fa-key"></i> Unlock System
+                </button>
+                
+                <div class="access-footer">
+                    <button type="button" id="btn-access-go-back" class="btn-link">
+                        <i class="fa-solid fa-arrow-left"></i> Change Request Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Branding -->
+        <header class="app-header">
+            <div class="logo-container">
+                <div class="li-logo" id="li-logo">
+                    <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
+                </div>
+                <div class="badge-en3">EN3 OFFICIAL</div>
+            </div>
+            <div class="header-desc-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                <div class="header-desc">INTERNAL POLICY AD PROCESSING SYSTEM</div>
+                <div class="created-by">Created by Dopamine</div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-float-pip" class="btn-header-action" title="Open floating always-on-top clipboard for Windows 10/11">
+                    <i class="fa-solid fa-up-right-from-square"></i> Floating Clipboard
+                </button>
+            </div>
+            <div class="stats-wrapper">
+                <div class="last-updated" id="last-updated-main" style="font-family: var(--font-heading); font-size: 9px; color: rgba(255, 255, 255, 0.35); letter-spacing: 1px; text-transform: uppercase; font-weight: 500; text-shadow: 0 0 4px rgba(255, 59, 48, 0.1);"></div>
+                <div class="header-stats">
+                    <div class="stat-card" id="stat-processed">
+                        <span class="stat-value">0</span>
+                        <span class="stat-label">Processed</span>
+                    </div>
+                    <div class="stat-card" id="stat-rejections">
+                        <span class="stat-value">0</span>
+                        <span class="stat-label">Rejected</span>
+                    </div>
+                    <div class="stat-card" id="stat-blacklists">
+                        <span class="stat-value">0</span>
+                        <span class="stat-label">Blacklisted</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="app-main">
+            <!-- Processing Workspace -->
+            <div class="editor-grid">
+                <!-- Left: Raw Input Area -->
+                <section class="panel input-panel">
+                    <div class="panel-header">
+                        <i class="fa-solid fa-file-pen panel-icon"></i>
+                        <h2>Raw Advertisement</h2>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Raw Ad Form -->
+                        <div class="form-group">
+                            <label for="raw-ad">Paste Advertisement Content</label>
+                            <textarea id="raw-ad" placeholder="e.g. buying fully upgraded sandking xl 12m budget negotiable or trade for obay r8..." autofocus></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-6">
+                                <label>Action Mode</label>
+                                <div class="action-toggle-group" id="action-toggle-group">
+                                    <button type="button" class="btn-toggle active" id="btn-toggle-sell" data-action="Selling">
+                                        <i class="fa-solid fa-tags"></i> Sell
+                                    </button>
+                                    <button type="button" class="btn-toggle" id="btn-toggle-buy" data-action="Buying">
+                                        <i class="fa-solid fa-cart-shopping"></i> Buy
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="category-override">Category Override</label>
+                                <select id="category-override">
+                                    <option value="auto">Auto-Detect Category</option>
+                                    <option value="Real Estate">Real Estate</option>
+                                    <option value="Auto">Auto</option>
+                                    <option value="Businesses">Businesses</option>
+                                    <option value="Work">Work</option>
+                                    <option value="Dating">Dating</option>
+                                    <option value="Services">Services</option>
+                                    <option value="Discounts">Discounts</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Quick Test Presets -->
+                        <div class="presets-section">
+                            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Most Used Advertisements</h3>
+                            <div class="preset-buttons">
+                                <button type="button" class="btn-preset" data-ad="selling 10 rp tickets for 350k each" title="Selling 10 Grand tickets at $350k each">Sell: 10 Grand Tickets</button>
+                                <button type="button" class="btn-preset" data-ad="buying prime platinum 30 days" title="Buying Prime Platinum with 30 days">Buy: Prime Platinum</button>
+                                <button type="button" class="btn-preset" data-ad="selling truffade chiron full config drift" title="Selling Chiron with full configuration and drift kit">Auto: Truffade Chiron</button>
+                                <button type="button" class="btn-preset" data-ad="selling house 1406 with helipad garden pool in vinewood hills" title="Selling house №1406 with garden, helipad and pool">RE: Vinewood House</button>
+                                <button type="button" class="btn-preset" data-ad="loking for girlfirnd" title="Looking for a girlfriend (auto-correcting typos)">Dating: Girlfriend</button>
+                                <button type="button" class="btn-preset" data-ad="selling 10% and 20% juices" title="Selling 10% and 20% juices in bulk">Other: Juices Bulk</button>
+                                <button type="button" class="btn-preset" data-ad="buying scrap metal" title="Buying scrap metal">Other: Scrap Metal</button>
+                                <button type="button" class="btn-preset" data-ad="looking to play dice" title="Looking to play dice">Other: Play Dice</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right: Processed Output & Audit Logs -->
+                <section class="panel output-panel">
+                    <div class="panel-header">
+                        <i class="fa-solid fa-square-poll-vertical panel-icon"></i>
+                        <h2>Processed Output</h2>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Status Flag Badge -->
+                        <div class="status-banner" id="ad-status-banner" data-status="pending">
+                            <span class="status-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                            <span class="status-title">Awaiting Input...</span>
+                        </div>
+
+                        <!-- Final Processed Advertisement Display -->
+                        <div class="processed-container">
+                            <div class="processed-header">
+                                <span><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT TEXT</span>
+                                <button id="btn-copy-ad" class="btn-copy" disabled>
+                                    <i class="fa-solid fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <div class="processed-text-wrapper">
+                                <div id="processed-ad-text" class="processed-text placeholder">Processed ad will appear here...</div>
+                            </div>
+                        </div>
+
+                        <!-- Rejection & Blacklist Feedbacks -->
+                        <div class="notice-container hide" id="rejection-container">
+                            <div class="notice-box rejection">
+                                <div class="notice-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa-solid fa-circle-xmark"></i> Rejection Reason
+                                    </div>
+                                    <button id="btn-copy-rejection" class="btn-copy hide" style="padding: 4px 8px; font-size: 11px;">
+                                        <i class="fa-solid fa-copy"></i> Copy Reason
+                                    </button>
+                                </div>
+                                <div class="notice-body" id="rejection-reason-text">
+                                    Why the ad was rejected.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="notice-container hide" id="blacklist-container">
+                            <div class="notice-box blacklist">
+                                <div class="notice-header">
+                                    <i class="fa-solid fa-hand-fist"></i> Blacklist Warning
+                                </div>
+                                <div class="notice-body" id="blacklist-reason-text">
+                                    Details about the phone blacklist trigger.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Applied Rules & Auto-corrections logs -->
+                        <div class="audit-logs-container">
+                            <h3><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
+                            <ul class="audit-logs" id="audit-logs-list">
+                                <li class="log-empty">No logs available. Enter some text to see corrections.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tabs Section: Database Explorer & Policy Guide -->
+            <section class="panel tabs-panel">
+                <!-- Tab Controls -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="tab-db">
+                        <i class="fa-solid fa-database"></i> Database Explorer
+                    </button>
+                    <button class="tab-btn" data-tab="tab-policy">
+                        <i class="fa-solid fa-gavel"></i> Policy Reference Guide
+                    </button>
+                    <button class="tab-btn" data-tab="tab-leaders">
+                        <i class="fa-solid fa-users-gear"></i> GRP Leader List
+                    </button>
+                    <button class="tab-btn" data-tab="tab-bug">
+                        <i class="fa-solid fa-circle-question"></i> Bug Report / Correction
+                    </button>
+                    <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
+                        <i class="fa-solid fa-user-shield"></i> Admin Panel
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tabs-body">
+                    <!-- Tab 1: Database Explorer -->
+                    <div class="tab-content active" id="tab-db">
+                        <div class="search-bar-container">
+                            <div class="search-input-wrapper">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="db-search-input" placeholder="Search vehicles, clothing lists, accessories...">
+                            </div>
+                            <div class="db-filters">
+                                <button class="filter-btn active" data-filter="all">All</button>
+                                <button class="filter-btn" data-filter="vehicles">Vehicles</button>
+                                <button class="filter-btn" data-filter="clothing">Clothing</button>
+                            </div>
+                        </div>
+                        <div class="db-results-grid" id="db-results">
+                            <!-- JS will inject dynamic database sections -->
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Policy Reference Guide -->
+                    <div class="tab-content" id="tab-policy">
+                        <div class="policy-grid">
+                            <div class="policy-card">
+                                <h3><i class="fa-solid fa-ban red-color"></i> Illegal Items (Blacklist Number)</h3>
+                                <ul>
+                                    <li>Firearms of any kind &amp; Ammunition</li>
+                                    <li>Bulletproof vests / Dark Lui Vi Armored Vest</li>
+                                    <li>Weed, cannabis seeds/trees, drugs, cocaine</li>
+                                    <li>EMS surgical/medical masks (excl. luminous head bag)</li>
+                                    <li>Vehicle / people scanners (radars), Anti-Radar</li>
+                                    <li>Balaclava masks, Ropes, Lock picks</li>
+                                    <li>Flash drive with virus (USB), Troll Ads</li>
+                                    <li>Engine Block, Smuggling Machine, Submodule</li>
+                                    <li>Offensive language on license plates</li>
+                                </ul>
+                            </div>
+                            <div class="policy-card">
+                                <h3><i class="fa-solid fa-circle-exclamation orange-color"></i> Rejection Only (No Blacklist)</h3>
+                                <ul>
+                                    <li>Crowbar, All fabric, Animal/Armor skin</li>
+                                    <li>Head bag (except luminous), Air Horn, Earplugs</li>
+                                    <li>Barricades, Traps, Poison darts, Army Uniforms</li>
+                                    <li>Tracking sensors, Dangerous razors, Resource scanners</li>
+                                    <li>Body armor, Body armor plates</li>
+                                    <li>Ingredients for cocaine, Paper for money</li>
+                                    <li>Satellite dish, Tincture of forest mushrooms</li>
+                                    <li>First Aid Kits, all pills, Food items (except fish)</li>
+                                </ul>
+                            </div>
+                            <div class="policy-card">
+                                <h3><i class="fa-solid fa-triangle-exclamation yellow-color"></i> Restricted Locations</h3>
+                                <ul>
+                                    <li><strong>Green Grass areas:</strong> No parties allowed. (e.g. Beach Market -> change to beach)</li>
+                                    <li><strong>Unadvertisable:</strong> Mega Mall, Black Market, Gang HQs, State Org party promotions (LSPD, FIB, EMS, LI, Govt buildings).</li>
+                                </ul>
+                            </div>
+                            <div class="policy-card">
+                                <h3><i class="fa-solid fa-code"></i> Text Upgrades Dictionary</h3>
+                                <ul>
+                                    <li><code>max tuning/max config</code> &rarr; <strong>with full configuration</strong></li>
+                                    <li><code>nearly max/lvl3 or below</code> &rarr; <strong>with partial configuration</strong></li>
+                                    <li><code>body upgrades/body kit</code> &rarr; <strong>with visual upgrades</strong></li>
+                                    <li><code>unique wheels/luminous rims</code> &rarr; <strong>luminous wheels of type X</strong></li>
+                                    <li><code>turbo</code> &rarr; <strong>turbo kit</strong> | <code>drift</code> &rarr; <strong>drift kit</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: GRP Leader List -->
+                    <div class="tab-content" id="tab-leaders">
+                        <p class="section-desc">Search for GRP State Leaders and Deputy Leaders. Employees cannot advertise/search for classified leaders in Dating ads unless they are in the official list. You can edit this simulated database below.</p>
+                        
+                        <div class="leaders-manager">
+                            <div class="leader-add-form">
+                                <h3>Add Leader to Database</h3>
+                                <div class="form-row">
+                                    <div class="form-group col-4">
+                                        <input type="text" id="leader-name" placeholder="Firstname Lastname">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <select id="leader-role">
+                                            <option value="State Org Leader">State Org Leader (Classified)</option>
+                                            <option value="State Org Deputy">State Org Deputy (Classified)</option>
+                                            <option value="Crime Leader">Crime Org Leader (Allowed)</option>
+                                            <option value="Unofficial Leader">Unofficial Family Leader (Allowed)</option>
+                                            <option value="Admin Assistant">Admin Assistant (Allowed)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <button type="button" class="btn-action" id="btn-add-leader"><i class="fa-solid fa-plus"></i> Add Person</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="leaders-list-container">
+                                <h3>Registered GRP Citizens Database</h3>
+                                <div class="table-responsive">
+                                    <table class="leaders-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Citizen Name</th>
+                                                <th>Organization Role</th>
+                                                <th>Status in Dating Ads</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="leaders-tbody">
+                                            <!-- Dynamically populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 4: Bug Report / Correction Request -->
+                    <div class="tab-content" id="tab-bug">
+                        <p class="section-desc">Encountered an issue or wrong formatting? Report it directly to the system administrator using the form below. You can upload a screenshot to help resolve it faster.</p>
+                        
+                        <div class="bug-report-form">
+                            <form id="form-bug-report">
+                                <div class="form-row">
+                                    <div class="form-group col-6">
+                                        <label for="bug-category">Issue Category</label>
+                                        <select id="bug-category" required>
+                                            <option value="Spelling error">Spelling error / Typo</option>
+                                            <option value="Incorrect rule/mapping">Incorrect policy rule / mapping</option>
+                                            <option value="Missing item/vehicle">Missing vehicle / item database entry</option>
+                                            <option value="Visual interface bug">Visual interface bug</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="bug-screenshot">Screenshot Upload</label>
+                                        <input type="file" id="bug-screenshot-file" accept="image/*" style="display: none;">
+                                        <button type="button" class="btn-preset" id="btn-select-screenshot" style="width: 100%;">
+                                            <i class="fa-solid fa-image"></i> Select Screenshot File
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row" style="margin-top: 15px;">
+                                    <div class="form-group col-12">
+                                        <div class="drag-drop-zone" id="bug-drag-drop-zone">
+                                            <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
+                                            <p class="drag-text">Drag and drop your screenshot here, or click to upload</p>
+                                            <div id="bug-preview-container" class="preview-container hide">
+                                                <img id="bug-screenshot-preview" src="" alt="Screenshot preview">
+                                                <span id="btn-remove-screenshot" class="btn-remove-image" title="Remove image">&times;</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row" style="margin-top: 15px;">
+                                    <div class="form-group col-6">
+                                        <label for="bug-raw-input">Raw Advertisement Input</label>
+                                        <textarea id="bug-raw-input" placeholder="e.g. trading white snowboarders mask for six tail fox" rows="4"></textarea>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="bug-expected">Expected Output / Description of Correction</label>
+                                        <textarea id="bug-expected" placeholder="e.g. The action should be Trading and the output should not include Price: Negotiable." rows="4" required></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row" style="margin-top: 20px; align-items: center;">
+                                    <div class="form-group col-12" style="text-align: right;">
+                                        <button type="submit" class="btn-action glow-red" id="btn-bug-submit" style="max-width: 250px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <i class="fa-solid fa-paper-plane"></i> Submit Bug Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <!-- Bug Submission Success / Loading State Overlay -->
+                            <div id="bug-feedback-overlay" class="bug-feedback-overlay hide">
+                                <div class="feedback-content">
+                                    <div class="spinner" id="bug-feedback-spinner"></div>
+                                    <div class="success-icon hide" id="bug-feedback-success"><i class="fa-solid fa-circle-check"></i></div>
+                                    <p id="bug-feedback-text">Sending bug report to email and Google Drive...</p>
+                                    <button type="button" id="btn-bug-feedback-close" class="btn-preset hide" style="margin-top: 15px;">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 5: Admin Panel (Trained Corrections & Templates) -->
+                    <div class="tab-content" id="tab-admin">
+                        <!-- Password Protection Overlay if not authenticated -->
+                        <div id="admin-auth-container" class="admin-auth-container">
+                            <div class="auth-card">
+                                <i class="fa-solid fa-lock auth-icon"></i>
+                                <h3>Creator Authorization Required</h3>
+                                <p class="section-desc" style="text-align: center;">This panel is restricted to the system creator (Dopamine). Please enter the admin passcode to unlock.</p>
+                                <div class="form-group" style="margin-top: 15px; width: 100%; max-width: 320px;">
+                                    <input type="password" id="admin-passcode-input" placeholder="Enter Admin Passcode" style="text-align: center; font-family: monospace;">
+                                </div>
+                                <button type="button" id="btn-admin-auth" class="btn-action glow-red" style="margin-top: 15px; max-width: 200px;">
+                                    <i class="fa-solid fa-unlock"></i> Unlock Panel
+                                </button>
+                                <div id="admin-auth-error" class="auth-error hide">Invalid passcode. Access Denied.</div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Panel Content (Visible only when authenticated) -->
+                        <div id="admin-panel-content" class="admin-panel-content hide">
+                            <div class="admin-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                
+                                <!-- Left: Manage Custom Spelling Corrections -->
+                                <div class="admin-col">
+                                    <div class="admin-section-header">
+                                        <i class="fa-solid fa-spell-check"></i> Train Spelling Corrections
+                                    </div>
+                                    <p class="section-desc">Add spelling mapping corrections that apply before advertisement processing. e.g. mapping "batteys" to "battery".</p>
+                                    <form id="form-admin-spelling" class="admin-form" style="margin-top: 15px;">
+                                        <div class="form-row">
+                                            <div class="form-group col-6">
+                                                <label for="spell-wrong">Misspelled Word</label>
+                                                <input type="text" id="spell-wrong" placeholder="e.g. batteys" required>
+                                            </div>
+                                            <div class="form-group col-6">
+                                                <label for="spell-right">Correct Word/Phrase</label>
+                                                <input type="text" id="spell-right" placeholder="e.g. battery" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-row" style="margin-top: 15px; text-align: right;">
+                                            <button type="submit" class="btn-action glow-red" style="max-width: 180px;">
+                                                <i class="fa-solid fa-plus"></i> Train Correction
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <h4 style="margin-top: 25px; margin-bottom: 10px; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Active Trained Corrections</h4>
+                                    <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                                        <table class="leaders-table" style="margin: 0;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Misspelling</th>
+                                                    <th>Correction</th>
+                                                    <th style="width: 80px; text-align: center;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="admin-spelling-list">
+                                                <!-- Dynamic list of custom spelling rules -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Manage Custom Templates -->
+                                <div class="admin-col">
+                                    <div class="admin-section-header">
+                                        <i class="fa-solid fa-file-invoice"></i> Train Custom Templates
+                                    </div>
+                                    <p class="section-desc">Add new advertisement templates and specify their category and optional shorthands. Custom templates are parsed without deploying code.</p>
+                                    <form id="form-admin-template" class="admin-form" style="margin-top: 15px;">
+                                        <div class="form-group">
+                                            <label for="template-text">Template Output Text</label>
+                                            <textarea id="template-text" placeholder="e.g. Upgrade your style this week at Clothing Shop n1 (GPS 31) ! Special offers..." rows="2" required></textarea>
+                                        </div>
+                                        <div class="form-row" style="margin-top: 10px;">
+                                            <div class="form-group col-6">
+                                                <label for="template-category">Category</label>
+                                                <select id="template-category" required>
+                                                    <option value="Services">Services</option>
+                                                    <option value="Discounts">Discounts</option>
+                                                    <option value="Real Estate">Real Estate</option>
+                                                    <option value="Vehicles">Vehicles</option>
+                                                    <option value="Jobs">Jobs</option>
+                                                    <option value="Dating">Dating</option>
+                                                    <option value="Buy">Buy</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-6">
+                                                <label for="template-shorthand">Shorthand (Optional)</label>
+                                                <input type="text" id="template-shorthand" placeholder="e.g. 31 t1">
+                                            </div>
+                                        </div>
+                                        <div class="form-row" style="margin-top: 15px; text-align: right;">
+                                            <button type="submit" class="btn-action glow-red" style="max-width: 180px;">
+                                                <i class="fa-solid fa-plus"></i> Train Template
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <h4 style="margin-top: 20px; margin-bottom: 10px; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Active Trained Templates</h4>
+                                    <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                                        <table class="leaders-table" style="margin: 0;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Template Text</th>
+                                                    <th>Category</th>
+                                                    <th>Shorthand</th>
+                                                    <th style="width: 80px; text-align: center;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="admin-template-list">
+                                                <!-- Dynamic list of custom templates -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Section: Backup & Restore Data -->
+                            <div class="admin-section-header" style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                                <i class="fa-solid fa-file-shield"></i> Backup & Restore trained configuration
+                            </div>
+                            <p class="section-desc">You can copy/export your trained corrections and templates as a JSON string to backup your data, or paste it here to import/restore. This avoids data loss if local storage is cleared.</p>
+                            <div class="form-row" style="margin-top: 15px; gap: 15px;">
+                                <div class="form-group col-10">
+                                    <textarea id="admin-backup-textarea" placeholder="JSON backup content will appear here or can be pasted here for restoration..." rows="2" style="font-family: monospace; font-size: 11px;"></textarea>
+                                </div>
+                                <div class="form-group col-2" style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                                    <button type="button" id="btn-admin-export" class="btn-preset" style="width: 100%;">
+                                        <i class="fa-solid fa-download"></i> Export Data
+                                    </button>
+                                    <button type="button" id="btn-admin-import" class="btn-action glow-red" style="width: 100%;">
+                                        <i class="fa-solid fa-upload"></i> Import Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="app-footer">
+            LifeInvader Ad Editor &copy; 2026. Built according to EN3 State Policies.
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered successfully.', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

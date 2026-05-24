@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 01:38:46";
-const BUILD_TIMESTAMP_SHORT = "May 25 01:38";
+const BUILD_TIMESTAMP = "2026 May 25 02:08:00";
+const BUILD_TIMESTAMP_SHORT = "May 25 02:08";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5420,7 +5420,8 @@ function updateUI(ctx) {
         // Stats increment check (only once per ad text)
         if (updateUI._lastText !== ctx.raw) {
             stats.processed++;
-            document.getElementById("stat-processed").querySelector(".stat-value").textContent = stats.processed;
+            const el = document.getElementById("stat-processed");
+            if (el) el.querySelector(".stat-value").textContent = stats.processed;
             updateUI._lastText = ctx.raw;
         }
     } else if (ctx.status === "rejected") {
@@ -5442,7 +5443,8 @@ function updateUI(ctx) {
         
         if (updateUI._lastText !== ctx.raw) {
             stats.rejections++;
-            document.getElementById("stat-rejections").querySelector(".stat-value").textContent = stats.rejections;
+            const el = document.getElementById("stat-rejections");
+            if (el) el.querySelector(".stat-value").textContent = stats.rejections;
             updateUI._lastText = ctx.raw;
         }
     } else if (ctx.status === "blacklisted") {
@@ -5466,7 +5468,8 @@ function updateUI(ctx) {
         
         if (updateUI._lastText !== ctx.raw) {
             stats.blacklists++;
-            document.getElementById("stat-blacklists").querySelector(".stat-value").textContent = stats.blacklists;
+            const el = document.getElementById("stat-blacklists");
+            if (el) el.querySelector(".stat-value").textContent = stats.blacklists;
             updateUI._lastText = ctx.raw;
         }
     }
@@ -5592,23 +5595,25 @@ function initFloatingClipboard() {
             pipWindow.document.body.innerHTML = `
                 <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
                     <header class="pip-header">
-                        <div class="pip-logo">
-                            <span class="li-logo">
-                                <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
-                            </span>
-                            <span class="pip-badge">Clipboard</span>
-                        </div>
-                        <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25;">
-                                <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 8px; font-size: 9.5px; border-radius: 4px; cursor: pointer; margin-top: 3px; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> Hit History</button>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; margin-top: 2.5px; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">Updated: May 25 01:38</span>
+                        <div class="pip-logo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="li-logo">
+                                    <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
+                                </span>
+                                <span class="pip-badge">Clipboard</span>
                             </div>
+                            <span class="pip-created-by" style="font-size: 9.5px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap; margin-left: 2px;">Created by Dopamine</span>
+                        </div>
+                        <div class="pip-header-right" style="display: flex; align-items: center; justify-content: flex-end;">
+                            <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1; overflow-y: auto;">
                         <div class="pip-form-group">
-                            <label for="pip-raw-ad">RAW ADVERTISEMENT CONTENT</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 02:08</span>
+                            </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
                         <div class="pip-form-row">

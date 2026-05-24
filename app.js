@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 04:29:40";
-const BUILD_TIMESTAMP_SHORT = "May 25 04:29";
+const BUILD_TIMESTAMP = "2026 May 25 04:50:51";
+const BUILD_TIMESTAMP_SHORT = "May 25 04:50";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5736,7 +5736,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 04:29</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 04:50</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6179,14 +6179,10 @@ function initAccessGate() {
     const inputFirstname = document.getElementById("access-firstname");
     const inputLastname = document.getElementById("access-lastname");
     const inputId = document.getElementById("access-id");
-    const inputEmail = document.getElementById("access-email");
     
     const btnRequestSubmit = document.getElementById("btn-access-request-submit");
-    const passcodeDisplay = document.getElementById("access-passcode-display");
-    const btnCopyPasscode = document.getElementById("btn-copy-passcode");
-    
-    const inputUnlockCode = document.getElementById("access-unlock-code");
-    const btnUnlockSubmit = document.getElementById("btn-access-unlock-submit");
+    const statusText = document.getElementById("access-status-text");
+    const btnCheckStatus = document.getElementById("btn-access-check-status");
     const btnGoBack = document.getElementById("btn-access-go-back");
     
     const settingsToggle = document.getElementById("access-settings-toggle");
@@ -6213,95 +6209,125 @@ function initAccessGate() {
             CONFIG.GOOGLE_SCRIPT_URL = url;
             alert("Settings saved! Web App URL updated.");
             settingsDrawer.classList.add("hide");
+            checkCurrentAccessStatus(true);
+        });
+    }
+
+    let statusPollInterval = null;
+
+    function checkCurrentAccessStatus(showFeedback = false) {
+        if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+
+        const clientUuid = getOrCreateClientUuid();
+        
+        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+                action: "check_access",
+                clientUuid: clientUuid
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success") {
+                if (data.approved) {
+                    localStorage.setItem("li_approved_token", "APPROVED");
+                    if (gate) gate.classList.add("hide");
+                    if (statusPollInterval) {
+                        clearInterval(statusPollInterval);
+                        statusPollInterval = null;
+                    }
+                    if (showFeedback) {
+                        alert("Access granted successfully! Welcome to LifeInvader Ad Editor.");
+                    }
+                } else {
+                    localStorage.removeItem("li_approved_token");
+                    if (statusText) {
+                        if (data.requestStatus === "rejected") {
+                            statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Request Rejected`;
+                            statusText.style.color = "#e63946";
+                        } else if (data.requestStatus === "pending") {
+                            statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pending Approval`;
+                            statusText.style.color = "#ffb703";
+                        } else {
+                            statusText.innerHTML = `No request submitted`;
+                            statusText.style.color = "var(--text-muted)";
+                            if (screenApprove && screenApprove.classList.contains("active")) {
+                                screenApprove.classList.remove("active");
+                                screenRequest.classList.add("active");
+                            }
+                        }
+                    }
+                    if (showFeedback && data.requestStatus === "pending") {
+                        alert("Access request is still pending admin approval. Please check back later.");
+                    } else if (showFeedback && data.requestStatus === "rejected") {
+                        alert("Your access request was rejected. Please contact an administrator.");
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Access verification error:", err);
+            const savedToken = localStorage.getItem("li_approved_token");
+            if (savedToken === "APPROVED") {
+                if (gate) gate.classList.add("hide");
+            }
         });
     }
     
-    // Check if already approved via server-validated token
+    // Initial verification
     const savedToken = localStorage.getItem("li_approved_token");
-    if (savedToken) {
-        // Verify the saved token with the server silently
-        if (CONFIG.GOOGLE_SCRIPT_URL) {
-            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({
-                    action: "validate_key",
-                    approvalKey: savedToken,
-                    clientUuid: getOrCreateClientUuid()
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === "success" && data.valid) {
-                    if (gate) gate.classList.add("hide");
-                } else {
-                    // Token is invalid or expired, clear it
-                    localStorage.removeItem("li_approved_token");
-                }
-            })
-            .catch(() => {
-                // Network error — allow access if token exists (offline grace)
-                if (gate) gate.classList.add("hide");
-            });
-        } else {
-            // No server URL — allow if token was previously validated
-            if (gate) gate.classList.add("hide");
+    if (savedToken === "APPROVED") {
+        if (gate) gate.classList.add("hide");
+        checkCurrentAccessStatus();
+    } else {
+        const reqFirstname = localStorage.getItem("li_request_firstname");
+        const reqLastname = localStorage.getItem("li_request_lastname");
+        const reqId = localStorage.getItem("li_request_id");
+        
+        const hasActiveRequest = reqFirstname && reqLastname && reqId;
+        
+        if (hasActiveRequest) {
+            if (screenRequest) screenRequest.classList.remove("active");
+            if (screenApprove) screenApprove.classList.add("active");
+            checkCurrentAccessStatus();
+            startPolling();
         }
-        return;
     }
     
-    // If request already submitted, show the approval screen
-    const reqFirstname = localStorage.getItem("li_request_firstname");
-    const reqLastname = localStorage.getItem("li_request_lastname");
-    const reqEmail = localStorage.getItem("li_request_email");
-    const reqId = localStorage.getItem("li_request_id");
-    
-    const hasActiveRequest = (reqFirstname && reqLastname && reqEmail && reqId) || 
-                             (localStorage.getItem("li_request_name") && localStorage.getItem("li_request_server") && reqId);
-                             
-    if (hasActiveRequest) {
-        if (screenRequest) screenRequest.classList.remove("active");
-        if (screenApprove) screenApprove.classList.add("active");
+    function startPolling() {
+        if (statusPollInterval) clearInterval(statusPollInterval);
+        statusPollInterval = setInterval(() => {
+            checkCurrentAccessStatus();
+        }, 10000);
     }
     
-    // Debounce flag to prevent spam
     let isSubmitting = false;
     
-    // Submit request handler
     if (btnRequestSubmit) {
         btnRequestSubmit.addEventListener("click", () => {
             if (isSubmitting) return;
             
             const firstname = inputFirstname ? inputFirstname.value.trim() : "";
             const lastname = inputLastname ? inputLastname.value.trim() : "";
-            const email = inputEmail ? inputEmail.value.trim() : "";
             const id = inputId ? inputId.value.trim() : "";
             const server = "EN3";
             
-            if (!firstname || !lastname || !email || !id) {
+            if (!firstname || !lastname || !id) {
                 alert("Please fill out all fields.");
                 return;
             }
             
-            // Basic email validation
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                alert("Please enter a valid email address.");
-                return;
-            }
-            
-            // Basic ID validation (alphanumeric, max 20 chars)
             if (!/^[a-zA-Z0-9]{1,20}$/.test(id)) {
                 alert("In-Game ID must be alphanumeric (max 20 characters).");
                 return;
             }
             
-            // Save state
             localStorage.setItem("li_request_firstname", firstname);
             localStorage.setItem("li_request_lastname", lastname);
-            localStorage.setItem("li_request_email", email);
             localStorage.setItem("li_request_id", id);
             
-            // Send request to serverless email backend if URL configured
             if (CONFIG.GOOGLE_SCRIPT_URL) {
                 isSubmitting = true;
                 btnRequestSubmit.disabled = true;
@@ -6314,29 +6340,34 @@ function initAccessGate() {
                         action: "access_request",
                         firstname: firstname,
                         lastname: lastname,
-                        email: email,
                         server: server,
                         id: id,
                         clientUuid: getOrCreateClientUuid()
                     })
                 })
-                .then(() => {
+                .then(r => r.json())
+                .then(data => {
                     isSubmitting = false;
                     btnRequestSubmit.disabled = false;
                     btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    transitionToApproveScreen();
+                    if (data.status === "success") {
+                        transitionToApproveScreen();
+                        startPolling();
+                    } else {
+                        alert("Error submitting request: " + data.message);
+                    }
                 })
                 .catch(err => {
                     console.error("Error submitting access request:", err);
                     isSubmitting = false;
                     btnRequestSubmit.disabled = false;
                     btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    alert("Could not connect to the server. Please try again later or contact your administrator directly.");
+                    alert("Could not connect to the server. Please try again later.");
                     transitionToApproveScreen();
+                    startPolling();
                 });
             } else {
-                alert("No Web App URL configured. Please contact your administrator directly for access.");
-                transitionToApproveScreen();
+                alert("No Web App URL configured. Please configure it in Developer Settings.");
             }
         });
     }
@@ -6344,65 +6375,35 @@ function initAccessGate() {
     function transitionToApproveScreen() {
         if (screenRequest) screenRequest.classList.remove("active");
         if (screenApprove) screenApprove.classList.add("active");
+        if (statusText) {
+            statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pending Approval`;
+            statusText.style.color = "#ffb703";
+        }
     }
     
-    // Unlock submit handler — validates with server
-    if (btnUnlockSubmit) {
-        btnUnlockSubmit.addEventListener("click", () => {
-            const code = inputUnlockCode.value.trim();
-            if (!code) {
-                alert("Please enter the approval key provided by the administrator.");
-                return;
-            }
-            
-            if (!CONFIG.GOOGLE_SCRIPT_URL) {
-                alert("Server URL not configured. Please contact your administrator.");
-                return;
-            }
-            
-            btnUnlockSubmit.disabled = true;
-            btnUnlockSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Verifying...`;
-            
-            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({
-                    action: "validate_key",
-                    approvalKey: code,
-                    clientUuid: getOrCreateClientUuid()
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                btnUnlockSubmit.disabled = false;
-                btnUnlockSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Unlock System`;
-                
-                if (data.status === "success" && data.valid) {
-                    localStorage.setItem("li_approved_token", code);
-                    if (gate) gate.classList.add("hide");
-                    alert("Access granted successfully! Welcome to LifeInvader Ad Editor.");
-                } else {
-                    alert("Invalid approval key. Please make sure you copied the correct key from the administrator.");
+    if (btnCheckStatus) {
+        btnCheckStatus.addEventListener("click", () => {
+            btnCheckStatus.disabled = true;
+            btnCheckStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
+            checkCurrentAccessStatus(true);
+            setTimeout(() => {
+                if (btnCheckStatus) {
+                    btnCheckStatus.disabled = false;
+                    btnCheckStatus.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Check Status`;
                 }
-            })
-            .catch(err => {
-                console.error("Validation error:", err);
-                btnUnlockSubmit.disabled = false;
-                btnUnlockSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Unlock System`;
-                alert("Could not connect to the server to verify the key. Please try again.");
-            });
+            }, 1000);
         });
     }
     
-    // Go back handler
     if (btnGoBack) {
         btnGoBack.addEventListener("click", () => {
             localStorage.removeItem("li_request_firstname");
             localStorage.removeItem("li_request_lastname");
-            localStorage.removeItem("li_request_email");
             localStorage.removeItem("li_request_id");
-            localStorage.removeItem("li_request_name");
-            localStorage.removeItem("li_request_server");
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
+            }
             if (screenApprove) screenApprove.classList.remove("active");
             if (screenRequest) screenRequest.classList.add("active");
         });
@@ -6706,6 +6707,7 @@ function initAdminPanel() {
         renderCustomSpelling();
         renderCustomTemplates();
         refreshMainHistory();
+        loadAndRenderAccessRequests(sessionStorage.getItem("li_admin_passcode") || "DopamineAdmin2026!");
     }
 
     // Handle Authentication Click
@@ -6713,12 +6715,14 @@ function initAdminPanel() {
         const password = inputPasscode.value.trim();
         if (password === "DopamineAdmin2026!") {
             sessionStorage.setItem("li_admin_authenticated", "true");
+            sessionStorage.setItem("li_admin_passcode", password);
             if (authError) authError.classList.add("hide");
             if (authContainer) authContainer.classList.add("hide");
             if (panelContent) panelContent.classList.remove("hide");
             renderCustomSpelling();
             renderCustomTemplates();
             refreshMainHistory();
+            loadAndRenderAccessRequests(password);
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -6798,6 +6802,193 @@ function initAdminPanel() {
             }
         });
     }
+}
+
+function loadAndRenderAccessRequests(passcode) {
+    const container = document.getElementById("admin-access-requests-container");
+    if (!container || !CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "get_access_requests",
+            passcode: passcode
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            const pendingRequests = data.requests.filter(r => r.status === "pending");
+            renderAccessRequestsList(container, pendingRequests, passcode);
+        } else {
+            container.innerHTML = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Failed to load access requests: ${data.message}</div>`;
+        }
+    })
+    .catch(err => {
+        console.error("Error loading access requests:", err);
+        container.innerHTML = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Network error loading access requests.</div>`;
+    });
+}
+
+function renderAccessRequestsList(container, requests, passcode) {
+    if (!container) return;
+    container.innerHTML = "";
+    
+    if (requests.length === 0) {
+        container.innerHTML = `
+            <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                <i class="fa-solid fa-users-slash" style="font-size: 24px; margin-bottom: 10px; display: block; color: var(--text-muted);"></i>
+                No pending access requests.
+            </div>`;
+        return;
+    }
+    
+    requests.forEach(req => {
+        const card = document.createElement("div");
+        card.className = "access-request-card";
+        card.style.background = "rgba(255, 255, 255, 0.02)";
+        card.style.border = "1px solid var(--border-color)";
+        card.style.padding = "15px";
+        card.style.borderRadius = "8px";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.justifyContent = "space-between";
+        card.style.transition = "transform 0.2s, box-shadow 0.2s";
+        
+        const details = document.createElement("div");
+        
+        const name = document.createElement("div");
+        name.style.fontSize = "14px";
+        name.style.fontWeight = "600";
+        name.style.color = "var(--text-color)";
+        name.textContent = `${req.firstname} ${req.lastname}`;
+        details.appendChild(name);
+        
+        const gameId = document.createElement("div");
+        gameId.style.fontSize = "12px";
+        gameId.style.color = "var(--text-muted)";
+        gameId.style.marginTop = "4px";
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
+        details.appendChild(gameId);
+        
+        const time = document.createElement("div");
+        time.style.fontSize = "11px";
+        time.style.color = "var(--text-muted)";
+        time.style.marginTop = "4px";
+        time.textContent = req.timestamp;
+        details.appendChild(time);
+        
+        const uuidInfo = document.createElement("div");
+        uuidInfo.style.fontSize = "10px";
+        uuidInfo.style.color = "var(--text-muted)";
+        uuidInfo.style.marginTop = "4px";
+        uuidInfo.style.wordBreak = "break-all";
+        uuidInfo.textContent = `UUID: ${req.clientUuid}`;
+        details.appendChild(uuidInfo);
+        
+        card.appendChild(details);
+        
+        const actionsRow = document.createElement("div");
+        actionsRow.style.display = "flex";
+        actionsRow.style.gap = "10px";
+        actionsRow.style.marginTop = "15px";
+        
+        const btnApprove = document.createElement("button");
+        btnApprove.type = "button";
+        btnApprove.className = "btn-preset";
+        btnApprove.style.flex = "1";
+        btnApprove.style.padding = "6px 12px";
+        btnApprove.style.borderRadius = "4px";
+        btnApprove.style.border = "none";
+        btnApprove.style.background = "#2ec4b6";
+        btnApprove.style.color = "white";
+        btnApprove.style.fontWeight = "600";
+        btnApprove.style.fontSize = "12px";
+        btnApprove.style.cursor = "pointer";
+        btnApprove.innerHTML = `<i class="fa-solid fa-check"></i> Approve`;
+        
+        btnApprove.addEventListener("click", () => {
+            btnApprove.disabled = true;
+            btnApprove.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            
+            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({
+                    action: "approve_access_request",
+                    passcode: passcode,
+                    clientUuid: req.clientUuid
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "success") {
+                    loadAndRenderAccessRequests(passcode);
+                } else {
+                    alert("Approval failed: " + data.message);
+                    btnApprove.disabled = false;
+                    btnApprove.innerHTML = `<i class="fa-solid fa-check"></i> Approve`;
+                }
+            })
+            .catch(err => {
+                console.error("Approve request error:", err);
+                alert("Network error approving request.");
+                btnApprove.disabled = false;
+                btnApprove.innerHTML = `<i class="fa-solid fa-check"></i> Approve`;
+            });
+        });
+        
+        const btnReject = document.createElement("button");
+        btnReject.type = "button";
+        btnReject.className = "btn-preset";
+        btnReject.style.padding = "6px 12px";
+        btnReject.style.borderRadius = "4px";
+        btnReject.style.border = "none";
+        btnReject.style.background = "#e63946";
+        btnReject.style.color = "white";
+        btnReject.style.fontWeight = "600";
+        btnReject.style.fontSize = "12px";
+        btnReject.style.cursor = "pointer";
+        btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Reject`;
+        
+        btnReject.addEventListener("click", () => {
+            btnReject.disabled = true;
+            btnReject.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            
+            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({
+                    action: "reject_access_request",
+                    passcode: passcode,
+                    clientUuid: req.clientUuid
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "success") {
+                    loadAndRenderAccessRequests(passcode);
+                } else {
+                    alert("Rejection failed: " + data.message);
+                    btnReject.disabled = false;
+                    btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Reject`;
+                }
+            })
+            .catch(err => {
+                console.error("Reject request error:", err);
+                alert("Network error rejecting request.");
+                btnReject.disabled = false;
+                btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Reject`;
+            });
+        });
+        
+        actionsRow.appendChild(btnApprove);
+        actionsRow.appendChild(btnReject);
+        
+        card.appendChild(actionsRow);
+        container.appendChild(card);
+    });
 }
 
 function renderCustomSpelling() {

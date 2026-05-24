@@ -45,17 +45,13 @@
                 </div>
                 
                 <div class="form-row" style="margin-top: 15px;">
-                    <div class="form-group col-6">
+                    <div class="form-group col-12">
                         <label for="access-id">In-Game ID</label>
                         <input type="text" id="access-id" placeholder="e.g. 12345" required>
                     </div>
-                    <div class="form-group col-6">
-                        <label for="access-email">Email ID</label>
-                        <input type="email" id="access-email" placeholder="name@domain.com" required>
-                    </div>
                 </div>
                 
-                <button type="button" id="btn-access-request-submit" class="btn-action">
+                <button type="button" id="btn-access-request-submit" class="btn-action" style="margin-top: 20px;">
                     <i class="fa-solid fa-paper-plane"></i> Submit Access Request
                 </button>
 
@@ -71,19 +67,20 @@
                 </div>
             </div>
             
-            <!-- Screen 2: Awaiting Approval / Enter Passcode -->
+            <!-- Screen 2: Awaiting Approval -->
             <div id="access-screen-approve" class="access-screen">
                 <h3>Awaiting Admin Approval</h3>
-                <p class="access-desc">Your request has been submitted to the administrator. Please enter the approval key provided by the admin to unlock the system.</p>
+                <p class="access-desc" style="text-align: center; margin-bottom: 20px;">Your request has been submitted to the administrator. Once approved, the system will unlock automatically. In the meantime, you can check the status below.</p>
                 
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label for="access-unlock-code">Enter Approval Key</label>
-                    <input type="text" id="access-unlock-code" placeholder="Paste the key provided by admin here" required>
+                <div class="status-box" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 20px; width: 100%;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">Current Request Status</div>
+                    <div id="access-status-text" style="font-size: 16px; font-weight: 600; color: #ffb703; margin-top: 5px;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Pending Approval
+                    </div>
                 </div>
                 
-                <button type="button" id="btn-access-unlock-submit" class="btn-action glow-green">
-                    <i class="fa-solid fa-key"></i> Unlock System
+                <button type="button" id="btn-access-check-status" class="btn-action">
+                    <i class="fa-solid fa-arrows-rotate"></i> Check Status
                 </button>
                 
                 <div class="access-footer">
@@ -511,6 +508,20 @@
 
                         <!-- Admin Panel Content (Visible only when authenticated) -->
                         <div id="admin-panel-content" class="admin-panel-content hide">
+                            <!-- Access Requests (Friend Request Style) -->
+                            <div class="admin-section" style="margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 25px;">
+                                <div class="admin-section-header" style="margin-bottom: 10px;">
+                                    <i class="fa-solid fa-user-plus"></i> Pending Access Requests
+                                </div>
+                                <p class="section-desc">Manage system access requests from users (one access per hardware). Approve requests to grant them system access.</p>
+                                <div id="admin-access-requests-container" class="access-requests-list" style="margin-top: 15px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                                    <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                                        <i class="fa-solid fa-users-slash" style="font-size: 24px; margin-bottom: 10px; display: block; color: var(--text-muted);"></i>
+                                        No pending access requests.
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="admin-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                 
                                 <!-- Left: Manage Custom Spelling Corrections -->

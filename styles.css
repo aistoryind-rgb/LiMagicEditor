@@ -379,6 +379,9 @@ body {
 .col-4 {
     flex: 1;
 }
+.col-12 {
+    width: 100%;
+}
 
 /* Inputs & Textareas */
 textarea, input, select {

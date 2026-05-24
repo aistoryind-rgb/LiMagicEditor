@@ -99,6 +99,14 @@ function doPost(e) {
     
     if (action === "access_request") {
       return handleAccessRequest(payload, headers);
+    } else if (action === "check_access") {
+      return handleCheckAccess(payload, headers);
+    } else if (action === "get_access_requests") {
+      return handleGetAccessRequests(payload, headers);
+    } else if (action === "approve_access_request") {
+      return handleApproveAccessRequest(payload, headers);
+    } else if (action === "reject_access_request") {
+      return handleRejectAccessRequest(payload, headers);
     } else if (action === "validate_key") {
       return handleValidateKey(payload, headers);
     } else if (action === "bug_report") {
@@ -150,49 +158,203 @@ function doOptions(e) {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
+const ADMIN_PASSCODE = "DopamineAdmin2026!";
+
+function getOrCreateAccessRequestsSheet() {
+  const ss = getOrCreateHistorySpreadsheet();
+  let sheet = ss.getSheetByName("Access_Requests");
+  if (!sheet) {
+    sheet = ss.insertSheet("Access_Requests");
+    sheet.appendRow(["Timestamp", "First Name", "Last Name", "In-Game ID", "UUID", "Status"]);
+  }
+  return sheet;
+}
+
 function handleAccessRequest(data, headers) {
   const firstname = data.firstname || "";
   const lastname = data.lastname || "";
-  const email = data.email || "";
-  const server = data.server || "EN3";
-  const id = data.id || "Unknown";
+  const id = data.id || "";
   const clientUuid = data.clientUuid || "";
   const timestamp = new Date().toLocaleString();
   
-  const approveSig = generateApprovalSignature(server, id, clientUuid);
-  const approvalKey = `LI-APPROVED-${server}-${id}-${approveSig}`;
+  if (!clientUuid || !id) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing In-Game ID or Hardware ID (UUID)."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
   
-  const nameDisplay = (firstname || lastname) ? `${firstname} ${lastname}`.trim() : (data.name || "Unknown");
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let foundRowIdx = -1;
   
-  const subject = `[LifeInvader Access Request] ${nameDisplay} (ID: ${id}) on Server ${server}`;
+  // Look for existing request by clientUuid
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      foundRowIdx = i + 1; // 1-based index
+      break;
+    }
+  }
   
-  const body = `
-LifeInvader Ad Editor Access Request Details:
----------------------------------------------
-Timestamp: ${timestamp}
-First Name: ${firstname}
-Last Name: ${lastname}
-Email ID: ${email}
-Server: ${server}
-In-Game ID: ${id}
-
-Admin Approval Key to send to user:
-${approvalKey}
-
-To approve this user, copy the "Admin Approval Key" above and send it to them. They must paste it into the unlock prompt on the website to gain access.
-  `;
-  
-  MailApp.sendEmail({
-    to: ADMIN_EMAIL,
-    subject: subject,
-    body: body
-  });
+  if (foundRowIdx !== -1) {
+    // Update existing request status to pending
+    sheet.getRange(foundRowIdx, 1).setValue(timestamp);
+    sheet.getRange(foundRowIdx, 2).setValue(firstname);
+    sheet.getRange(foundRowIdx, 3).setValue(lastname);
+    sheet.getRange(foundRowIdx, 4).setValue(id);
+    sheet.getRange(foundRowIdx, 6).setValue("pending");
+  } else {
+    // Append new request
+    sheet.appendRow([timestamp, firstname, lastname, id, clientUuid, "pending"]);
+  }
   
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
-    message: "Access request email sent successfully."
-  }))
-  .setMimeType(ContentService.MimeType.JSON);
+    message: "Access request submitted. Please wait for admin approval."
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleCheckAccess(data, headers) {
+  const clientUuid = data.clientUuid || "";
+  if (!clientUuid) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing client UUID."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let requestStatus = "none";
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      requestStatus = rows[i][5] || "pending";
+      break;
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    approved: (requestStatus === "approved"),
+    requestStatus: requestStatus
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleGetAccessRequests(data, headers) {
+  const passcode = data.passcode || "";
+  if (passcode !== ADMIN_PASSCODE) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access. Invalid passcode."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  const requests = [];
+  
+  for (let i = 1; i < rows.length; i++) {
+    requests.push({
+      timestamp: rows[i][0] ? new Date(rows[i][0]).toLocaleString() : "",
+      firstname: rows[i][1] || "",
+      lastname: rows[i][2] || "",
+      id: rows[i][3] || "",
+      clientUuid: rows[i][4] || "",
+      status: rows[i][5] || "pending"
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    requests: requests.reverse()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleApproveAccessRequest(data, headers) {
+  const passcode = data.passcode || "";
+  const clientUuid = data.clientUuid || "";
+  
+  if (passcode !== ADMIN_PASSCODE) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access. Invalid passcode."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (!clientUuid) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing UUID."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let updated = false;
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      sheet.getRange(i + 1, 6).setValue("approved");
+      updated = true;
+      break;
+    }
+  }
+  
+  if (updated) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Access request approved."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Request not found."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleRejectAccessRequest(data, headers) {
+  const passcode = data.passcode || "";
+  const clientUuid = data.clientUuid || "";
+  
+  if (passcode !== ADMIN_PASSCODE) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access. Invalid passcode."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (!clientUuid) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing UUID."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let updated = false;
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      sheet.getRange(i + 1, 6).setValue("rejected");
+      updated = true;
+      break;
+    }
+  }
+  
+  if (updated) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Access request rejected."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Request not found."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function handleValidateKey(data, headers) {

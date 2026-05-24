@@ -105,6 +105,10 @@ function doPost(e) {
       return handleBugReport(payload, headers);
     } else if (action === "log_ad") {
       return handleLogAd(payload, headers);
+    } else if (action === "get_custom_data") {
+      return handleGetCustomData(headers);
+    } else if (action === "save_custom_data") {
+      return handleSaveCustomData(payload, headers);
     } else if (action === "get_history") {
       return handleGetHistory(payload, headers);
     } else {
@@ -400,6 +404,112 @@ function handleGetHistory(data, headers) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
       message: "Error getting history: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleGetCustomData(headers) {
+  try {
+    const ss = getOrCreateHistorySpreadsheet();
+    
+    // Spelling sheet
+    let spellingSheet = ss.getSheetByName("Custom_Spelling");
+    if (!spellingSheet) {
+      spellingSheet = ss.insertSheet("Custom_Spelling");
+      spellingSheet.appendRow(["Wrong", "Right"]);
+    }
+    
+    // Templates sheet
+    let templatesSheet = ss.getSheetByName("Custom_Templates");
+    if (!templatesSheet) {
+      templatesSheet = ss.insertSheet("Custom_Templates");
+      templatesSheet.appendRow(["Text", "Category", "Shorthand"]);
+    }
+    
+    // Read spelling
+    const spelling = {};
+    const spellingRows = spellingSheet.getDataRange().getValues();
+    for (let i = 1; i < spellingRows.length; i++) {
+      const wrong = spellingRows[i][0];
+      const right = spellingRows[i][1];
+      if (wrong) {
+        spelling[wrong.toString().toLowerCase().trim()] = right ? right.toString().trim() : "";
+      }
+    }
+    
+    // Read templates
+    const templates = [];
+    const templatesRows = templatesSheet.getDataRange().getValues();
+    for (let i = 1; i < templatesRows.length; i++) {
+      const text = templatesRows[i][0];
+      const category = templatesRows[i][1];
+      const shorthand = templatesRows[i][2];
+      if (text) {
+        templates.push({
+          text: text.toString().trim(),
+          category: category ? category.toString().trim() : "Services",
+          shorthand: shorthand ? shorthand.toString().trim() : ""
+        });
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      spelling: spelling,
+      templates: templates
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error getting custom data: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleSaveCustomData(data, headers) {
+  try {
+    const ss = getOrCreateHistorySpreadsheet();
+    
+    // Save Spelling
+    let spellingSheet = ss.getSheetByName("Custom_Spelling");
+    if (!spellingSheet) {
+      spellingSheet = ss.insertSheet("Custom_Spelling");
+    }
+    spellingSheet.clear();
+    spellingSheet.appendRow(["Wrong", "Right"]);
+    
+    const spelling = data.spelling || {};
+    for (const wrong in spelling) {
+      spellingSheet.appendRow([wrong.toString().toLowerCase().trim(), spelling[wrong].toString().trim()]);
+    }
+    
+    // Save Templates
+    let templatesSheet = ss.getSheetByName("Custom_Templates");
+    if (!templatesSheet) {
+      templatesSheet = ss.insertSheet("Custom_Templates");
+    }
+    templatesSheet.clear();
+    templatesSheet.appendRow(["Text", "Category", "Shorthand"]);
+    
+    const templates = data.templates || [];
+    for (const t of templates) {
+      if (t.text) {
+        templatesSheet.appendRow([
+          t.text.toString().trim(),
+          t.category ? t.category.toString().trim() : "Services",
+          t.shorthand ? t.shorthand.toString().trim() : ""
+        ]);
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Custom spelling and templates saved successfully."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error saving custom data: " + err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }

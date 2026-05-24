@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 02:21:44";
-const BUILD_TIMESTAMP_SHORT = "May 25 02:21";
+const BUILD_TIMESTAMP = "2026 May 25 03:02:46";
+const BUILD_TIMESTAMP_SHORT = "May 25 03:02";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1468,6 +1468,11 @@ function correctSpelling(text, ctx) {
         corrected = corrected.replace(repKitRegex, "repair kit");
     }
 
+    if (/\bcharging\b/i.test(corrected) && !/\bcharging\s+station\b/i.test(corrected)) {
+        corrected = corrected.replace(/\bcharging\b/gi, "chargers");
+        ctx.logs.push({ text: `Spelling correction: <strong>charging</strong> corrected to <strong>chargers</strong>`, type: 'correction' });
+    }
+
     // Format property and shop numbers to use № symbol
     corrected = corrected.replace(/\b(house|apartment|mansion|penthouse|shop)\s*(?:no\.?|number|num\.?|#)?\s*(\d+)\b/gi, (match, prop, num) => {
         return `${prop} \u2116${num}`;
@@ -1605,6 +1610,18 @@ function matchVehicle(inputText) {
     }
     if (/\bviper\b/i.test(cleanInput)) {
         return { name: "Bravado Viper 2008", category: "sellable_cars" };
+    }
+    if (/\b(?:t-20|t20)\b/i.test(cleanInput)) {
+        return { name: "T-20", category: "sellable_cars" };
+    }
+    if (/\b(?:z-type|ztype)\b/i.test(cleanInput)) {
+        return { name: "Z-Type", category: "sellable_cars" };
+    }
+    if (/\b(?:sc-1|sc1)\b/i.test(cleanInput)) {
+        return { name: "SC-1", category: "sellable_cars" };
+    }
+    if (/\b(?:gp-1|gp1)\b/i.test(cleanInput)) {
+        return { name: "GP-1", category: "sellable_cars" };
     }
     
     // Direct tokenized compare
@@ -2766,6 +2783,13 @@ function runValidationPipeline(ctx, override) {
 function detectCategory(text) {
     const lower = text.toLowerCase();
     
+    // Check if it's the "charger" item to prevent false vehicle matching to Bravado Charger Daytona
+    const isRealChargerVehicle = /\b(?:bravado|srt|daytona|1969)\b/i.test(lower);
+    const hasChargerItemWord = /\b(?:charger|chargers|charging)\b/i.test(lower);
+    if (hasChargerItemWord && !isRealChargerVehicle) {
+        return "Other";
+    }
+
     // Check for clothing first to prevent generic adjectives/colors from false vehicle matching (e.g. "Black gloves")
     if (matchClothingItem(text)) {
         return "Other";
@@ -3190,6 +3214,11 @@ function checkProhibitedItems(text, ctx) {
     // Check Blacklist items
     for (const item of [...blacklistWeapons, ...blacklistDrugs, ...blacklistEMS, ...blacklistScanners, ...blacklistMisc]) {
         if (lower.includes(item)) {
+            // Exclude weapon shop / ammunition store businesses
+            if ((item === "ammunition" || item === "ammo" || item === "rifle") && 
+                (lower.includes("store") || lower.includes("shop") || lower.includes("club") || lower.includes("rifleclub"))) {
+                continue;
+            }
             ctx.status = "blacklisted";
             ctx.blacklistReason = `The advertisement contains illegal item/term: "${item.toUpperCase()}" which triggers an immediate phone blacklist.`;
             ctx.rejectionReason = "Cannot promote illegal items.";
@@ -3752,7 +3781,7 @@ function parseAutoUpgrades(text) {
     const upgrades = {};
     
     // 1. Configuration
-    if (lower.includes("full configuration") || lower.includes("max config") || lower.includes("max tuning") || lower.includes("fully upgraded") || lower.includes("full tune") || lower.includes("full config") || lower.includes("maxed") || lower.includes("full max") || lower.includes("full chip tuning") || lower.includes("pro parts")) {
+    if (lower.includes("full configuration") || lower.includes("max config") || lower.includes("max tuning") || lower.includes("fully upgraded") || lower.includes("full tune") || lower.includes("full config") || lower.includes("maxed") || lower.includes("full max") || lower.includes("full chip tuning") || lower.includes("pro parts") || lower.includes("car full") || /\bfull\b/i.test(lower)) {
         upgrades.config = "with full configuration";
     } else if (lower.includes("partial configuration") || lower.includes("nearly max") || lower.includes("lvl3") || lower.includes("lvl 3") || lower.includes("partial config") || lower.includes("partial tuning") || lower.includes("partially upgraded")) {
         upgrades.config = "with partial configuration";
@@ -5198,7 +5227,8 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "biker container": ["biker container", "biker containers", "biker contaner", "biker contaners"],
         "trucker container": ["trucker container", "trucker containers", "trucker contaner", "trucker contaners"],
         "Ingrand container": ["ingrand container", "ingrand containers", "ingrand contaner", "ingrand contaners"],
-        "desert scarf mask container": ["desert scarf mask container", "desert scarf mask containers", "desert scarf mask contaner", "desert scarf mask contaners"]
+        "desert scarf mask container": ["desert scarf mask container", "desert scarf mask containers", "desert scarf mask contaner", "desert scarf mask contaners"],
+        "charger": ["charger", "chargers", "electric charger", "electric chargers", "electric charging", "charging"]
     };
     
     for (const canonical in mappings) {
@@ -5627,7 +5657,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 02:21</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 03:02</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6490,6 +6520,72 @@ function initCustomData() {
     } catch (e) {
         console.error("Error loading custom spelling:", e);
     }
+
+    // Sync from the shared backend (Google Sheets)
+    syncCustomDataFromBackend();
+}
+
+function syncCustomDataFromBackend() {
+    if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "get_custom_data" })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            let changed = false;
+            if (data.spelling) {
+                const fetchedSpellingStr = JSON.stringify(data.spelling);
+                if (localStorage.getItem("li_custom_spelling") !== fetchedSpellingStr) {
+                    customSpelling = data.spelling;
+                    localStorage.setItem("li_custom_spelling", fetchedSpellingStr);
+                    changed = true;
+                }
+            }
+            if (data.templates) {
+                const fetchedTemplatesStr = JSON.stringify(data.templates);
+                if (localStorage.getItem("li_custom_templates") !== fetchedTemplatesStr) {
+                    customTemplates = data.templates;
+                    localStorage.setItem("li_custom_templates", fetchedTemplatesStr);
+                    changed = true;
+                }
+            }
+            
+            if (changed && sessionStorage.getItem("li_admin_authenticated") === "true") {
+                renderCustomSpelling();
+                renderCustomTemplates();
+            }
+        }
+    })
+    .catch(err => {
+        console.error("Error syncing custom data from backend:", err);
+    });
+}
+
+function saveCustomDataToBackend() {
+    if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "save_custom_data",
+            spelling: customSpelling,
+            templates: customTemplates
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status !== "success") {
+            console.error("Failed to save custom data to backend:", data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Network error saving custom data to backend:", err);
+    });
 }
 
 function initAdminPanel() {
@@ -6549,6 +6645,7 @@ function initAdminPanel() {
             if (wrong && right) {
                 customSpelling[wrong] = right;
                 localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                saveCustomDataToBackend();
                 renderCustomSpelling();
                 formSpelling.reset();
             }
@@ -6565,6 +6662,7 @@ function initAdminPanel() {
             if (text && category) {
                 customTemplates.push({ text, category, shorthand });
                 localStorage.setItem("li_custom_templates", JSON.stringify(customTemplates));
+                saveCustomDataToBackend();
                 renderCustomTemplates();
                 formTemplate.reset();
             }
@@ -6596,6 +6694,7 @@ function initAdminPanel() {
                     customTemplates = parsed.templates;
                     localStorage.setItem("li_custom_templates", JSON.stringify(customTemplates));
                 }
+                saveCustomDataToBackend();
                 renderCustomSpelling();
                 renderCustomTemplates();
                 alert("Data imported successfully!");
@@ -6642,6 +6741,7 @@ function renderCustomSpelling() {
         btnDel.addEventListener("click", () => {
             delete customSpelling[wrong];
             localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+            saveCustomDataToBackend();
             renderCustomSpelling();
         });
         tdAction.appendChild(btnDel);
@@ -6695,6 +6795,7 @@ function renderCustomTemplates() {
         btnDel.addEventListener("click", () => {
             customTemplates.splice(index, 1);
             localStorage.setItem("li_custom_templates", JSON.stringify(customTemplates));
+            saveCustomDataToBackend();
             renderCustomTemplates();
         });
         tdAction.appendChild(btnDel);

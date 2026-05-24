@@ -861,7 +861,7 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 24 22:15:19";
+const BUILD_TIMESTAMP = "2026 May 24 22:20:24";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5519,7 +5519,7 @@ function initFloatingClipboard() {
                         <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
                             <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
                                 <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 22:15</span>
+                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 22:20</span>
                             </div>
                             <button class="pip-close-btn" id="pip-close-btn" title="Close Clipboard"><i class="fa-solid fa-xmark"></i></button>
                         </div>
@@ -6043,7 +6043,6 @@ function initBugReport() {
     const textExpected = document.getElementById("bug-expected");
     
     const fileInput = document.getElementById("bug-screenshot-file");
-    const btnSelect = document.getElementById("btn-select-screenshot");
     const dragDropZone = document.getElementById("bug-drag-drop-zone");
     const previewContainer = document.getElementById("bug-preview-container");
     const imgPreview = document.getElementById("bug-screenshot-preview");
@@ -6056,13 +6055,6 @@ function initBugReport() {
     const btnFeedbackClose = document.getElementById("btn-bug-feedback-close");
     
     if (!form) return;
-    
-    // File selection
-    if (btnSelect && fileInput) {
-        btnSelect.addEventListener("click", () => {
-            fileInput.click();
-        });
-    }
     
     if (fileInput) {
         fileInput.addEventListener("change", (e) => {

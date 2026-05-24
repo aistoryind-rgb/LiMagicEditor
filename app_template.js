@@ -5187,7 +5187,6 @@ function initBugReport() {
     const textExpected = document.getElementById("bug-expected");
     
     const fileInput = document.getElementById("bug-screenshot-file");
-    const btnSelect = document.getElementById("btn-select-screenshot");
     const dragDropZone = document.getElementById("bug-drag-drop-zone");
     const previewContainer = document.getElementById("bug-preview-container");
     const imgPreview = document.getElementById("bug-screenshot-preview");
@@ -5200,13 +5199,6 @@ function initBugReport() {
     const btnFeedbackClose = document.getElementById("btn-bug-feedback-close");
     
     if (!form) return;
-    
-    // File selection
-    if (btnSelect && fileInput) {
-        btnSelect.addEventListener("click", () => {
-            fileInput.click();
-        });
-    }
     
     if (fileInput) {
         fileInput.addEventListener("change", (e) => {

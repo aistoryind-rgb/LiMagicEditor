@@ -404,7 +404,7 @@
                         <div class="bug-report-form">
                             <form id="form-bug-report">
                                 <div class="form-row">
-                                    <div class="form-group col-6">
+                                    <div class="form-group col-12">
                                         <label for="bug-category">Issue Category</label>
                                         <select id="bug-category" required>
                                             <option value="Spelling error">Spelling error / Typo</option>
@@ -414,17 +414,11 @@
                                             <option value="Other">Other</option>
                                         </select>
                                     </div>
-                                    <div class="form-group col-6">
-                                        <label for="bug-screenshot">Screenshot Upload</label>
-                                        <input type="file" id="bug-screenshot-file" accept="image/*" style="display: none;">
-                                        <button type="button" class="btn-preset" id="btn-select-screenshot" style="width: 100%;">
-                                            <i class="fa-solid fa-image"></i> Select Screenshot File
-                                        </button>
-                                    </div>
                                 </div>
                                 
                                 <div class="form-row" style="margin-top: 15px;">
                                     <div class="form-group col-12">
+                                        <input type="file" id="bug-screenshot-file" accept="image/*" style="display: none;">
                                         <div class="drag-drop-zone" id="bug-drag-drop-zone">
                                             <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
                                             <p class="drag-text">Drag and drop your screenshot here, or click to upload</p>

@@ -861,7 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 00:57:30";
+const BUILD_TIMESTAMP = "2026 May 25 01:38:46";
+const BUILD_TIMESTAMP_SHORT = "May 25 01:38";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5513,6 +5514,13 @@ function initFloatingClipboard() {
             });
             pipWindowInstance = pipWindow;
 
+            try {
+                pipWindow.focus();
+                window.blur();
+            } catch (focusErr) {
+                console.warn("Focus/blur error:", focusErr);
+            }
+
             // Toggle main window overlay to hide content and keep only the overlay visible
             const mainContainer = document.querySelector(".app-container");
             const pipOverlay = document.getElementById("pip-active-overlay");
@@ -5591,9 +5599,10 @@ function initFloatingClipboard() {
                             <span class="pip-badge">Clipboard</span>
                         </div>
                         <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25;">
                                 <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <button id="pip-btn-history" style="background: var(--accent-color); border: none; color: white; padding: 2px 6px; font-size: 9px; border-radius: 3px; cursor: pointer; margin-top: 2px; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2;"><i class="fa-solid fa-clock-rotate-left"></i> Hit History</button>
+                                <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 8px; font-size: 9.5px; border-radius: 4px; cursor: pointer; margin-top: 3px; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> Hit History</button>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; margin-top: 2.5px; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">Updated: May 25 01:38</span>
                             </div>
                         </div>
                     </header>
@@ -5878,11 +5887,12 @@ function initFloatingClipboard() {
                             card.innerHTML = `
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: rgba(255,255,255,0.4); font-size: 9px;">
                                     <span><strong>${nameDisplay}</strong> (${item.id})</span>
-                                    <span>${item.timestamp}</span>
                                 </div>
                                 <div style="color: var(--text-secondary); margin-bottom: 6px; white-space: pre-wrap; font-style: italic; max-height: 40px; overflow-y: auto;">Raw: ${item.rawInput}</div>
                                 <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px;">
-                                    <div style="color: #4ade80; font-family: monospace; font-weight: 600; flex: 1; word-break: break-all;">${item.finalAd}</div>
+                                    <div style="color: #4ade80; font-family: monospace; font-weight: 600; flex: 1; word-break: break-all; line-height: 1.3;">
+                                        <span style="color: rgba(255,255,255,0.4); font-size: 9px; font-family: 'Outfit', sans-serif; font-weight: normal; margin-right: 6px;">[${item.timestamp}]</span>${item.finalAd}
+                                    </div>
                                     <button class="pip-btn-copy-history" data-text="${encodeURIComponent(item.finalAd)}" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 3px 6px; font-size: 9px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 2px; font-family: 'Outfit', sans-serif;">
                                         <i class="fa-solid fa-copy"></i> Copy
                                     </button>

@@ -786,6 +786,36 @@ textarea:focus, input:focus, select:focus {
     background: rgba(0, 0, 0, 0.05);
 }
 
+#tab-btn-history {
+    background: var(--color-info) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 8px 16px !important;
+    margin: 8px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: fit-content !important;
+    align-self: center !important;
+    transition: var(--transition-smooth) !important;
+    border-bottom: none !important;
+}
+
+#tab-btn-history:hover {
+    opacity: 0.9 !important;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4) !important;
+}
+
+#tab-btn-history.active {
+    background: var(--color-info) !important;
+    box-shadow: 0 0 12px rgba(10, 132, 255, 0.6) !important;
+    border-bottom: none !important;
+}
+
 .tab-content {
     display: none;
 }

@@ -58,6 +58,17 @@ function testEmailAndDrive() {
     Logger.log("Error connecting to Drive folder: " + err.toString());
     throw new Error("Could not find the Google Drive folder. Please double-check GOOGLE_DRIVE_FOLDER_ID.");
   }
+
+  Logger.log("Testing Google Sheets access...");
+  try {
+    const tempSs = SpreadsheetApp.create("LifeInvader_Auth_Test_Temp");
+    const tempFile = DriveApp.getFileById(tempSs.getId());
+    tempFile.setTrashed(true); // clean up the test spreadsheet
+    Logger.log("Google Sheets test successful! Authorized to use SpreadsheetApp.");
+  } catch (err) {
+    Logger.log("Error testing Sheets: " + err.toString());
+    throw new Error("Could not authorize Google Sheets. Please grant the requested permissions.");
+  }
 }
 
 function doPost(e) {

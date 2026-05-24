@@ -1750,6 +1750,10 @@ function runValidationPipeline(ctx, override) {
                 patterns: [/\brenting\b/i, /\brent\b/i]
             },
             {
+                action: "Hiring",
+                patterns: [/\bhiring\b/i, /\bhire\b/i]
+            },
+            {
                 action: "Looking for",
                 patterns: [/\blooking for\b/i, /\blook for\b/i, /\bsearching for\b/i, /\bsearch for\b/i]
             },
@@ -1822,8 +1826,8 @@ function runValidationPipeline(ctx, override) {
     // Clean ad body by stripping price keywords
     let adBody = cleanPriceKeywords(text, ctx);
     // Strip action prefixes/suffixes
-    adBody = adBody.replace(/^(buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(a\s+|an\s+)?/i, "").trim();
-    adBody = adBody.replace(/\s+(buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i, "").trim();
+    adBody = adBody.replace(/^(buying|selling or trading|selling|trading|renting out|renting|hiring|wtb|wts|wtt|buy|sell|trade|rent|hire|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(a\s+|an\s+)?/i, "").trim();
+    adBody = adBody.replace(/\s+(buying|selling or trading|selling|trading|renting out|renting|hiring|wtb|wts|wtt|buy|sell|trade|rent|hire|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i, "").trim();
     // Strip leading/trailing punctuation again
     adBody = adBody.replace(/^[^\w"'()\s]+|[^\w"'()\s]+$/g, "").trim();
     
@@ -1901,7 +1905,8 @@ function runValidationPipeline(ctx, override) {
     } else if (!suppressPriceLabel) {
         // Fallback pricing label
         let label = "Price";
-        if (ctx.raw.toLowerCase().includes("dice") || ctx.raw.toLowerCase().includes("poker")) label = "Bet";
+        if (ctx.category === "Work") label = "Salary";
+        else if (ctx.raw.toLowerCase().includes("dice") || ctx.raw.toLowerCase().includes("poker")) label = "Bet";
         else if (action === "Buying" || action === "Renting" || action === "Looking") label = "Budget";
         else if (action === "Renting out") label = "Rent";
         
@@ -2298,6 +2303,9 @@ function detectCategory(text) {
     
     // 2. Work Check
     if (lower.includes("hiring") || lower.includes("looking for work") || lower.includes("looking for a job") ||
+        /looking\s+(?:to\s+)?work\b/i.test(lower) || /look\s+(?:to\s+)?work\b/i.test(lower) ||
+        /looking\s+for\s+.*work\b/i.test(lower) || /look\s+for\s+.*work\b/i.test(lower) ||
+        /looking\s+for\s+a\s+job\b/i.test(lower) || /look\s+for\s+a\s+job\b/i.test(lower) ||
         lower.includes("construction site") || lower.includes("driver") || lower.includes("electrician") ||
         lower.includes("locksmith") || lower.includes("gardener") || lower.includes("surveyor") ||
         lower.includes("trucker") || lower.includes("lawyer") || lower.includes("bodyguard")) {
@@ -2522,12 +2530,12 @@ function parsePriceAndBudget(text, action, ctx) {
     
     // Sequential price matches
     const regexes = [
-        /(?:price|budget|rent|bet|cost|cash)\s*(?::|is)?\s*(?:\$)?\b(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\$\s*(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\b(?:for|at)\s+(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
-        /\beach\s+(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\b(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\s*each\b/gi,
-        /\b(\d+(?:\.\d+)?)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
+        /(?:price|budget|rent|bet|cost|cash|salary|wage)\s*(?::|is)?\s*(?:\$)?\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
+        /\$\s*(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
+        /\b(?:for|at)\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
+        /\beach\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
+        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\s*each\b/gi,
+        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
         /\b(\d{5,})\b/g
     ];
     
@@ -2567,6 +2575,11 @@ function parsePriceAndBudget(text, action, ctx) {
 
                 let valStr = match[1];
                 let suffix = match[2] ? match[2].toLowerCase() : "";
+                if (!suffix) {
+                    valStr = valStr.replace(/[\.,]/g, "");
+                } else {
+                    valStr = valStr.replace(/,/g, ".");
+                }
                 const numericVal = parseFloat(valStr);
                 matchedValues.push({
                     raw: match[0],
@@ -3271,6 +3284,19 @@ function formatWorkAd(adBody, action, ctx) {
     
     // DJ casing check
     let body = adBody.replace(/\bdj\b/gi, "DJ");
+    
+    // Spell corrections
+    body = body.replace(/\bfore\b/gi, "for");
+    
+    // Solar panel plantation corrections
+    if (/\bsolar\s*(?:panel\s*)?plantations?\b/i.test(body)) {
+        if (body.toLowerCase().includes("workers")) {
+            body = body.replace(/\bsolar\s*(?:panel\s*)?plantations?\b/gi, "solar panel plantations");
+        } else {
+            body = body.replace(/\bsolar\s*(?:panel\s*)?plantations?\b/gi, "solar panel plantation");
+        }
+        ctx.logs.push({ text: `Normalized solar panel plantation reference`, type: 'correction' });
+    }
     
     // level X -> X years experience
     const lvlMatch = body.match(/level\s*(\d+)/i) || body.match(/lvl\s*(\d+)/i);

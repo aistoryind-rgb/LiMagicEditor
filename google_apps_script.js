@@ -92,6 +92,10 @@ function doPost(e) {
       return handleValidateKey(payload, headers);
     } else if (action === "bug_report") {
       return handleBugReport(payload, headers);
+    } else if (action === "log_ad") {
+      return handleLogAd(payload, headers);
+    } else if (action === "get_history") {
+      return handleGetHistory(payload, headers);
     } else {
       return ContentService.createTextOutput(JSON.stringify({
         status: "error",
@@ -303,3 +307,89 @@ function handleBugReport(data, headers) {
   }))
   .setMimeType(ContentService.MimeType.JSON);
 }
+
+function getOrCreateHistorySpreadsheet() {
+  const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+  const files = folder.getFilesByName("LifeInvader_Ad_History");
+  let ss;
+  if (files.hasNext()) {
+    ss = SpreadsheetApp.openById(files.next().getId());
+  } else {
+    ss = SpreadsheetApp.create("LifeInvader_Ad_History");
+    const file = DriveApp.getFileById(ss.getId());
+    folder.addFile(file);
+    DriveApp.getRootFolder().removeFile(file);
+    const sheet = ss.getSheets()[0];
+    sheet.appendRow(["Timestamp", "First Name", "Last Name", "Server", "ID", "Raw Input", "Final Ad", "Status"]);
+  }
+  return ss;
+}
+
+function handleLogAd(data, headers) {
+  try {
+    const ss = getOrCreateHistorySpreadsheet();
+    const sheet = ss.getSheets()[0];
+    
+    const timestamp = new Date().toLocaleString();
+    const firstname = data.firstname || "";
+    const lastname = data.lastname || "";
+    const server = data.server || "";
+    const id = data.id || "";
+    const rawInput = data.rawInput || "";
+    const finalAd = data.finalAd || "";
+    const status = data.status || "";
+    
+    sheet.appendRow([timestamp, firstname, lastname, server, id, rawInput, finalAd, status]);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Ad logged successfully."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error logging ad: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleGetHistory(data, headers) {
+  try {
+    const ss = getOrCreateHistorySpreadsheet();
+    const sheet = ss.getSheets()[0];
+    const lastRow = sheet.getLastRow();
+    
+    const history = [];
+    if (lastRow > 1) {
+      const limit = parseInt(data.limit || "50");
+      const startRow = Math.max(2, lastRow - limit + 1);
+      const numRows = lastRow - startRow + 1;
+      
+      const values = sheet.getRange(startRow, 1, numRows, 8).getValues();
+      for (let i = values.length - 1; i >= 0; i--) {
+        const row = values[i];
+        history.push({
+          timestamp: row[0] ? new Date(row[0]).toLocaleString() : "",
+          firstname: row[1],
+          lastname: row[2],
+          server: row[3],
+          id: row[4],
+          rawInput: row[5],
+          finalAd: row[6],
+          status: row[7]
+        });
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      history: history
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error getting history: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+

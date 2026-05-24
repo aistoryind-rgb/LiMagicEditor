@@ -293,6 +293,9 @@
                     <button class="tab-btn" data-tab="tab-bug">
                         <i class="fa-solid fa-circle-question"></i> Bug Report / Correction
                     </button>
+                    <button class="tab-btn" data-tab="tab-history" id="tab-btn-history">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Ad History
+                    </button>
                     <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
                         <i class="fa-solid fa-user-shield"></i> Admin Panel
                     </button>
@@ -617,6 +620,45 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 6: Edit History -->
+                    <div class="tab-content" id="tab-history">
+                        <p class="section-desc">View the history of processed advertisements edited by everyone using this application. The history is fetched in real-time from the central database.</p>
+                        <div class="history-controls" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <button id="btn-refresh-history" class="btn btn-secondary" style="background-color: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600;"><i class="fa-solid fa-sync"></i> Refresh History</button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+                            <table class="leaders-table" style="margin: 0;">
+                                <style>
+                                    .history-table th, .history-table td {
+                                        padding: 10px;
+                                        text-align: left;
+                                        border-bottom: 1px solid var(--border-color);
+                                    }
+                                    .history-table th {
+                                        background-color: rgba(255,255,255,0.02);
+                                        font-family: 'Outfit', sans-serif;
+                                        font-weight: 600;
+                                    }
+                                </style>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 140px;">Timestamp</th>
+                                        <th style="width: 120px;">Editor</th>
+                                        <th style="width: 80px;">ID</th>
+                                        <th>Raw Input</th>
+                                        <th>Formatted Output</th>
+                                        <th style="width: 100px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Click Refresh to load history.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

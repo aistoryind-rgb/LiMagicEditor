@@ -861,7 +861,7 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 00:26:59";
+const BUILD_TIMESTAMP = "2026 May 25 00:57:30";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -973,6 +973,15 @@ function initTabs() {
             document.getElementById(tabId).classList.add("active");
         });
     });
+
+    const tabBtnHistory = document.getElementById("tab-btn-history");
+    if (tabBtnHistory) {
+        tabBtnHistory.addEventListener("click", refreshMainHistory);
+    }
+    const btnRefreshHistory = document.getElementById("btn-refresh-history");
+    if (btnRefreshHistory) {
+        btnRefreshHistory.addEventListener("click", refreshMainHistory);
+    }
 }
 
 function initSearchExplorer() {
@@ -1808,6 +1817,9 @@ function initAdProcessing() {
                         btnCopyRej.innerHTML = `<i class="fa-solid fa-copy"></i> Copy Reason`;
                         btnCopyRej.classList.remove("copied");
                     }, 2000);
+                    
+                    const rawVal = document.getElementById("raw-ad").value;
+                    logAdToBackend(rawVal, textElement.textContent, "rejected");
                 });
             }
         });
@@ -1844,6 +1856,9 @@ function initAdProcessing() {
                         btnCopy.innerHTML = `<i class="fa-solid fa-copy"></i> Copy`;
                         btnCopy.classList.remove("copied");
                     }, 2000);
+                    
+                    const rawVal = document.getElementById("raw-ad").value;
+                    logAdToBackend(rawVal, textElement.textContent, "passed");
                 });
             }
         });
@@ -5567,7 +5582,7 @@ function initFloatingClipboard() {
 
             // Inject the compact HTML layout
             pipWindow.document.body.innerHTML = `
-                <div class="pip-layout">
+                <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
                     <header class="pip-header">
                         <div class="pip-logo">
                             <span class="li-logo">
@@ -5578,12 +5593,11 @@ function initFloatingClipboard() {
                         <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
                             <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
                                 <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 25 00:26</span>
+                                <button id="pip-btn-history" style="background: var(--accent-color); border: none; color: white; padding: 2px 6px; font-size: 9px; border-radius: 3px; cursor: pointer; margin-top: 2px; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2;"><i class="fa-solid fa-clock-rotate-left"></i> Hit History</button>
                             </div>
-                            <button class="pip-close-btn" id="pip-close-btn" title="Close Clipboard"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     </header>
-                    <main class="pip-main">
+                    <main class="pip-main" style="flex: 1; overflow-y: auto;">
                         <div class="pip-form-group">
                             <label for="pip-raw-ad">RAW ADVERTISEMENT CONTENT</label>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
@@ -5651,6 +5665,18 @@ function initFloatingClipboard() {
                             </ul>
                         </div>
                     </main>
+                    <div class="pip-history-overlay hide" id="pip-history-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 20, 0.97); z-index: 1000; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; font-family: 'Outfit', sans-serif;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                            <h3 style="margin: 0; font-size: 13px; font-family: 'Outfit', sans-serif; color: white;"><i class="fa-solid fa-clock-rotate-left"></i> Ad History</h3>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="pip-btn-refresh-history" style="padding: 3px 8px; font-size: 10px; background-color: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600;"><i class="fa-solid fa-sync"></i> Refresh</button>
+                                <button id="pip-btn-close-history" style="padding: 3px 8px; font-size: 10px; background-color: #3f3f46; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600;"><i class="fa-solid fa-xmark"></i> Close</button>
+                            </div>
+                        </div>
+                        <div id="pip-history-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                            <div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 11px;">Loading history...</div>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -5769,9 +5795,11 @@ function initFloatingClipboard() {
                 updatePipDisplay();
             });
 
-            pipClose.addEventListener("click", () => {
-                pipWindow.close();
-            });
+            if (pipClose) {
+                pipClose.addEventListener("click", () => {
+                    pipWindow.close();
+                });
+            }
 
             pipCopy.addEventListener("click", () => {
                 const textVal = pipWindow.document.getElementById("pip-processed-text").textContent;
@@ -5782,6 +5810,9 @@ function initFloatingClipboard() {
                         pipCopy.innerHTML = `<i class="fa-solid fa-copy"></i> Copy`;
                         pipCopy.classList.remove("copied");
                     }, 2000);
+                    
+                    const rawVal = pipWindow.document.getElementById("pip-raw-ad").value;
+                    logAdToBackend(rawVal, textVal, "passed");
                 });
             });
 
@@ -5795,8 +5826,125 @@ function initFloatingClipboard() {
                             pipCopyRej.innerHTML = `<i class="fa-solid fa-copy"></i> Copy Reason`;
                             pipCopyRej.classList.remove("copied");
                         }, 2000);
+                        
+                        const rawVal = pipWindow.document.getElementById("pip-raw-ad").value;
+                        logAdToBackend(rawVal, textVal, "rejected");
                     });
                 });
+            }
+
+            // Bind Hit History Overlay elements
+            const pipBtnHistory = pipWindow.document.getElementById("pip-btn-history");
+            const pipHistoryOverlay = pipWindow.document.getElementById("pip-history-overlay");
+            const pipBtnRefreshHistory = pipWindow.document.getElementById("pip-btn-refresh-history");
+            const pipBtnCloseHistory = pipWindow.document.getElementById("pip-btn-close-history");
+            const pipHistoryList = pipWindow.document.getElementById("pip-history-list");
+
+            const loadPipHistory = () => {
+                if (!pipHistoryList) return;
+                pipHistoryList.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 11px;"><i class="fa-solid fa-sync fa-spin"></i> Loading history...</div>`;
+                
+                if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                    pipHistoryList.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 11px;">Server URL not configured.</div>`;
+                    return;
+                }
+
+                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "get_history", limit: 30 })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        const history = data.history || [];
+                        if (history.length === 0) {
+                            pipHistoryList.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 11px;">No history records found.</div>`;
+                            return;
+                        }
+                        
+                        pipHistoryList.innerHTML = "";
+                        history.forEach(item => {
+                            const card = pipWindow.document.createElement("div");
+                            card.style.background = "rgba(255,255,255,0.03)";
+                            card.style.border = "1px solid var(--border-color)";
+                            card.style.borderRadius = "6px";
+                            card.style.padding = "8px";
+                            card.style.fontSize = "10.5px";
+                            card.style.position = "relative";
+                            card.style.marginBottom = "8px";
+                            
+                            const nameDisplay = `${item.firstname} ${item.lastname}`.trim() || "Unknown";
+                            card.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: rgba(255,255,255,0.4); font-size: 9px;">
+                                    <span><strong>${nameDisplay}</strong> (${item.id})</span>
+                                    <span>${item.timestamp}</span>
+                                </div>
+                                <div style="color: var(--text-secondary); margin-bottom: 6px; white-space: pre-wrap; font-style: italic; max-height: 40px; overflow-y: auto;">Raw: ${item.rawInput}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px;">
+                                    <div style="color: #4ade80; font-family: monospace; font-weight: 600; flex: 1; word-break: break-all;">${item.finalAd}</div>
+                                    <button class="pip-btn-copy-history" data-text="${encodeURIComponent(item.finalAd)}" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 3px 6px; font-size: 9px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 2px; font-family: 'Outfit', sans-serif;">
+                                        <i class="fa-solid fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                            `;
+                            
+                            card.style.cursor = "pointer";
+                            card.title = "Click to copy formatted ad";
+                            
+                            const btnCopyHist = card.querySelector(".pip-btn-copy-history");
+                            const copyCardHandler = () => {
+                                const valToCopy = item.finalAd;
+                                pipWindow.navigator.clipboard.writeText(valToCopy).then(() => {
+                                    const originalBg = card.style.background;
+                                    card.style.background = "rgba(34, 197, 94, 0.2)";
+                                    if (btnCopyHist) {
+                                        btnCopyHist.textContent = "Copied!";
+                                        btnCopyHist.style.backgroundColor = "#22c55e";
+                                    }
+                                    setTimeout(() => {
+                                        card.style.background = originalBg;
+                                        if (btnCopyHist) {
+                                            btnCopyHist.innerHTML = `<i class="fa-solid fa-copy"></i> Copy`;
+                                            btnCopyHist.style.backgroundColor = "rgba(255,255,255,0.1)";
+                                        }
+                                    }, 1500);
+                                });
+                            };
+                            
+                            card.addEventListener("click", copyCardHandler);
+                            
+                            pipHistoryList.appendChild(card);
+                        });
+                    } else {
+                        pipHistoryList.innerHTML = `<div style="text-align: center; color: #f87171; padding: 20px; font-size: 11px;">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Error loading PiP history:", err);
+                    pipHistoryList.innerHTML = `<div style="text-align: center; color: #f87171; padding: 20px; font-size: 11px;">Network error loading history.</div>`;
+                });
+            };
+
+            if (pipBtnHistory) {
+                pipBtnHistory.addEventListener("click", () => {
+                    if (pipHistoryOverlay) {
+                        pipHistoryOverlay.classList.remove("hide");
+                        loadPipHistory();
+                    }
+                });
+            }
+
+            if (pipBtnCloseHistory) {
+                pipBtnCloseHistory.addEventListener("click", () => {
+                    if (pipHistoryOverlay) {
+                        pipHistoryOverlay.classList.add("hide");
+                    }
+                });
+            }
+
+            if (pipBtnRefreshHistory) {
+                pipBtnRefreshHistory.addEventListener("click", loadPipHistory);
             }
 
             // Listen for changes in the main window to update PiP display
@@ -6509,6 +6657,204 @@ function renderCustomTemplates() {
         tr.appendChild(tdAction);
         
         tbody.appendChild(tr);
+    });
+}
+
+function showHistoryToast(message) {
+    let container = document.getElementById("history-toast-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "history-toast-container";
+        container.style.position = "fixed";
+        container.style.bottom = "20px";
+        container.style.right = "20px";
+        container.style.zIndex = "9999";
+        container.style.display = "flex";
+        container.style.flexDirection = "column";
+        container.style.gap = "10px";
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement("div");
+    toast.style.background = "rgba(18, 18, 20, 0.95)";
+    toast.style.border = "1px solid #22c55e";
+    toast.style.color = "white";
+    toast.style.padding = "10px 20px";
+    toast.style.borderRadius = "8px";
+    toast.style.fontFamily = "'Outfit', sans-serif";
+    toast.style.fontSize = "13px";
+    toast.style.fontWeight = "600";
+    toast.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.5)";
+    toast.style.display = "flex";
+    toast.style.alignItems = "center";
+    toast.style.gap = "8px";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(20px)";
+    toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+    
+    toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+    
+    // Trigger transition
+    setTimeout(() => {
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+    }, 10);
+    
+    // Auto dismiss after 2.5s
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-20px)";
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 2500);
+}
+
+function logAdToBackend(rawInput, finalAd, status) {
+    if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    const firstname = localStorage.getItem("li_request_firstname") || "Guest";
+    const lastname = localStorage.getItem("li_request_lastname") || "Editor";
+    const server = localStorage.getItem("li_request_server") || "EN3";
+    const id = localStorage.getItem("li_request_id") || "Unknown";
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "log_ad",
+            firstname: firstname,
+            lastname: lastname,
+            server: server,
+            id: id,
+            rawInput: rawInput,
+            finalAd: finalAd,
+            status: status
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status !== "success") {
+            console.error("Failed to log ad to backend sheet:", data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Network error logging ad:", err);
+    });
+}
+
+function refreshMainHistory() {
+    const tbody = document.getElementById("history-table-body");
+    if (!tbody) return;
+    
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;"><i class="fa-solid fa-sync fa-spin"></i> Loading history...</td></tr>`;
+    
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Server URL not configured.</td></tr>`;
+        return;
+    }
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "get_history", limit: 50 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            const history = data.history || [];
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">No history records found.</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = "";
+            history.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.style.cursor = "pointer";
+                tr.title = "Click to copy formatted ad";
+                tr.className = "history-row-item";
+                
+                const tdTime = document.createElement("td");
+                tdTime.textContent = item.timestamp || "";
+                tr.appendChild(tdTime);
+                
+                const tdEditor = document.createElement("td");
+                const nameDisplay = `${item.firstname} ${item.lastname}`.trim();
+                tdEditor.textContent = nameDisplay || "Unknown";
+                tr.appendChild(tdEditor);
+                
+                const tdId = document.createElement("td");
+                tdId.textContent = item.id || "";
+                tr.appendChild(tdId);
+                
+                const tdRaw = document.createElement("td");
+                tdRaw.textContent = item.rawInput || "";
+                tdRaw.style.maxWidth = "200px";
+                tdRaw.style.overflow = "hidden";
+                tdRaw.style.textOverflow = "ellipsis";
+                tdRaw.style.whiteSpace = "nowrap";
+                tdRaw.title = item.rawInput || "";
+                tr.appendChild(tdRaw);
+                
+                const tdFinal = document.createElement("td");
+                tdFinal.textContent = item.finalAd || "";
+                tdFinal.style.maxWidth = "250px";
+                tdFinal.style.overflow = "hidden";
+                tdFinal.style.textOverflow = "ellipsis";
+                tdFinal.style.whiteSpace = "nowrap";
+                tdFinal.title = item.finalAd || "";
+                tdFinal.style.color = "#4ade80";
+                tdFinal.style.fontWeight = "600";
+                tr.appendChild(tdFinal);
+                
+                const tdStatus = document.createElement("td");
+                tdStatus.style.textAlign = "center";
+                const statusSpan = document.createElement("span");
+                statusSpan.style.padding = "2px 6px";
+                statusSpan.style.borderRadius = "4px";
+                statusSpan.style.fontSize = "10px";
+                statusSpan.style.fontWeight = "600";
+                
+                if (item.status === "passed") {
+                    statusSpan.style.background = "rgba(74, 222, 128, 0.1)";
+                    statusSpan.style.color = "#4ade80";
+                    statusSpan.textContent = "PASSED";
+                } else if (item.status === "rejected") {
+                    statusSpan.style.background = "rgba(248, 113, 113, 0.1)";
+                    statusSpan.style.color = "#f87171";
+                    statusSpan.textContent = "REJECTED";
+                } else {
+                    statusSpan.style.background = "rgba(255, 255, 255, 0.1)";
+                    statusSpan.style.color = "var(--text-secondary)";
+                    statusSpan.textContent = (item.status || "UNKNOWN").toUpperCase();
+                }
+                tdStatus.appendChild(statusSpan);
+                tr.appendChild(tdStatus);
+                
+                tr.addEventListener("click", () => {
+                    navigator.clipboard.writeText(item.finalAd || "").then(() => {
+                        const originalBg = tr.style.background;
+                        tr.style.background = "rgba(34, 197, 94, 0.2)";
+                        showHistoryToast("Copied to clipboard!");
+                        setTimeout(() => {
+                            tr.style.background = originalBg;
+                        }, 1000);
+                    }).catch(err => {
+                        console.error("Failed to copy:", err);
+                    });
+                });
+                
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #f87171; padding: 20px;">Error: ${data.message}</td></tr>`;
+        }
+    })
+    .catch(err => {
+        console.error("Error fetching history:", err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #f87171; padding: 20px;">Network error loading history.</td></tr>`;
     });
 }
 

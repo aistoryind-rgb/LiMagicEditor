@@ -861,7 +861,7 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 24 22:20:24";
+const BUILD_TIMESTAMP = "2026 May 24 22:41:40";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5476,6 +5476,26 @@ function initFloatingClipboard() {
             });
             pipWindowInstance = pipWindow;
 
+            // Toggle main window overlay to hide content and keep only the overlay visible
+            const mainContainer = document.querySelector(".app-container");
+            const pipOverlay = document.getElementById("pip-active-overlay");
+            if (mainContainer && pipOverlay) {
+                mainContainer.classList.add("hide");
+                pipOverlay.classList.remove("hide");
+            }
+
+            // Bind Return to Main button on the overlay
+            const btnRestore = document.getElementById("btn-restore-main");
+            if (btnRestore) {
+                const newBtnRestore = btnRestore.cloneNode(true);
+                btnRestore.parentNode.replaceChild(newBtnRestore, btnRestore);
+                newBtnRestore.addEventListener("click", () => {
+                    if (pipWindowInstance) {
+                        pipWindowInstance.close();
+                    }
+                });
+            }
+
             // Copy stylesheets from main window
             [...document.styleSheets].forEach((styleSheet) => {
                 try {
@@ -5519,7 +5539,7 @@ function initFloatingClipboard() {
                         <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
                             <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
                                 <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 22:20</span>
+                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 22:41</span>
                             </div>
                             <button class="pip-close-btn" id="pip-close-btn" title="Close Clipboard"><i class="fa-solid fa-xmark"></i></button>
                         </div>
@@ -5762,6 +5782,12 @@ function initFloatingClipboard() {
             pipWindow.addEventListener("unload", () => {
                 pipWindowInstance = null;
                 mainObserver.disconnect();
+                
+                // Restore main window content view
+                if (mainContainer && pipOverlay) {
+                    mainContainer.classList.remove("hide");
+                    pipOverlay.classList.add("hide");
+                }
             });
 
         } catch (error) {

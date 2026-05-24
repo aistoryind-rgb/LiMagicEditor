@@ -4620,6 +4620,26 @@ function initFloatingClipboard() {
             });
             pipWindowInstance = pipWindow;
 
+            // Toggle main window overlay to hide content and keep only the overlay visible
+            const mainContainer = document.querySelector(".app-container");
+            const pipOverlay = document.getElementById("pip-active-overlay");
+            if (mainContainer && pipOverlay) {
+                mainContainer.classList.add("hide");
+                pipOverlay.classList.remove("hide");
+            }
+
+            // Bind Return to Main button on the overlay
+            const btnRestore = document.getElementById("btn-restore-main");
+            if (btnRestore) {
+                const newBtnRestore = btnRestore.cloneNode(true);
+                btnRestore.parentNode.replaceChild(newBtnRestore, btnRestore);
+                newBtnRestore.addEventListener("click", () => {
+                    if (pipWindowInstance) {
+                        pipWindowInstance.close();
+                    }
+                });
+            }
+
             // Copy stylesheets from main window
             [...document.styleSheets].forEach((styleSheet) => {
                 try {
@@ -4906,6 +4926,12 @@ function initFloatingClipboard() {
             pipWindow.addEventListener("unload", () => {
                 pipWindowInstance = null;
                 mainObserver.disconnect();
+                
+                // Restore main window content view
+                if (mainContainer && pipOverlay) {
+                    mainContainer.classList.remove("hide");
+                    pipOverlay.classList.add("hide");
+                }
             });
 
         } catch (error) {

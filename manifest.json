@@ -4,6 +4,7 @@
   "description": "Official Internal Advertisement Policy Processing & Verification system for GRP EN3.",
   "start_url": "./index.html",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#0a0b10",
   "theme_color": "#ff7700",
   "orientation": "any",

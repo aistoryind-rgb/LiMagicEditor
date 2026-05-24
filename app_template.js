@@ -1829,7 +1829,8 @@ function runValidationPipeline(ctx, override) {
     let pricePart = "";
     // Suppress price/budget label when category is Dating, Services, Discounts, when the raw text contains "beach market" / "beach markit", or when it is a party/wedding/car meet event.
     const lowerRaw = ctx.raw.toLowerCase();
-    const isBeachMarket = /beach\s*mar[kt]et/i.test(lowerRaw) || lowerRaw.includes("beach markit");
+    const isBeachMarket = (/beach\s*mar[kt]et/i.test(lowerRaw) || lowerRaw.includes("beach markit")) && 
+                          !(["Real Estate", "Auto", "Businesses"].includes(ctx.category) && ctx.isNegotiable);
     const isEventAd = /^(?:pool\s+)?party\b/i.test(lowerRaw) || 
                       /^(?:wedding|car\s+meet)\b/i.test(lowerRaw) || 
                       /\b(?:party|wedding|car\s+meet)\s+at\b/i.test(lowerRaw);
@@ -2421,6 +2422,7 @@ function parsePriceAndBudget(text, action, ctx) {
         isNegotiable = true;
         ctx.priceMatches.push(negoMatch[0]);
     }
+    ctx.isNegotiable = isNegotiable;
     
     // Sequential price matches
     const regexes = [
@@ -2596,6 +2598,16 @@ function parsePriceAndBudget(text, action, ctx) {
             cleanItem = cleanItem.replace(/\b(?:price|budget|rent|bet|cost|cash)\b/gi, "").trim();
             cleanItem = cleanItem.replace(/^[^\w"'()\s]+|[^\w"'()\s]+$/g, "").replace(/\s+/g, " ").trim();
             
+            const isExplicitPlural = lower.includes("bulk") || 
+                                     lower.includes("in bulk") || 
+                                     (parseQuantity(text) && parseQuantity(text) > 1);
+            if (isExplicitPlural) return true;
+
+            // Gloves, shoes, masks, etc. are conceptually singular/pairs and do not get 'each' unless explicitly pluralized
+            if (matchClothingItem(cleanItem) || /\b(?:shoes|gloves|masks|glasses|pants|trousers|jeans|shorts|dress|dresses|hoodie|hoodies|boots|sneakers|caps|hats|socks)\b/i.test(cleanItem)) {
+                return false;
+            }
+
             const isPluralWord = (cleanItem.endsWith("s") && 
                                   !cleanItem.endsWith("ss") && 
                                   !cleanItem.endsWith("is") && 
@@ -2611,7 +2623,7 @@ function parsePriceAndBudget(text, action, ctx) {
             return lower.includes("bulk") || 
                    lower.includes("in bulk") || 
                    (parseQuantity(text) && parseQuantity(text) > 1) ||
-                   /\b(?:seeds|timber|tickets|juices|batteries|wires|threads|tokens|canisters|barrels|shoes|gloves|materials|ores|cards|masks|items|keys|snow)\b/i.test(cleanItem) ||
+                   /\b(?:seeds|timber|tickets|juices|batteries|wires|threads|tokens|canisters|barrels|materials|ores|cards|items|keys|snow)\b/i.test(cleanItem) ||
                    isPluralWord;
         })();
         if (lower.includes("each respectively") || lower.includes("each") || isPluralOther) {
@@ -2644,6 +2656,16 @@ function parsePriceAndBudget(text, action, ctx) {
             cleanItem = cleanItem.replace(/\b(?:price|budget|rent|bet|cost|cash)\b/gi, "").trim();
             cleanItem = cleanItem.replace(/^[^\w"'()\s]+|[^\w"'()\s]+$/g, "").replace(/\s+/g, " ").trim();
             
+            const isExplicitPlural = lower.includes("bulk") || 
+                                     lower.includes("in bulk") || 
+                                     (parseQuantity(text) && parseQuantity(text) > 1);
+            if (isExplicitPlural) return true;
+
+            // Gloves, shoes, masks, etc. are conceptually singular/pairs and do not get 'each' unless explicitly pluralized
+            if (matchClothingItem(cleanItem) || /\b(?:shoes|gloves|masks|glasses|pants|trousers|jeans|shorts|dress|dresses|hoodie|hoodies|boots|sneakers|caps|hats|socks)\b/i.test(cleanItem)) {
+                return false;
+            }
+
             const isPluralWord = (cleanItem.endsWith("s") && 
                                   !cleanItem.endsWith("ss") && 
                                   !cleanItem.endsWith("is") && 
@@ -2659,7 +2681,7 @@ function parsePriceAndBudget(text, action, ctx) {
             return lower.includes("bulk") || 
                    lower.includes("in bulk") || 
                    (parseQuantity(text) && parseQuantity(text) > 1) ||
-                   /\b(?:seeds|timber|tickets|juices|batteries|wires|threads|tokens|canisters|barrels|shoes|gloves|materials|ores|cards|masks|items|keys|snow)\b/i.test(cleanItem) ||
+                   /\b(?:seeds|timber|tickets|juices|batteries|wires|threads|tokens|canisters|barrels|materials|ores|cards|items|keys|snow)\b/i.test(cleanItem) ||
                    isPluralWord;
         })();
         if (/\beach\b/i.test(lower) || isPluralOther) {
@@ -3911,7 +3933,7 @@ function parseType(text) {
 function parseGender(text) {
     const lower = text.toLowerCase();
     if (lower.includes("for men") || lower.includes("for man") || lower.includes("male") || /\bmens?\b/i.test(lower) || /\bmen's\b/i.test(lower)) return "for men";
-    if (lower.includes("for women") || lower.includes("for woman") || lower.includes("female") || /\bwomens?\b/i.test(lower) || /\bwomen's\b/i.test(lower)) return "for woman";
+    if (lower.includes("for women") || lower.includes("for woman") || lower.includes("female") || /\bwomens?\b/i.test(lower) || /\bwomen's\b/i.test(lower)) return "for women";
     return null;
 }
 

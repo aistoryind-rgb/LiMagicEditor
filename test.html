@@ -77,9 +77,9 @@
           { name: "49. obsidian each price prefix", raw: "selling obsidian each 6000", expected: "Selling obsidian. Price: $6.000 each." },
           { name: "50. obsidian in bulk each", raw: "selling obsidian in bulk 6000 each", expected: "Selling obsidian in bulk. Price: $6.000 each." },
           { name: "51. various items beach market shop no5", raw: "Selling various items at beach market shop no5", expected: "Selling various items at the beach market shop №5." },
-          { name: "52. red gloves for women", raw: "selling red gloves for women price 500k", expected: "Selling red gloves for woman. Price: $500.000 each." },
+          { name: "52. red gloves for women", raw: "selling red gloves for women price 500k", expected: "Selling red gloves for women. Price: $500.000" },
           { name: "53. buy white snowboarders mask", raw: "BUY white snowboarders mask BUD 500k", expected: "Buying white snowboarders mask. Budget: $500.000" },
-          { name: "54. buy purple gloves for women", raw: "BUY PURPLE gloves for women BUD 500k", expected: "Buying purple gloves for woman. Budget: $500.000 each." },
+          { name: "54. buy purple gloves for women", raw: "BUY PURPLE gloves for women BUD 500k", expected: "Buying purple gloves for women. Budget: $500.000" },
           { name: "55. selling or trading Truffade Chiron", raw: "selling or trading Truffade Chiron", expected: 'Selling or trading "Truffade Chiron". Price: Negotiable.' },
           { name: "56. house num shorthand", raw: "renting house num 100 near the beach market", expected: "Renting out house №100 near the beach market." },
           { name: "57. business with number", raw: "selling parking 18", expected: "Selling Parking №18. Price: Negotiable." },
@@ -107,8 +107,8 @@
           { name: "79. selling bataris in balk buget nego", raw: "selling bataris in balk buget nego", expected: "Selling batteries in bulk. Price: Negotiable." },
           { name: "80. selling red mens gloves price nego", raw: "selling red mens gloves price nego", expected: "Selling red gloves for men. Price: Negotiable." },
           { name: "81. look frainds (dating)", raw: "look frainds", expected: "Looking for a friend." },
-          { name: "82. social hoodie for women", raw: "social hoodie for women", expected: "Selling Social Club hoodie for woman. Price: Negotiable." },
-          { name: "83. buyong social hoodie for women", raw: "buyong social hoodie for women", expected: "Buying Social Club hoodie for woman. Budget: Negotiable." },
+          { name: "82. social hoodie for women", raw: "social hoodie for women", expected: "Selling Social Club hoodie for women. Price: Negotiable." },
+          { name: "83. buyong social hoodie for women", raw: "buyong social hoodie for women", expected: "Buying Social Club hoodie for women. Budget: Negotiable." },
           { name: "84. buyong 20 top quality mettal 200k each", raw: "buyong 20 top quality mettal 200k each", expected: "Buying 20 top quality metal. Budget: $200.000 each." },
           { name: "85. buy rp tick", raw: "buy rp tick", expected: "Buying a Grand ticket. Budget: Negotiable." },
           { name: "86. sell haus with 25 grage", raw: "sell haus with 25 grage", expected: "Selling a house with 25 g.s. Price: Negotiable." },
@@ -212,7 +212,7 @@
           { name: "184. Volex watch wildcard match with bare number", raw: "selling Volex 2", expected: "Selling Volex watch of type 2. Price: Negotiable." },
           { name: "185. Kolex watch wildcard match with type keyword", raw: "buying Kolex type 5", expected: "Buying Kolex watch of type 5. Budget: Negotiable." },
           { name: "186. Volex watch wildcard match with color and price", raw: "selling black Volex watch 4 for 100k", expected: "Selling black Volex watch of type 4. Price: $100.000" },
-          { name: "187. Selling purple gloves for woman", raw: "Selling purple gloves for woman price negotiable", expected: "Selling purple gloves for woman. Price: Negotiable." },
+          { name: "187. Selling purple gloves for woman", raw: "Selling purple gloves for woman price negotiable", expected: "Selling purple gloves for women. Price: Negotiable." },
           { name: "188. 10 and 20% juice", raw: "selling 10 and 20% juice price negotiable", expected: "Selling 10% and 20% juices in bulk. Price: Negotiable." },
           { name: "189. selling 10 and 20 % juices", raw: "selling 10 and 20 % juices", expected: "Selling 10% and 20% juices in bulk. Price: Negotiable." },
           { name: "190. selling 5 Batteys 40k each", raw: "selling 5 Batteys 40k each", expected: "Selling 5 batteries. Price: $40.000 each." },
@@ -223,7 +223,8 @@
           { name: "195. Buying wife", raw: "buying wife", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
           { name: "196. Buying gf", raw: "buying gf", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
           { name: "197. Looking for wife budget 100k", raw: "looking for wife budget 100k", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
-          { name: "198. Looking for wife (should pass)", raw: "looking for wife", expected: "Looking for a wife." }
+          { name: "198. Looking for wife (should pass)", raw: "looking for wife", expected: "Looking for a wife." },
+          { name: "199. Real Estate beach market price negotiable", raw: "selling apartment near beach market price negotiable", expected: "Selling an apartment near the beach market. Price: Negotiable." }
         ];
 
         // Mock custom spelling and templates for the unit tests

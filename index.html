@@ -406,21 +406,47 @@
                         
                         <div class="bug-report-form">
                             <form id="form-bug-report">
-                                <div class="form-row">
-                                    <div class="form-group col-12">
-                                        <label for="bug-category">Issue Category</label>
-                                        <select id="bug-category" required>
-                                            <option value="Spelling error">Spelling error / Typo</option>
-                                            <option value="Incorrect rule/mapping">Incorrect policy rule / mapping</option>
-                                            <option value="Missing item/vehicle">Missing vehicle / item database entry</option>
-                                            <option value="Visual interface bug">Visual interface bug</option>
-                                            <option value="Other">Other</option>
-                                        </select>
+                                <div class="form-row bug-top-row">
+                                    <div class="form-group col-6">
+                                        <label>Issue Category</label>
+                                        <div id="bug-category-selector" class="category-options-box">
+                                            <div class="category-option active" data-value="Spelling error">
+                                                <i class="fa-solid fa-font"></i>
+                                                <span>Spelling error / Typo</span>
+                                            </div>
+                                            <div class="category-option" data-value="Category mismatch">
+                                                <i class="fa-solid fa-tags"></i>
+                                                <span>Category detection issue</span>
+                                            </div>
+                                            <div class="category-option" data-value="Type mismatch">
+                                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                                <span>Type mismatch (Ad type)</span>
+                                            </div>
+                                            <div class="category-option" data-value="Incorrect rule/mapping">
+                                                <i class="fa-solid fa-circle-exclamation"></i>
+                                                <span>Incorrect policy rule / mapping</span>
+                                            </div>
+                                            <div class="category-option" data-value="Missing vehicle">
+                                                <i class="fa-solid fa-car"></i>
+                                                <span>Missing vehicle name</span>
+                                            </div>
+                                            <div class="category-option" data-value="Missing item">
+                                                <i class="fa-solid fa-database"></i>
+                                                <span>Missing item database entry</span>
+                                            </div>
+                                            <div class="category-option" data-value="Visual interface bug">
+                                                <i class="fa-solid fa-eye"></i>
+                                                <span>Visual interface bug</span>
+                                            </div>
+                                            <div class="category-option" data-value="Other">
+                                                <i class="fa-solid fa-ellipsis"></i>
+                                                <span>Other issue / Suggestion</span>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="bug-category" value="Spelling error" required>
                                     </div>
-                                </div>
-                                
-                                <div class="form-row" style="margin-top: 15px;">
-                                    <div class="form-group col-12">
+                                    <div class="form-group col-6">
+                                        <label>Screenshot Upload (Optional)</label>
                                         <input type="file" id="bug-screenshot-file" accept="image/*" style="display: none;">
                                         <div class="drag-drop-zone" id="bug-drag-drop-zone">
                                             <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>

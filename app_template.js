@@ -5523,6 +5523,19 @@ function initBugReport() {
     
     if (!form) return;
     
+    // Visual category options list selector
+    const categorySelector = document.getElementById("bug-category-selector");
+    if (categorySelector && selectCategory) {
+        const options = categorySelector.querySelectorAll(".category-option");
+        options.forEach(opt => {
+            opt.addEventListener("click", () => {
+                options.forEach(o => o.classList.remove("active"));
+                opt.classList.add("active");
+                selectCategory.value = opt.getAttribute("data-value");
+            });
+        });
+    }
+    
     if (fileInput) {
         fileInput.addEventListener("change", (e) => {
             handleFileSelect(e.target.files);

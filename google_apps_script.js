@@ -28,8 +28,8 @@ const ADMIN_EMAIL = "curiocityinternational@gmail.com";
 const GOOGLE_DRIVE_FOLDER_ID = "1FmlgmnWwVDt6AShp_KnCWb8gyg-lh3U9";
 const APPROVE_SALT = "DopamineLifeInvader2026!NewApprovalKey_Revoked_2026_05_24";
 
-function generateApprovalSignature(server, id) {
-  const data = `${server.toLowerCase().trim()}:${id.toString().trim()}:${APPROVE_SALT}`;
+function generateApprovalSignature(server, id, clientUuid) {
+  const data = `${server.toLowerCase().trim()}:${id.toString().trim()}:${(clientUuid || "").toString().trim()}:${APPROVE_SALT}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < data.length; i++) {
     hash ^= data.charCodeAt(i);
@@ -137,9 +137,10 @@ function handleAccessRequest(data, headers) {
   const email = data.email || "";
   const server = data.server || "EN3";
   const id = data.id || "Unknown";
+  const clientUuid = data.clientUuid || "";
   const timestamp = new Date().toLocaleString();
   
-  const approveSig = generateApprovalSignature(server, id);
+  const approveSig = generateApprovalSignature(server, id, clientUuid);
   const approvalKey = `LI-APPROVED-${server}-${id}-${approveSig}`;
   
   const nameDisplay = (firstname || lastname) ? `${firstname} ${lastname}`.trim() : (data.name || "Unknown");
@@ -193,7 +194,8 @@ function handleValidateKey(data, headers) {
     const server = parts[2];
     const id = parts[3];
     const sig = parts[4];
-    const expectedSig = generateApprovalSignature(server, id);
+    const clientUuid = data.clientUuid || "";
+    const expectedSig = generateApprovalSignature(server, id, clientUuid);
     
     if (sig === expectedSig) {
       return ContentService.createTextOutput(JSON.stringify({

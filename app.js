@@ -861,7 +861,7 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 24 19:00:37";
+const BUILD_TIMESTAMP = "2026 May 24 21:42:34";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5490,7 +5490,7 @@ function initFloatingClipboard() {
                         <div class="pip-header-right" style="display: flex; align-items: center; gap: 8px;">
                             <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
                                 <span class="pip-created-by" style="font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap;">Created by Dopamine</span>
-                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 19:00</span>
+                                <span class="pip-last-updated" style="font-size: 8px; color: rgba(255,255,255,0.25); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Updated: May 24 21:42</span>
                             </div>
                             <button class="pip-close-btn" id="pip-close-btn" title="Close Clipboard"><i class="fa-solid fa-xmark"></i></button>
                         </div>
@@ -5751,6 +5751,20 @@ const CONFIG = {
 };
 
 
+function getOrCreateClientUuid() {
+    let uuid = localStorage.getItem("li_client_uuid");
+    if (!uuid) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let temp = "";
+        for (let i = 0; i < 16; i++) {
+            temp += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        uuid = temp;
+        localStorage.setItem("li_client_uuid", uuid);
+    }
+    return uuid;
+}
+
 function initAccessGate() {
     const gate = document.getElementById("access-gate");
     const screenRequest = document.getElementById("access-screen-request");
@@ -5806,7 +5820,8 @@ function initAccessGate() {
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify({
                     action: "validate_key",
-                    approvalKey: savedToken
+                    approvalKey: savedToken,
+                    clientUuid: getOrCreateClientUuid()
                 })
             })
             .then(r => r.json())
@@ -5895,7 +5910,8 @@ function initAccessGate() {
                         lastname: lastname,
                         email: email,
                         server: server,
-                        id: id
+                        id: id,
+                        clientUuid: getOrCreateClientUuid()
                     })
                 })
                 .then(() => {
@@ -5946,7 +5962,8 @@ function initAccessGate() {
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify({
                     action: "validate_key",
-                    approvalKey: code
+                    approvalKey: code,
+                    clientUuid: getOrCreateClientUuid()
                 })
             })
             .then(r => r.json())

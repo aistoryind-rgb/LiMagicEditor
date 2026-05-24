@@ -4895,6 +4895,20 @@ const CONFIG = {
 };
 
 
+function getOrCreateClientUuid() {
+    let uuid = localStorage.getItem("li_client_uuid");
+    if (!uuid) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let temp = "";
+        for (let i = 0; i < 16; i++) {
+            temp += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        uuid = temp;
+        localStorage.setItem("li_client_uuid", uuid);
+    }
+    return uuid;
+}
+
 function initAccessGate() {
     const gate = document.getElementById("access-gate");
     const screenRequest = document.getElementById("access-screen-request");
@@ -4950,7 +4964,8 @@ function initAccessGate() {
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify({
                     action: "validate_key",
-                    approvalKey: savedToken
+                    approvalKey: savedToken,
+                    clientUuid: getOrCreateClientUuid()
                 })
             })
             .then(r => r.json())
@@ -5039,7 +5054,8 @@ function initAccessGate() {
                         lastname: lastname,
                         email: email,
                         server: server,
-                        id: id
+                        id: id,
+                        clientUuid: getOrCreateClientUuid()
                     })
                 })
                 .then(() => {
@@ -5090,7 +5106,8 @@ function initAccessGate() {
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify({
                     action: "validate_key",
-                    approvalKey: code
+                    approvalKey: code,
+                    clientUuid: getOrCreateClientUuid()
                 })
             })
             .then(r => r.json())

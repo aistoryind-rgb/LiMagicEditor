@@ -2261,6 +2261,34 @@ function detectCategory(text) {
     }
     
     // 1. Dating Check
+    // Person search check: e.g. "looking for Max Dopamine"
+    const personMatch = lower.match(/\b(?:looking for|searching for|look for|search for|looking|searching|look|search)\s+([a-z]+)\s+([a-z]+)\b/i);
+    if (personMatch) {
+        const pName = personMatch[1] + " " + personMatch[2];
+        const isVeh = matchVehicle(pName);
+        const isCloth = matchClothingItem(pName);
+        const isService = /\b(?:lawyer|driver|dancer|singer|dj|worker|workers|physician|doctor|mechanic|bodyguard|employee|employees|cop|cops|police|officer|officers|admin|assistant|assistants|mediator|mediators)\b/i.test(pName);
+        const otherKeywordsList = [
+            "ticket", "tcket", "tikcet", "tckets", "tikets", "juice", "battery", "batteries", "metal", "mask", "pet", "shoulder", 
+            "fox", "cat", "dog", "drill", "sawmill", "pickaxe", "hookah", "sponge", "timber",
+            "copper", "emerald", "ruby", "diamond", "obsidian", "magma stone", "thread", "token",
+            "tonic treat", "map", "wire", "plate", "container", "containers", "fuel",
+            "party", "wedding", "car meet", "prime", "platinum", "plat",
+            "salmon", "carp", "perch", "trout", "megalodon", "ray", "orca", "whale",
+            "tuning", "suspension", "transmission", "brakes", "tires",
+            "inventory", "inventry", "inventories", "booster", "shot", "shots",
+            "rod", "rods", "case", "cases", "crate", "crates",
+            "sim", "sim card", "sim cards", "card", "cards", "biospark", "biosparks"
+        ];
+        const isOtherKw = otherKeywordsList.some(keyword => pName.includes(keyword));
+        const isExcluded = isVeh || isCloth || isService || isOtherKw ||
+            /\b(?:house|apartment|mansion|penthouse|garage|spaces|warehouse|helipad|gps|temp|template|discount|off|%|biz|business|store|shop|station|wash|sharing|tuning|club|salon|studio|company|cowshed|train|plantation|well|atm)\b/i.test(pName);
+        
+        if (!isExcluded) {
+            return "Dating";
+        }
+    }
+
     const isDatingSearch = /\b(look|looking|search|searching|want|find|finding)\b/i.test(lower);
     const hasDatingTarget = /\b(wife|girlfriend|boyfriend|husband|valentine|date|spouse|soulmate|alliance)\b/i.test(lower) || 
                             (/\b(friend|friends|family|family\s+members)\b/i.test(lower) && /\b(look|looking|search|searching)\b/i.test(lower));

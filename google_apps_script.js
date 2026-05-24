@@ -26,7 +26,7 @@
 
 const ADMIN_EMAIL = "curiocityinternational@gmail.com";
 const GOOGLE_DRIVE_FOLDER_ID = "1FmlgmnWwVDt6AShp_KnCWb8gyg-lh3U9";
-const APPROVE_SALT = "DopamineLifeInvader2026!ApprovalKey";
+const APPROVE_SALT = "DopamineLifeInvader2026!NewApprovalKey_Revoked_2026_05_24";
 
 function generateApprovalSignature(server, id) {
   const data = `${server.toLowerCase().trim()}:${id.toString().trim()}:${APPROVE_SALT}`;

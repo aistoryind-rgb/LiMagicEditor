@@ -532,6 +532,7 @@ function correctSpelling(text, ctx) {
         "juguler": "jugular",
         "engen": "engine",
         "transmision": "transmission",
+        "transmition": "transmission",
         "transmisin": "transmission",
         "bataris": "batteries",
         "balk": "bulk",
@@ -740,7 +741,11 @@ function matchVehicle(inputText) {
         }
     }
     
-    const cleanInput = mapVehicleBrands(inputText.trim().toLowerCase().replace(/['"“”]/g, ''));
+    const actionPrefixes = /^(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(?:a\s+|an\s+)?/i;
+    const actionSuffixes = /\s+(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i;
+    
+    let cleanInput = mapVehicleBrands(inputText.trim().toLowerCase().replace(/['"“”]/g, ''));
+    cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     
     // Shortcuts
     if (/\b(?:skyline|r34)\b/i.test(cleanInput)) {
@@ -896,7 +901,11 @@ function matchClothingItem(inputText) {
         }
     }
     
+    const actionPrefixes = /^(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(?:a\s+|an\s+)?/i;
+    const actionSuffixes = /\s+(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i;
+    
     let cleanInput = mapClothingBrands(inputText.trim().toLowerCase().replace(/__has_each__/g, ""));
+    cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     
     // Detect gender specified in input
     const hasMaleGender = /\b(?:for\s+men|for\s+man|male|mens?|men's)\b/i.test(inputText);
@@ -1741,8 +1750,12 @@ function runValidationPipeline(ctx, override) {
                 patterns: [/\brenting\b/i, /\brent\b/i]
             },
             {
+                action: "Looking for",
+                patterns: [/\blooking for\b/i, /\blook for\b/i, /\bsearching for\b/i, /\bsearch for\b/i]
+            },
+            {
                 action: "Buying",
-                patterns: [/\bbuying\b/i, /\blook for\b/i, /\blooking to buy\b/i, /\blooking to purchase\b/i, /\bbuy\b/i, /\bwant to buy\b/i, /\bwtb\b/i]
+                patterns: [/\bbuying\b/i, /\blooking to buy\b/i, /\blooking to purchase\b/i, /\bbuy\b/i, /\bwant to buy\b/i, /\bwtb\b/i]
             },
             {
                 action: "Trading",
@@ -1870,7 +1883,7 @@ function runValidationPipeline(ctx, override) {
     const isEventAd = /^(?:pool\s+)?party\b/i.test(lowerRaw) || 
                       /^(?:wedding|car\s+meet)\b/i.test(lowerRaw) || 
                       /\b(?:party|wedding|car\s+meet)\s+at\b/i.test(lowerRaw);
-    const suppressPriceLabel = ["Dating", "Services", "Discounts"].includes(ctx.category) || isBeachMarket || isEventAd || ctx.isOwnerSearch || action === "Trading";
+    const suppressPriceLabel = ["Dating", "Services", "Discounts"].includes(ctx.category) || isBeachMarket || isEventAd || ctx.isOwnerSearch || action === "Trading" || action === "Looking for";
     
     if (ctx.priceInfo && ctx.priceInfo.value !== "Negotiable") {
         let label = ctx.priceInfo.type; // Price, Budget, Rent, Bet
@@ -1936,6 +1949,13 @@ function detectCategory(text) {
 
     // Check for clothing first to prevent generic adjectives/colors from false vehicle matching (e.g. "Black gloves")
     if (matchClothingItem(text)) {
+        return "Other";
+    }
+    
+    // Check if it is a service role search (which goes to "Other" category)
+    const isServiceSearch = /\b(?:looking for|searching for|look for|search for)\b/i.test(lower);
+    const serviceRoles = /\b(?:lawyer|driver|dancer|singer|dj)\b/i.test(lower);
+    if (isServiceSearch && serviceRoles) {
         return "Other";
     }
     
@@ -2291,7 +2311,7 @@ function detectCategory(text) {
     }
     
     // 6. Auto Check (Verify if vehicles or auto-related words are present)
-    if (vehCheck || lower.includes("car") || lower.includes("truck") || lower.includes("motorcycle") || 
+    if (vehCheck || /\bcars?\b/i.test(lower) || /\btrucks?\b/i.test(lower) || lower.includes("motorcycle") || 
         lower.includes("bike") || lower.includes("boat") || lower.includes("plane") || 
         lower.includes("helicopter") || /\bheli\b/i.test(lower) || lower.includes("auto fair")) {
         return "Auto";
@@ -4372,7 +4392,12 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "trucker container": ["trucker container", "trucker containers", "trucker contaner", "trucker contaners"],
         "Ingrand container": ["ingrand container", "ingrand containers", "ingrand contaner", "ingrand contaners"],
         "desert scarf mask container": ["desert scarf mask container", "desert scarf mask containers", "desert scarf mask contaner", "desert scarf mask contaners"],
-        "charger": ["charger", "chargers", "electric charger", "electric chargers", "electric charging", "charging"]
+        "charger": ["charger", "chargers", "electric charger", "electric chargers", "electric charging", "charging"],
+        "personal driver": ["personal driver", "personal drivers", "professional driver", "professional drivers", "driver", "drivers"],
+        "lawyer": ["lawyer", "lawyers"],
+        "professional dancer": ["professional dancer", "professional dancers"],
+        "professional singer": ["professional singer", "professional singers"],
+        "DJ": ["dj", "djs"]
     };
     
     for (const canonical in mappings) {
@@ -5667,6 +5692,9 @@ function initCustomData() {
 
     // Sync from the shared backend (Google Sheets)
     syncCustomDataFromBackend();
+    
+    // Periodically sync custom data from backend (every 60 seconds) to update corrections globally
+    setInterval(syncCustomDataFromBackend, 60000);
 }
 
 function syncCustomDataFromBackend() {

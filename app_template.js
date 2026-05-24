@@ -2264,6 +2264,43 @@ function detectCategory(text) {
 function checkProhibitedItems(text, ctx) {
     const lower = text.toLowerCase();
     
+    // Dating Trolling Check
+    const datingTargets = ["wife", "husband", "girlfriend", "boyfriend", "gf", "bf", "spouse", "soulmate", "sugar daddy", "sugar mommy", "sugar baby", "sugar babe", "valentine"];
+    let matchedDatingTarget = null;
+    for (const dt of datingTargets) {
+        const regex = new RegExp(`\\b${dt}\\b`, "i");
+        if (regex.test(lower)) {
+            matchedDatingTarget = dt;
+            break;
+        }
+    }
+    
+    if (matchedDatingTarget) {
+        if (matchedDatingTarget.includes("sugar")) {
+            ctx.status = "blacklisted";
+            ctx.blacklistReason = "Troll advertisements";
+            ctx.rejectionReason = "Trolling advertisements.";
+            ctx.logs.push({ text: `Blacklist triggered: Dating troll target <strong>${matchedDatingTarget}</strong>`, type: 'danger' });
+            return;
+        }
+        
+        const hasCommercialAction = /\b(sell|selling|buy|buying|trade|trading|wts|wtb|wtt|rent|renting)\b/i.test(lower);
+        const cleanForNumbers = lower
+            .replace(new RegExp(`\\b(${datingTargets.join("|")})\\b`, "gi"), "")
+            .replace(/\b(look|looking|search|searching|find|finding|for|a|an|the)\b/gi, "")
+            .trim();
+        const hasNumber = /\b\d+(?:\s*[kKmM])?\b/.test(cleanForNumbers);
+        const hasPriceIndicator = /\b(price|budget|rent|cost|value|negotiable|nego|each)\b/i.test(lower) || lower.includes("$");
+        
+        if (hasCommercialAction || hasNumber || hasPriceIndicator) {
+            ctx.status = "blacklisted";
+            ctx.blacklistReason = "Troll advertisements";
+            ctx.rejectionReason = "Trolling advertisements.";
+            ctx.logs.push({ text: `Blacklist triggered: Dating troll target <strong>${matchedDatingTarget}</strong> with value/action`, type: 'danger' });
+            return;
+        }
+    }
+    
     // Immediate Blacklist Triggers
     const blacklistWeapons = ["firearm", "heavy sniper", "sniper", "pistol", "revolver", "rifle", "shotgun", "ammunition", "ammo", "bulletproof vest", "armored vest", "lui vi armored vest", "body armor"];
     const blacklistDrugs = ["weed", "cannabis", "cocaine", "drug"];
@@ -4506,11 +4543,7 @@ function updateUI(ctx) {
         btnCopy.disabled = true;
         
         if (btnCopyRej) {
-            if (ctx.rejectionReason && ctx.rejectionReason.toLowerCase().includes("non-sellable")) {
-                btnCopyRej.classList.remove("hide");
-            } else {
-                btnCopyRej.classList.add("hide");
-            }
+            btnCopyRej.classList.remove("hide");
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -4534,11 +4567,7 @@ function updateUI(ctx) {
         btnCopy.disabled = true;
         
         if (btnCopyRej) {
-            if (ctx.rejectionReason && ctx.rejectionReason.toLowerCase().includes("non-sellable")) {
-                btnCopyRej.classList.remove("hide");
-            } else {
-                btnCopyRej.classList.add("hide");
-            }
+            btnCopyRej.classList.remove("hide");
         }
         
         if (updateUI._lastText !== ctx.raw) {

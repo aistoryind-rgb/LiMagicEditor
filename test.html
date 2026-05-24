@@ -218,7 +218,12 @@
           { name: "190. selling 5 Batteys 40k each", raw: "selling 5 Batteys 40k each", expected: "Selling 5 batteries. Price: $40.000 each." },
           { name: "191. Custom spelling correction training", raw: "selling 5 mybattery 40k each", expected: "Selling 5 batteries. Price: $40.000 each." },
           { name: "192. Custom template matching training", raw: "My trained template for test price negotiable", expected: "My trained template for test." },
-          { name: "193. Custom template shorthand training", raw: "testshort 1", expected: "My trained template for shorthand test." }
+          { name: "193. Custom template shorthand training", raw: "testshort 1", expected: "My trained template for shorthand test." },
+          { name: "194. Selling wife", raw: "selling wife", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
+          { name: "195. Buying wife", raw: "buying wife", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
+          { name: "196. Buying gf", raw: "buying gf", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
+          { name: "197. Looking for wife budget 100k", raw: "looking for wife budget 100k", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
+          { name: "198. Looking for wife (should pass)", raw: "looking for wife", expected: "Looking for a wife." }
         ];
 
         // Mock custom spelling and templates for the unit tests

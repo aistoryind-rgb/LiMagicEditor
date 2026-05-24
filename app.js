@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 04:53:34";
-const BUILD_TIMESTAMP_SHORT = "May 25 04:53";
+const BUILD_TIMESTAMP = "2026 May 25 05:04:41";
+const BUILD_TIMESTAMP_SHORT = "May 25 05:04";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5736,7 +5736,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 04:53</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:04</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6153,7 +6153,15 @@ function initFloatingClipboard() {
    ========================================================================== */
 
 const CONFIG = {
-    GOOGLE_SCRIPT_URL: localStorage.getItem('li_google_script_url') || 'https://script.google.com/macros/s/AKfycbwPefRKB2W4EjA1nc_dg7k3A5TJ4S-lBr0sN0WyPaMkJ7DHitm4vI4JZt8tdai_EhoUVw/exec'
+    GOOGLE_SCRIPT_URL: (() => {
+        const stored = localStorage.getItem('li_google_script_url');
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbztFqPh3-N4b54c-W0p_FcFxDaSTFqVR5F8963EoyYsOEXXNWhHrz7q6Q3UnvJhL__NMQ/exec';
+        if (!stored || stored.includes('AKfycbwPefRKB2W4EjA1nc_dg7k3A5TJ4S-lBr0sN0WyPaMkJ7DHitm4vI4JZt8tdai_EhoUVw')) {
+            localStorage.setItem('li_google_script_url', defaultUrl);
+            return defaultUrl;
+        }
+        return stored;
+    })()
 };
 
 

@@ -5297,7 +5297,15 @@ function initFloatingClipboard() {
    ========================================================================== */
 
 const CONFIG = {
-    GOOGLE_SCRIPT_URL: localStorage.getItem('li_google_script_url') || 'https://script.google.com/macros/s/AKfycbwPefRKB2W4EjA1nc_dg7k3A5TJ4S-lBr0sN0WyPaMkJ7DHitm4vI4JZt8tdai_EhoUVw/exec'
+    GOOGLE_SCRIPT_URL: (() => {
+        const stored = localStorage.getItem('li_google_script_url');
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbztFqPh3-N4b54c-W0p_FcFxDaSTFqVR5F8963EoyYsOEXXNWhHrz7q6Q3UnvJhL__NMQ/exec';
+        if (!stored || stored.includes('AKfycbwPefRKB2W4EjA1nc_dg7k3A5TJ4S-lBr0sN0WyPaMkJ7DHitm4vI4JZt8tdai_EhoUVw')) {
+            localStorage.setItem('li_google_script_url', defaultUrl);
+            return defaultUrl;
+        }
+        return stored;
+    })()
 };
 
 

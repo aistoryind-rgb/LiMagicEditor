@@ -5357,6 +5357,63 @@ function initAccessGate() {
         });
     }
 
+    // Toggle Admin settings
+    const adminToggle1 = document.getElementById("access-admin-toggle-1");
+    const adminDrawer1 = document.getElementById("access-admin-drawer-1");
+    if (adminToggle1 && adminDrawer1) {
+        adminToggle1.addEventListener("click", () => {
+            adminDrawer1.classList.toggle("hide");
+            if (settingsDrawer) settingsDrawer.classList.add("hide");
+        });
+    }
+
+    const adminToggle2 = document.getElementById("access-admin-toggle-2");
+    const adminDrawer2 = document.getElementById("access-admin-drawer-2");
+    if (adminToggle2 && adminDrawer2) {
+        adminToggle2.addEventListener("click", () => {
+            adminDrawer2.classList.toggle("hide");
+        });
+    }
+
+    const btnAdminSubmit1 = document.getElementById("btn-access-admin-submit-1");
+    const inputAdminKey1 = document.getElementById("access-admin-key-1");
+    const btnAdminSubmit2 = document.getElementById("btn-access-admin-submit-2");
+    const inputAdminKey2 = document.getElementById("access-admin-key-2");
+
+    function handleAdminLogin(key) {
+        if (key === "DopamineAdmin2026!") {
+            localStorage.setItem("li_approved_token", "APPROVED");
+            sessionStorage.setItem("li_admin_authenticated", "true");
+            sessionStorage.setItem("li_admin_passcode", key);
+            alert("Welcome Admin! Access granted.");
+            window.location.reload();
+        } else {
+            alert("Invalid admin key. Access denied.");
+        }
+    }
+
+    if (btnAdminSubmit1 && inputAdminKey1) {
+        btnAdminSubmit1.addEventListener("click", () => {
+            handleAdminLogin(inputAdminKey1.value.trim());
+        });
+        inputAdminKey1.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                handleAdminLogin(inputAdminKey1.value.trim());
+            }
+        });
+    }
+
+    if (btnAdminSubmit2 && inputAdminKey2) {
+        btnAdminSubmit2.addEventListener("click", () => {
+            handleAdminLogin(inputAdminKey2.value.trim());
+        });
+        inputAdminKey2.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                handleAdminLogin(inputAdminKey2.value.trim());
+            }
+        });
+    }
+
     let statusPollInterval = null;
 
     function checkCurrentAccessStatus(showFeedback = false) {

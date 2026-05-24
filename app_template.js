@@ -4628,6 +4628,23 @@ function initFloatingClipboard() {
                 pipOverlay.classList.remove("hide");
             }
 
+            // Save window coordinates and try to minimize (shrink/move) main window
+            const originalPosition = {
+                x: window.screenX || window.screenLeft || 0,
+                y: window.screenY || window.screenTop || 0,
+                width: window.outerWidth || window.innerWidth || 1200,
+                height: window.outerHeight || window.innerHeight || 800
+            };
+            sessionStorage.setItem('li_pwa_original_pos', JSON.stringify(originalPosition));
+            
+            try {
+                // Shrink to tiny dimensions and move to bottom-left corner
+                window.resizeTo(160, 80);
+                window.moveTo(0, window.screen.availHeight - 100);
+            } catch (err) {
+                console.warn("Could not shrink window:", err);
+            }
+
             // Bind Return to Main button on the overlay
             const btnRestore = document.getElementById("btn-restore-main");
             if (btnRestore) {
@@ -4931,6 +4948,19 @@ function initFloatingClipboard() {
                 if (mainContainer && pipOverlay) {
                     mainContainer.classList.remove("hide");
                     pipOverlay.classList.add("hide");
+                }
+
+                // Restore PWA window size and position
+                const storedPos = sessionStorage.getItem('li_pwa_original_pos');
+                if (storedPos) {
+                    try {
+                        const pos = JSON.parse(storedPos);
+                        window.resizeTo(pos.width, pos.height);
+                        window.moveTo(pos.x, pos.y);
+                    } catch (err) {
+                        console.warn("Could not restore window:", err);
+                    }
+                    sessionStorage.removeItem('li_pwa_original_pos');
                 }
             });
 

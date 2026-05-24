@@ -1970,6 +1970,49 @@ textarea:focus, input:focus, select:focus {
     }
 }
 
+/* Media query for tiny/minimized main window when PiP is active */
+@media (max-width: 250px), (max-height: 200px) {
+    .pip-active-overlay {
+        padding: 4px !important;
+        background: #000000 !important;
+        overflow: hidden !important;
+    }
+    .pip-overlay-card {
+        padding: 8px !important;
+        gap: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        width: 100% !important;
+        height: 100% !important;
+        justify-content: center !important;
+        animation: none !important;
+    }
+    .pip-overlay-card .li-logo,
+    .pip-overlay-card .pip-overlay-text,
+    .pip-overlay-card .pip-overlay-subtext,
+    .pip-overlay-card .btn-restore-main {
+        display: none !important;
+    }
+    .pip-overlay-badge {
+        font-size: 8px !important;
+        padding: 4px 6px !important;
+        margin: 0 !important;
+        border-radius: 4px !important;
+        white-space: nowrap !important;
+        background: rgba(255, 59, 48, 0.15) !important;
+        border: 1px solid rgba(255, 59, 48, 0.3) !important;
+        color: var(--color-danger) !important;
+        animation: pipBadgePulse 2s infinite !important;
+    }
+}
+
+@keyframes pipBadgePulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
 /* PWA Window Controls Overlay (Borderless Desktop) Support */
 @media (display-mode: window-controls-overlay) {
     .app-header {

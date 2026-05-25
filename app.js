@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 01:00:42";
-const BUILD_TIMESTAMP_SHORT = "May 26 01:00";
+const BUILD_TIMESTAMP = "2026 May 26 01:03:12";
+const BUILD_TIMESTAMP_SHORT = "May 26 01:03";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6352,7 +6352,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 01:00</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 01:03</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6419,50 +6419,45 @@ function initFloatingClipboard() {
                             </div>
                         </div>
                         
-                        <!-- Flipped Side-by-Side Category Guide & Policy Rules -->
+                        <!-- Game Category Guide Container -->
+                        <div class="pip-category-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
+                            <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-folder-open"></i> Game Category Guide
+                            </div>
+                            <div class="pip-category-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;">
+                                <button type="button" class="category-btn pip-category-btn" data-category="Real Estate">
+                                    <i class="fa-solid fa-house"></i> Real Estate
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Auto">
+                                    <i class="fa-solid fa-car"></i> Auto
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Businesses">
+                                    <i class="fa-solid fa-briefcase"></i> Businesses
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Discounts">
+                                    <i class="fa-solid fa-percent"></i> Discounts
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Work">
+                                    <i class="fa-solid fa-helmet-safety"></i> Work
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Dating">
+                                    <i class="fa-solid fa-heart"></i> Dating
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Services">
+                                    <i class="fa-solid fa-wrench"></i> Services
+                                </button>
+                                <button type="button" class="category-btn pip-category-btn" data-category="Other">
+                                    <i class="fa-solid fa-infinity"></i> Other
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Applied Policy Rules & Corrections Container -->
                         <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: auto;">
                             <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
-                            <div class="audit-logs-row" style="display: flex; gap: 12px; align-items: flex-start;">
-                                <!-- Left Column: Game Category Guide -->
-                                <div class="pip-category-side" style="flex: 1.1; min-width: 0;">
-                                    <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                                        <i class="fa-solid fa-folder-open"></i> Game Category Guide
-                                    </div>
-                                    <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Real Estate">
-                                            <i class="fa-solid fa-house"></i> Real Estate
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Auto">
-                                            <i class="fa-solid fa-car"></i> Auto
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Businesses">
-                                            <i class="fa-solid fa-briefcase"></i> Businesses
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Discounts">
-                                            <i class="fa-solid fa-percent"></i> Discounts
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Work">
-                                            <i class="fa-solid fa-helmet-safety"></i> Work
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Dating">
-                                            <i class="fa-solid fa-heart"></i> Dating
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Services">
-                                            <i class="fa-solid fa-wrench"></i> Services
-                                        </button>
-                                        <button type="button" class="category-btn pip-category-btn" data-category="Other">
-                                            <i class="fa-solid fa-infinity"></i> Other
-                                        </button>
-                                    </div>
-                                </div>
-                                <!-- Right Column: Rules List -->
-                                <div class="pip-logs-side" style="flex: 1.3; min-width: 0;">
-                                    <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; margin-bottom: 6px; visibility: hidden;">&nbsp;</div>
-                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 80px; box-sizing: border-box;">
-                                        <li class="log-empty">No corrections made.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 80px; box-sizing: border-box; width: 100%;">
+                                <li class="log-empty">No corrections made.</li>
+                            </ul>
                         </div>
                     </main>
                     <div class="pip-history-overlay hide" id="pip-history-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 20, 0.97); z-index: 1000; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; font-family: 'Outfit', sans-serif;">

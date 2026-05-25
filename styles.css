@@ -606,6 +606,31 @@ textarea:focus, input:focus, select:focus {
     box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
 }
 
+.btn-paste {
+    background: var(--color-success);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition-smooth);
+}
+
+.btn-paste:hover {
+    opacity: 0.9;
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
+}
+
+.btn-paste:active {
+    transform: scale(0.97);
+}
+
 .processed-text-wrapper {
     padding: 16px;
     min-height: 70px;

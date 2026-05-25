@@ -5140,15 +5140,18 @@ function initFloatingClipboard() {
                             </div>
                             <span class="pip-created-by" style="font-size: 9.5px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap; margin-left: 2px;">Created by Dopamine</span>
                         </div>
-                        <div class="pip-header-right" style="display: flex; align-items: center; justify-content: flex-end;">
+                        <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: __BUILD_TIMESTAMP_SHORT__</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1; overflow-y: auto;">
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: __BUILD_TIMESTAMP_SHORT__</span>
+                                <button id="pip-btn-paste" class="btn-paste" style="padding: 4px 10px; font-size: 9.5px; line-height: 1.2;">
+                                    <i class="fa-solid fa-paste"></i> Paste
+                                </button>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -5330,6 +5333,32 @@ function initFloatingClipboard() {
                 mainRaw.dispatchEvent(new Event("input"));
                 updatePipDisplay();
             });
+
+            const pipPaste = pipWindow.document.getElementById("pip-btn-paste");
+            if (pipPaste) {
+                pipPaste.addEventListener("click", async () => {
+                    try {
+                        const text = await pipWindow.navigator.clipboard.readText();
+                        pipRaw.value = "";
+                        pipRaw.value = text;
+                        mainRaw.value = text;
+                        mainRaw.dispatchEvent(new Event("input"));
+                        updatePipDisplay();
+                    } catch (err) {
+                        console.error("Failed to read clipboard in PiP context: ", err);
+                        try {
+                            const text = await navigator.clipboard.readText();
+                            pipRaw.value = "";
+                            pipRaw.value = text;
+                            mainRaw.value = text;
+                            mainRaw.dispatchEvent(new Event("input"));
+                            updatePipDisplay();
+                        } catch (mainErr) {
+                            alert("Clipboard access denied. Please click the button again or paste manually.");
+                        }
+                    }
+                });
+            }
 
             const pipTextElement = pipWindow.document.getElementById("pip-processed-text");
             if (pipTextElement) {

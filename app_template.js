@@ -4547,6 +4547,8 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "wires": ["wires", "wire"],
         "sponge": ["sponge", "sponges"],
         "license plate": ["license plate", "licence plate"],
+        "premium fuel canister": ["premium fuel canister", "premium fuel canisters", "premium fuel", "premium fuel can", "premium fuel cans", "canister of premium fuel", "canisters of premium fuel"],
+        "fuel canister": ["fuel canister", "fuel canisters", "fuel can", "fuel cans", "canister of fuel", "canisters of fuel", "canister", "canisters"],
         "fuel for resource extraction": ["fuel for resource extraction", "fuel", "resource extraction fuel", "extraction fuel"],
         "Progen container": ["progen container", "progen containers", "progen contaner", "progen contaners", "container", "containers", "p1 container", "p1 containers", "p1 contaner", "p1 contaners", "porgen p1", "porgen p1 container", "progen p1", "progen p1 container", "porgen container", "porgen containers", "porgen contaner", "porgen contaners"],
         "valuable container": ["valuable container", "valuable containers", "valuable contaner", "valuable contaners"],

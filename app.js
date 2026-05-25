@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 04:30:58";
-const BUILD_TIMESTAMP_SHORT = "May 26 04:30";
+const BUILD_TIMESTAMP = "2026 May 26 04:42:37";
+const BUILD_TIMESTAMP_SHORT = "May 26 04:42";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -2130,6 +2130,21 @@ function mapClothingBrands(text) {
 
 // Specialised Vehicle match
 function matchVehicle(inputText) {
+    const lowerInput = inputText.toLowerCase();
+    const itemWords = [
+        "solar panel", "solar panels", "solar barrel", "solar barrels",
+        "sim card", "sim cards", "simcard", "simcards",
+        "video card", "video cards", "videocard", "videocards",
+        "scrap metal", "luminous stone", "luminous stones", "stone", "stones",
+        "ticket", "tickets", "juice", "juices", "pet", "pets", "cage", "cages",
+        "oil well", "sawmill", "drill", "watering can", "pickaxe", "fishing rod",
+        "thread", "threads", "battery", "batteries", "gasoline barrel", "kerene barrel",
+        "paint can", "sponge", "sponges", "license plate", "license plates", "custom plate"
+    ];
+    if (itemWords.some(item => lowerInput.includes(item))) {
+        return null;
+    }
+
     const categories = ['helicopters', 'boats', 'planes', 'motorcycles', 'not_sellable_cars', 'sellable_cars'];
     const allVehicles = [];
     const nameMap = new Map();
@@ -6655,7 +6670,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 04:30</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 04:42</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

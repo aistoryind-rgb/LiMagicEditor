@@ -977,6 +977,21 @@ function mapClothingBrands(text) {
 
 // Specialised Vehicle match
 function matchVehicle(inputText) {
+    const lowerInput = inputText.toLowerCase();
+    const itemWords = [
+        "solar panel", "solar panels", "solar barrel", "solar barrels",
+        "sim card", "sim cards", "simcard", "simcards",
+        "video card", "video cards", "videocard", "videocards",
+        "scrap metal", "luminous stone", "luminous stones", "stone", "stones",
+        "ticket", "tickets", "juice", "juices", "pet", "pets", "cage", "cages",
+        "oil well", "sawmill", "drill", "watering can", "pickaxe", "fishing rod",
+        "thread", "threads", "battery", "batteries", "gasoline barrel", "kerene barrel",
+        "paint can", "sponge", "sponges", "license plate", "license plates", "custom plate"
+    ];
+    if (itemWords.some(item => lowerInput.includes(item))) {
+        return null;
+    }
+
     const categories = ['helicopters', 'boats', 'planes', 'motorcycles', 'not_sellable_cars', 'sellable_cars'];
     const allVehicles = [];
     const nameMap = new Map();

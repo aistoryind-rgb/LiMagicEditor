@@ -501,7 +501,7 @@ function correctSpelling(text, ctx) {
         corrected = corrected.replace(/\b(par\s+confin|par\s+config|par\s+tuning|part\s+config|part\s+tuning|partial\s+config|partial\s+tuning|partially\s+upgraded|nearly\s+max|partially\s+config|part\s+confin|part\s+configuration|par\s+configuration|par\s+conf|part\s+conf|part\s+confin)\b/gi, "partial configuration");
     }
 
-    const fullConfigMatch = corrected.match(/\b(full\s+conf|full\s+config|full\s+tuning|full\s+tune|max\s+conf|max\s+config|max\s+tuning|maxed|fully\s+upgraded|full\s+configuration|full\s+confin)\b/gi);
+    const fullConfigMatch = corrected.match(/\b(full\s+conf|ful\s+conf|full\s+config|ful\s+config|full\s+tuning|ful\s+tuning|full\s+tune|ful\s+tune|max\s+conf|max\s+config|max\s+tuning|max\s+tune|maxed|fully\s+upgraded|ful\s+upgraded|full\s+configuration|ful\s+configuration|full\s+confin|ful\s+confin|full\s+max|ful\s+max|full\s+maxed|ful\s+maxed|pro\s+parts)\b/gi);
     if (fullConfigMatch) {
         const uniqueMatches = [...new Set(fullConfigMatch.map(m => m.toLowerCase()))];
         uniqueMatches.forEach(m => {
@@ -509,7 +509,7 @@ function correctSpelling(text, ctx) {
                 ctx.logs.push({ text: `Spelling correction: upgrade <strong>${m}</strong> corrected to <strong>full configuration</strong>`, type: 'correction' });
             }
         });
-        corrected = corrected.replace(/\b(full\s+conf|full\s+config|full\s+tuning|full\s+tune|max\s+conf|max\s+config|max\s+tuning|maxed|fully\s+upgraded|full\s+configuration|full\s+confin)\b/gi, "full configuration");
+        corrected = corrected.replace(/\b(full\s+conf|ful\s+conf|full\s+config|ful\s+config|full\s+tuning|ful\s+tuning|full\s+tune|ful\s+tune|max\s+conf|max\s+config|max\s+tuning|max\s+tune|maxed|fully\s+upgraded|ful\s+upgraded|full\s+configuration|ful\s+configuration|full\s+confin|ful\s+confin|full\s+max|ful\s+max|full\s+maxed|ful\s+maxed|pro\s+parts)\b/gi, "full configuration");
     }
 
     // Luminous wheels / rims
@@ -788,6 +788,8 @@ function mapVehicleBrands(text) {
     result = result.replace(/\bhuracan\b/gi, "performante");
     result = result.replace(/\bskyline\b/gi, "skyline gt-r");
     result = result.replace(/\blvn\b/gi, "la voiture noire");
+    result = result.replace(/\bgt-?r\s*(?:1|i)\b/gi, "gt-r i");
+    result = result.replace(/\bgtr\b/gi, "gt-r");
     return result;
 }
 

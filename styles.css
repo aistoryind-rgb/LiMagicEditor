@@ -562,11 +562,12 @@ textarea:focus, input:focus, select:focus {
     box-shadow: 0 0 15px rgba(255, 59, 48, 0.15);
 }
 
-/* Processed Text Display Container */
 #raw-ad,
 .processed-container {
     min-height: 150px;
     height: 150px;
+    width: 100%;
+    resize: none;
 }
 
 .processed-container {

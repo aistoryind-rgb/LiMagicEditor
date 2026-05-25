@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 02:33:38";
-const BUILD_TIMESTAMP_SHORT = "May 26 02:33";
+const BUILD_TIMESTAMP = "2026 May 26 02:46:31";
+const BUILD_TIMESTAMP_SHORT = "May 26 02:46";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5172,6 +5172,9 @@ function itemRequiresArticle(itemStr, isFirst, ctx) {
     if (lower.includes("sim card") && (lower.includes("\u2116") || /\d/.test(lower))) {
         return false;
     }
+    if (lower.includes("license plate") && (lower.includes("(") || /\d/.test(lower))) {
+        return false;
+    }
     if (lower.includes("inventory")) {
         return false;
     }
@@ -5671,6 +5674,66 @@ function fuzzyCorrectItemName(rawItem, ctx) {
     const cleaned = cleanItemForFuzzy(rawItem);
     const hasEach = /\beach\b/i.test(cleanLower) || cleanLower.includes("__has_each__");
     
+    // License plate check
+    if (cleanLower.includes("plate") && !cleanLower.includes("armor")) {
+        
+        const plateMatch = rawItem.match(/(?:license|licence|liesence|liesance)?\s*plate\s*(?:no\.?|#|\u2116|number|num\.?)?\s*\(?([a-z0-9]+)\)?/i) || 
+                           rawItem.match(/plate\s*(?:no\.?|#|\u2116|number|num\.?)?\s*\(?([a-z0-9]+)\)?/i);
+                           
+        let plateVal = null;
+        if (plateMatch) {
+            const tempVal = plateMatch[1].toLowerCase();
+            if (tempVal !== "no" && tempVal !== "number" && tempVal !== "num" && tempVal !== "plate") {
+                plateVal = plateMatch[1].toUpperCase();
+            }
+        }
+        
+        if (plateVal) {
+            if (plateVal.length >= 3 && plateVal.length <= 7) {
+                if (plateVal.includes("SEX") || plateVal.includes("FUCK") || plateVal.includes("BITCH") || plateVal.includes("CUNT") || plateVal.includes("NIGGER") || plateVal.includes("DICK")) {
+                    ctx.status = "blacklisted";
+                    ctx.blacklistReason = `License plate "${plateVal}" contains inappropriate or offensive language.`;
+                    ctx.rejectionReason = "Cannot promote illegal items.";
+                    ctx.logs.push({ text: `Blacklist triggered: Offensive license plate <strong>${plateVal}</strong>`, type: 'danger' });
+                    return "";
+                }
+                
+                let rawItemWithoutPlate = rawItem.replace(plateMatch[0], "");
+                let qty = parseQuantity(rawItemWithoutPlate);
+                let qtyText = qty && qty > 1 ? `${qty} ` : "";
+                if (qty && qty > 1) {
+                    return `${qtyText}license plates (${plateVal})`;
+                } else {
+                    return `license plate (${plateVal})`;
+                }
+            } else {
+                ctx.status = "rejected";
+                ctx.rejectionReason = "license plate: Must be 3-7 characters in length.";
+                ctx.logs.push({ text: `Rejected: License plate "${plateVal}" is not 3-7 characters in length.`, type: 'warning' });
+                return "";
+            }
+        } else {
+            let qty = parseQuantity(rawItem);
+            let qtyText = qty && qty > 1 ? `${qty} ` : "";
+            const isCustom = cleanLower.includes("custom");
+            const isPlural = cleanLower.includes("plates") || (qty && qty > 1) || hasEach;
+            
+            if (isCustom) {
+                if (isPlural) {
+                    return `${qtyText}custom license plates`;
+                } else {
+                    return `custom license plate`;
+                }
+            } else {
+                if (isPlural) {
+                    return `${qtyText}license plates`;
+                } else {
+                    return `license plate`;
+                }
+            }
+        }
+    }
+
     // 1. Ticket check
     if (cleanLower.includes("ticket") || cleanLower.includes("tcket") || cleanLower.includes("tikcet") || cleanLower.includes("tick") || cleaned.includes("ticket") || cleanLower.includes("cayo") || cleanLower.includes("perico")) {
         let canonical = "";
@@ -6530,7 +6593,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:33</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:46</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

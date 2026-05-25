@@ -1121,6 +1121,22 @@ function initAdProcessing() {
         override.addEventListener("change", processAd);
     }
     
+    // Bind click events to main page category guide buttons
+    const mainCatBtns = document.querySelectorAll(".main-category-btn");
+    mainCatBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const targetCat = btn.getAttribute("data-category");
+            const currentOverride = override ? override.value : "auto";
+            
+            if (currentOverride === targetCat) {
+                if (override) override.value = "auto";
+            } else {
+                if (override) override.value = targetCat;
+            }
+            if (override) override.dispatchEvent(new Event("change"));
+        });
+    });
+    
     if (btnCopy) {
         btnCopy.addEventListener("click", () => {
             const textElement = document.getElementById("processed-ad-text");
@@ -4968,6 +4984,17 @@ function updateUI(ctx) {
             updateUI._lastText = ctx.raw;
         }
     }
+
+    // Highlight main page category guide buttons
+    const activeCat = ctx.category;
+    const mainCatBtns = document.querySelectorAll(".main-category-btn");
+    mainCatBtns.forEach(btn => {
+        if (activeCat && btn.getAttribute("data-category") === activeCat) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
 }
 
 /* ==========================================================================
@@ -5215,44 +5242,49 @@ function initFloatingClipboard() {
                             </div>
                         </div>
                         
-                        <!-- Game Category Guide Grid -->
-                        <div class="pip-category-section" style="margin-top: 12px; margin-bottom: 5px;">
-                            <div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-folder-open"></i> Game Category Guide
-                            </div>
-                            <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                                <button type="button" class="pip-category-btn" data-category="Real Estate">
-                                    <i class="fa-solid fa-house"></i> Real Estate
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Auto">
-                                    <i class="fa-solid fa-car"></i> Auto
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Businesses">
-                                    <i class="fa-solid fa-briefcase"></i> Businesses
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Discounts">
-                                    <i class="fa-solid fa-percent"></i> Discounts
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Work">
-                                    <i class="fa-solid fa-helmet-safety"></i> Work
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Dating">
-                                    <i class="fa-solid fa-heart"></i> Dating
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Services">
-                                    <i class="fa-solid fa-wrench"></i> Services
-                                </button>
-                                <button type="button" class="pip-category-btn" data-category="Other">
-                                    <i class="fa-solid fa-infinity"></i> Other
-                                </button>
-                            </div>
-                        </div>
-
+                        <!-- Flipped Side-by-Side Category Guide & Policy Rules -->
                         <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 12px;">
-                            <h3><i class="fa-solid fa-list-check"></i> Applied Rules &amp; Corrections</h3>
-                            <ul class="audit-logs" id="pip-logs-list">
-                                <li class="log-empty">No corrections made.</li>
-                            </ul>
+                            <h3 style="margin-top: 0; margin-bottom: 10px;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
+                            <div class="audit-logs-row" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <!-- Left Column: Game Category Guide -->
+                                <div class="pip-category-side" style="flex: 1.1; min-width: 0;">
+                                    <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-folder-open"></i> Game Category Guide
+                                    </div>
+                                    <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Real Estate">
+                                            <i class="fa-solid fa-house"></i> Real Estate
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Auto">
+                                            <i class="fa-solid fa-car"></i> Auto
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Businesses">
+                                            <i class="fa-solid fa-briefcase"></i> Businesses
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Discounts">
+                                            <i class="fa-solid fa-percent"></i> Discounts
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Work">
+                                            <i class="fa-solid fa-helmet-safety"></i> Work
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Dating">
+                                            <i class="fa-solid fa-heart"></i> Dating
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Services">
+                                            <i class="fa-solid fa-wrench"></i> Services
+                                        </button>
+                                        <button type="button" class="category-btn pip-category-btn" data-category="Other">
+                                            <i class="fa-solid fa-infinity"></i> Other
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Right Column: Rules List -->
+                                <div class="pip-logs-side" style="flex: 1.3; min-width: 0;">
+                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; min-height: 115px; box-sizing: border-box;">
+                                        <li class="log-empty">No corrections made.</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </main>
                     <div class="pip-history-overlay hide" id="pip-history-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 20, 0.97); z-index: 1000; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; font-family: 'Outfit', sans-serif;">

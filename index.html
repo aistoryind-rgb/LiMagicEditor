@@ -270,9 +270,47 @@
                         <!-- Applied Rules & Auto-corrections logs -->
                         <div class="audit-logs-container">
                             <h3><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
-                            <ul class="audit-logs" id="audit-logs-list">
-                                <li class="log-empty">No logs available. Enter some text to see corrections.</li>
-                            </ul>
+                            <div class="audit-logs-row" style="display: flex; gap: 16px; align-items: flex-start; margin-top: 10px;">
+                                <!-- Left Column: Game Category Guide -->
+                                <div class="main-category-side" style="flex: 1; min-width: 0;">
+                                    <div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-folder-open"></i> Game Category Guide
+                                    </div>
+                                    <div class="main-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                        <button type="button" class="category-btn main-category-btn" data-category="Real Estate">
+                                            <i class="fa-solid fa-house"></i> Real Estate
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Auto">
+                                            <i class="fa-solid fa-car"></i> Auto
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Businesses">
+                                            <i class="fa-solid fa-briefcase"></i> Businesses
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Discounts">
+                                            <i class="fa-solid fa-percent"></i> Discounts
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Work">
+                                            <i class="fa-solid fa-helmet-safety"></i> Work
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Dating">
+                                            <i class="fa-solid fa-heart"></i> Dating
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Services">
+                                            <i class="fa-solid fa-wrench"></i> Services
+                                        </button>
+                                        <button type="button" class="category-btn main-category-btn" data-category="Other">
+                                            <i class="fa-solid fa-infinity"></i> Other
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Right Column: Rules List -->
+                                <div class="audit-logs-side" style="flex: 1.2; min-width: 0;">
+                                    <ul class="audit-logs" id="audit-logs-list" style="margin: 0; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); list-style: none;">
+                                        <li class="log-empty">No logs available. Enter some text to see corrections.</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

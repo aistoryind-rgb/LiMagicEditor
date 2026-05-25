@@ -2828,71 +2828,81 @@ textarea:focus, input:focus, select:focus {
     }
 }
 
-/* Game Category Guide inside PiP Clipboard Popup */
-.pip-category-section {
+/* Game Category Guide - Shared between Main Window and PiP Popup */
+.category-section {
     box-sizing: border-box;
 }
 
-.pip-category-grid {
+.category-grid {
     box-sizing: border-box;
 }
 
-.pip-category-btn {
+.category-btn {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-sm);
-    color: #c7c7cc;
+    color: #e5e5ea; /* Brighter, more readable text */
     cursor: pointer;
     font-family: var(--font-heading);
-    font-size: 9px;
+    font-size: 8.5px; /* Slightly smaller text */
     font-weight: 700;
+    letter-spacing: 0.5px;
     padding: 5px 8px;
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
+    gap: 10px; /* More space between icon and text */
     text-transform: uppercase;
     transition: var(--transition-smooth);
     user-select: none;
     text-align: left;
     outline: none;
-    height: 25px;
+    height: 25px; /* Compact height */
     box-sizing: border-box;
+    width: 100%;
 }
 
-.pip-category-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
+.category-btn:hover {
+    background: rgba(255, 255, 255, 0.07);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
-.pip-category-btn.active {
+.category-btn.active {
     background: var(--color-success); /* Green */
     border-color: var(--color-success);
     color: #0c0e12;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.3);
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.35);
 }
 
-.pip-category-btn.active i {
+.category-btn.active i {
     color: #0c0e12;
 }
 
-.pip-category-btn i {
-    font-size: 10px;
-    width: 12px;
+.category-btn i {
+    font-size: 11px; /* Slightly larger icon */
+    width: 14px; /* Icon uses a little more space */
     text-align: center;
-    color: #8e8e93;
+    color: #a1a1a6; /* Brighter inactive icon */
     transition: var(--transition-smooth);
 }
 
-.pip-category-btn:hover i {
+.category-btn:hover i {
     color: var(--text-primary);
 }
 
-.pip-category-btn.active:hover {
+.category-btn.active:hover {
     background: #34e062;
     border-color: #34e062;
     color: #0c0e12;
 }
+
+/* Compact rules text inside Floating Clipboard Popup */
+#pip-logs-list li {
+    font-size: 11.5px;
+    gap: 6px;
+    line-height: 1.35;
+}
+
 
 

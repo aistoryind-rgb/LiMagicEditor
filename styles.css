@@ -543,24 +543,25 @@ textarea:focus, input:focus, select:focus {
 }
 
 .btn-copy {
-    background: var(--color-success);
+    background: linear-gradient(135deg, #30d158 0%, #0a84ff 100%);
     border: none;
-    border-radius: var(--radius-sm);
-    color: #0c0e12;
+    border-radius: var(--radius-md);
+    color: #fff;
     cursor: pointer;
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 12px;
-    padding: 6px 12px;
+    font-size: 13px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     gap: 6px;
     transition: var(--transition-smooth);
+    box-shadow: 0 4px 12px rgba(48, 209, 88, 0.2);
 }
 
 .btn-copy:hover:not(:disabled) {
-    opacity: 0.9;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.45);
+    transform: translateY(-1.5px) scale(1.02);
+    box-shadow: 0 6px 18px rgba(48, 209, 88, 0.4), 0 6px 18px rgba(10, 132, 255, 0.4);
 }
 
 .btn-copy:disabled {
@@ -568,24 +569,26 @@ textarea:focus, input:focus, select:focus {
     color: var(--text-secondary);
     cursor: not-allowed;
     opacity: 0.5;
+    transform: none;
+    box-shadow: none;
 }
 
 .btn-copy.copied {
-    background: var(--color-info);
+    background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
     color: #fff;
-    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.35);
 }
 
 .btn-clear {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     color: var(--text-secondary);
     cursor: pointer;
     font-family: var(--font-heading);
     font-weight: 600;
-    font-size: 12px;
-    padding: 6px 12px;
+    font-size: 13px;
+    padding: 8px 16px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -604,28 +607,29 @@ textarea:focus, input:focus, select:focus {
 }
 
 .btn-paste {
-    background: var(--color-success);
+    background: linear-gradient(135deg, #30d158 0%, #0a84ff 100%);
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     color: #fff;
     cursor: pointer;
     font-family: var(--font-heading);
     font-weight: 600;
-    font-size: 12px;
-    padding: 6px 12px;
+    font-size: 13px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     gap: 6px;
     transition: var(--transition-smooth);
+    box-shadow: 0 4px 12px rgba(48, 209, 88, 0.2);
 }
 
 .btn-paste:hover {
-    opacity: 0.9;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
+    transform: translateY(-1.5px) scale(1.02);
+    box-shadow: 0 6px 18px rgba(48, 209, 88, 0.4), 0 6px 18px rgba(10, 132, 255, 0.4);
 }
 
 .btn-paste:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
 }
 
 .processed-text-wrapper {
@@ -2719,31 +2723,32 @@ textarea:focus, input:focus, select:focus {
 }
 
 .btn-restore-main {
-    background: linear-gradient(135deg, var(--color-primary) 0%, #ff453a 100%) !important;
+    background: linear-gradient(135deg, #30d158 0%, #0a84ff 100%) !important;
     color: #fff !important;
-    border: 1px solid rgba(255, 69, 58, 0.3) !important;
+    border: none !important;
     border-radius: 30px !important;
     font-family: var(--font-heading);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13.5px;
     padding: 12px 28px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 4px 15px rgba(255, 59, 48, 0.2);
+    box-shadow: 0 4px 15px rgba(48, 209, 88, 0.3);
     width: auto !important;
     margin-top: 8px;
     letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-restore-main:hover {
-    background: linear-gradient(135deg, var(--color-primary-hover) 0%, #ff453a 100%) !important;
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(255, 59, 48, 0.4);
-    border-color: rgba(255, 69, 58, 0.5) !important;
+    box-shadow: 0 8px 25px rgba(48, 209, 88, 0.45), 0 8px 25px rgba(10, 132, 255, 0.45) !important;
 }
 
 .btn-restore-main:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
 }
 
 @keyframes scaleUp {
@@ -3127,17 +3132,17 @@ textarea:focus, input:focus, select:focus {
 
 /* Uniform action buttons inside Floating Clipboard (History, Paste, Copy) */
 .pip-uniform-btn {
-    width: 76px !important;
-    height: 20px !important;
+    width: 96px !important;
+    height: 28px !important;
     padding: 0 !important;
-    font-size: 8px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
     font-family: 'Outfit', sans-serif !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 4px !important;
-    border-radius: 4px !important;
+    gap: 6px !important;
+    border-radius: 6px !important;
     border: none !important;
     cursor: pointer !important;
     box-sizing: border-box !important;
@@ -3145,31 +3150,32 @@ textarea:focus, input:focus, select:focus {
     text-transform: uppercase !important;
 }
 .pip-uniform-btn.btn-paste {
-    background: var(--color-success) !important;
-    color: #0c0e12 !important;
+    background: linear-gradient(135deg, #30d158 0%, #0a84ff 100%) !important;
+    color: #fff !important;
 }
 .pip-uniform-btn.btn-paste:hover {
-    opacity: 0.9 !important;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.45) !important;
+    transform: translateY(-1.5px) scale(1.02);
+    box-shadow: 0 4px 15px rgba(48, 209, 88, 0.45), 0 4px 15px rgba(10, 132, 255, 0.45) !important;
 }
 .pip-uniform-btn.btn-copy {
-    background: var(--color-success) !important;
-    color: #0c0e12 !important;
+    background: linear-gradient(135deg, #30d158 0%, #0a84ff 100%) !important;
+    color: #fff !important;
 }
 .pip-uniform-btn.btn-copy:hover:not(:disabled) {
-    opacity: 0.9 !important;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.45) !important;
+    transform: translateY(-1.5px) scale(1.02);
+    box-shadow: 0 4px 15px rgba(48, 209, 88, 0.45), 0 4px 15px rgba(10, 132, 255, 0.45) !important;
 }
 .pip-uniform-btn.btn-copy.copied {
-    background: var(--color-info) !important;
+    background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%) !important;
     color: #fff !important;
-    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4) !important;
 }
 .pip-uniform-btn.btn-copy:disabled {
     background: var(--text-muted) !important;
     color: var(--text-secondary) !important;
     cursor: not-allowed !important;
     box-shadow: none !important;
+    transform: none !important;
 }
 .pip-uniform-btn.btn-clear {
     background: rgba(255, 255, 255, 0.03) !important;

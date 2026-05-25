@@ -4078,6 +4078,10 @@ function formatOtherAd(adBody, action, ctx) {
                 
                 let namePart = matchedClothing.name;
                 
+                if (typeVal && typeVal.includes("and")) {
+                    namePart = pluralizeClothingName(namePart);
+                }
+                
                 if (namePart.includes('*')) {
                     namePart = namePart.replace('*', typeVal || 'X');
                 }
@@ -4218,6 +4222,85 @@ function cleanItemForFuzzy(text) {
     }
     
     return clean;
+}
+
+function pluralizeClothingName(name) {
+    const lower = name.toLowerCase();
+    // If it already ends with s and is not dress, it's plural or doesn't change
+    if (lower.endsWith("s") && !lower.endsWith("dress")) {
+        return name;
+    }
+    
+    // Check if it has "of type *"
+    if (name.includes("of type *")) {
+        // e.g. "Volex watch of type *" -> pluralize "watch" -> "Volex watches of type *"
+        return name.replace(/watch/i, "watches");
+    }
+    
+    // Check common clothing suffixes/words
+    if (lower.endsWith("accessory")) {
+        return name.slice(0, -9) + "accessories";
+    }
+    if (lower.endsWith("mask")) {
+        return name.slice(0, -4) + "masks";
+    }
+    if (lower.endsWith("watch")) {
+        return name.slice(0, -5) + "watches";
+    }
+    if (lower.endsWith("dress")) {
+        return name + "es";
+    }
+    if (lower.endsWith("t-shirt") || lower.endsWith("shirt")) {
+        return name + "s";
+    }
+    if (lower.endsWith("pullover")) {
+        return name + "s";
+    }
+    if (lower.endsWith("sweater")) {
+        return name + "s";
+    }
+    if (lower.endsWith("bra")) {
+        return name + "s";
+    }
+    if (lower.endsWith("jacket")) {
+        return name + "s";
+    }
+    if (lower.endsWith("hoodie")) {
+        return name + "s";
+    }
+    if (lower.endsWith("coat")) {
+        return name + "s";
+    }
+    if (lower.endsWith("suit")) {
+        return name + "s";
+    }
+    if (lower.endsWith("chain")) {
+        return name + "s";
+    }
+    if (lower.endsWith("necklace")) {
+        return name + "s";
+    }
+    if (lower.endsWith("band")) {
+        return name + "s";
+    }
+    if (lower.endsWith("ring")) {
+        return name + "s";
+    }
+    if (lower.endsWith("charge")) {
+        return name + "s";
+    }
+    if (lower.endsWith("cape")) {
+        return name + "s";
+    }
+    if (lower.endsWith("rune") || lower.endsWith("runes")) {
+        return name;
+    }
+    if (lower.endsWith("chick")) {
+        return name + "s";
+    }
+    
+    // Fallback using the standard pluralizeItemName
+    return pluralizeItemName(name);
 }
 
 function pluralizeItemName(name) {

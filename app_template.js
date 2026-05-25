@@ -1154,6 +1154,7 @@ function processAd() {
     
     // Clear display if no input
     if (!rawAd.trim()) {
+        textDisplay.removeAttribute("data-active-category");
         textDisplay.textContent = "Processed ad will appear here...";
         textDisplay.classList.add("placeholder");
         banner.setAttribute("data-status", "pending");
@@ -4869,6 +4870,7 @@ function formatLocationTerms(bodyText, ctx) {
 
 function updateUI(ctx) {
     const textDisplay = document.getElementById("processed-ad-text");
+    textDisplay.setAttribute("data-active-category", ctx.category);
     const banner = document.getElementById("ad-status-banner");
     const rejectionBox = document.getElementById("rejection-container");
     const blacklistBox = document.getElementById("blacklist-container");
@@ -5219,6 +5221,39 @@ function initFloatingClipboard() {
                                 <li class="log-empty">No corrections made.</li>
                             </ul>
                         </div>
+
+                        <!-- Game Category Guide Grid -->
+                        <div class="pip-category-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 5px;">
+                            <div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-folder-open"></i> Game Category Guide
+                            </div>
+                            <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <button type="button" class="pip-category-btn" data-category="Real Estate">
+                                    <i class="fa-solid fa-house"></i> Real Estate
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Auto">
+                                    <i class="fa-solid fa-car"></i> Auto
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Businesses">
+                                    <i class="fa-solid fa-briefcase"></i> Businesses
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Discounts">
+                                    <i class="fa-solid fa-percent"></i> Discounts
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Work">
+                                    <i class="fa-solid fa-helmet-safety"></i> Work
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Dating">
+                                    <i class="fa-solid fa-heart"></i> Dating
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Services">
+                                    <i class="fa-solid fa-wrench"></i> Services
+                                </button>
+                                <button type="button" class="pip-category-btn" data-category="Other">
+                                    <i class="fa-solid fa-infinity"></i> Other
+                                </button>
+                            </div>
+                        </div>
                     </main>
                     <div class="pip-history-overlay hide" id="pip-history-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 20, 0.97); z-index: 1000; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; font-family: 'Outfit', sans-serif;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
@@ -5324,6 +5359,17 @@ function initFloatingClipboard() {
 
                 // Audit Logs
                 pipLogs.innerHTML = mainLogs.innerHTML;
+
+                // Category buttons highlight
+                const activeCat = mainProcessedText.getAttribute("data-active-category");
+                const catBtns = pipWindow.document.querySelectorAll(".pip-category-btn");
+                catBtns.forEach(btn => {
+                    if (activeCat && btn.getAttribute("data-category") === activeCat) {
+                        btn.classList.add("active");
+                    } else {
+                        btn.classList.remove("active");
+                    }
+                });
             };
 
             // Initial display update
@@ -5376,6 +5422,25 @@ function initFloatingClipboard() {
                 mainOverride.value = pipCategory.value;
                 mainOverride.dispatchEvent(new Event("change"));
                 updatePipDisplay();
+            });
+
+            // Bind click events to category guide buttons in PiP window
+            const pipCatBtns = pipWindow.document.querySelectorAll(".pip-category-btn");
+            pipCatBtns.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const targetCat = btn.getAttribute("data-category");
+                    const currentOverride = pipCategory.value;
+                    
+                    if (currentOverride === targetCat) {
+                        // Revert to Auto-Detect if clicking already active category
+                        pipCategory.value = "auto";
+                    } else {
+                        // Override to selected category
+                        pipCategory.value = targetCat;
+                    }
+                    pipCategory.dispatchEvent(new Event("change"));
+                    updatePipDisplay();
+                });
             });
 
             pipSell.addEventListener("click", () => {

@@ -2828,3 +2828,71 @@ textarea:focus, input:focus, select:focus {
     }
 }
 
+/* Game Category Guide inside PiP Clipboard Popup */
+.pip-category-section {
+    box-sizing: border-box;
+}
+
+.pip-category-grid {
+    box-sizing: border-box;
+}
+
+.pip-category-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    color: #c7c7cc;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    text-transform: uppercase;
+    transition: var(--transition-smooth);
+    user-select: none;
+    text-align: left;
+    outline: none;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.pip-category-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.pip-category-btn.active {
+    background: var(--color-success); /* Green */
+    border-color: var(--color-success);
+    color: #0c0e12;
+    box-shadow: 0 0 12px rgba(48, 209, 88, 0.35);
+}
+
+.pip-category-btn.active i {
+    color: #0c0e12;
+}
+
+.pip-category-btn i {
+    font-size: 11px;
+    width: 14px;
+    text-align: center;
+    color: #8e8e93;
+    transition: var(--transition-smooth);
+}
+
+.pip-category-btn:hover i {
+    color: var(--text-primary);
+}
+
+.pip-category-btn.active:hover {
+    background: #34e062;
+    border-color: #34e062;
+    color: #0c0e12;
+}
+
+

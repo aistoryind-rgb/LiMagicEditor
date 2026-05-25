@@ -5387,6 +5387,28 @@ function initAccessGate() {
     const settingsDrawer = document.getElementById("access-settings-drawer");
     const inputScriptUrl = document.getElementById("access-script-url");
     const btnSaveScriptUrl = document.getElementById("btn-save-script-url");
+
+    // Dynamic submit button state (red if incomplete, green if all filled)
+    function updateSubmitButtonState() {
+        const fn = inputFirstname ? inputFirstname.value.trim() : "";
+        const ln = inputLastname ? inputLastname.value.trim() : "";
+        const id = inputId ? inputId.value.trim() : "";
+        
+        if (btnRequestSubmit) {
+            if (fn && ln && id) {
+                btnRequestSubmit.classList.add("glow-green");
+            } else {
+                btnRequestSubmit.classList.remove("glow-green");
+            }
+        }
+    }
+
+    if (inputFirstname) inputFirstname.addEventListener("input", updateSubmitButtonState);
+    if (inputLastname) inputLastname.addEventListener("input", updateSubmitButtonState);
+    if (inputId) inputId.addEventListener("input", updateSubmitButtonState);
+    
+    // Call initially in case inputs are pre-filled
+    updateSubmitButtonState();
     
     // Populate inputScriptUrl if saved
     if (inputScriptUrl) {

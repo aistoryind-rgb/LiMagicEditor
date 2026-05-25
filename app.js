@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 05:53:36";
-const BUILD_TIMESTAMP_SHORT = "May 25 05:53";
+const BUILD_TIMESTAMP = "2026 May 25 06:06:50";
+const BUILD_TIMESTAMP_SHORT = "May 25 06:06";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5779,7 +5779,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:53</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 06:06</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6243,6 +6243,28 @@ function initAccessGate() {
     const settingsDrawer = document.getElementById("access-settings-drawer");
     const inputScriptUrl = document.getElementById("access-script-url");
     const btnSaveScriptUrl = document.getElementById("btn-save-script-url");
+
+    // Dynamic submit button state (red if incomplete, green if all filled)
+    function updateSubmitButtonState() {
+        const fn = inputFirstname ? inputFirstname.value.trim() : "";
+        const ln = inputLastname ? inputLastname.value.trim() : "";
+        const id = inputId ? inputId.value.trim() : "";
+        
+        if (btnRequestSubmit) {
+            if (fn && ln && id) {
+                btnRequestSubmit.classList.add("glow-green");
+            } else {
+                btnRequestSubmit.classList.remove("glow-green");
+            }
+        }
+    }
+
+    if (inputFirstname) inputFirstname.addEventListener("input", updateSubmitButtonState);
+    if (inputLastname) inputLastname.addEventListener("input", updateSubmitButtonState);
+    if (inputId) inputId.addEventListener("input", updateSubmitButtonState);
+    
+    // Call initially in case inputs are pre-filled
+    updateSubmitButtonState();
     
     // Populate inputScriptUrl if saved
     if (inputScriptUrl) {

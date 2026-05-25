@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 17:04:03";
-const BUILD_TIMESTAMP_SHORT = "May 25 17:04";
+const BUILD_TIMESTAMP = "2026 May 25 17:14:36";
+const BUILD_TIMESTAMP_SHORT = "May 25 17:14";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1952,6 +1952,7 @@ function mapClothingBrands(text) {
     result = result.replace(/\bpikachu\b/g, "mikachu");
     result = result.replace(/\brolex\b/g, "kolex");
     result = result.replace(/\bsocial hoodie\b/g, "social club hoodie");
+    result = result.replace(/\btype mask\b/g, "tight mask");
     return result;
 }
 
@@ -5198,7 +5199,7 @@ function formatOtherAd(adBody, action, ctx) {
             if (matchedClothing) {
                 // Reorder clothing: color (lowercase) | item name | type | gender
                 const color = parseColor(rawItem);
-                let typeVal = parseType(rawItem);
+                let typeVal = parseMultipleTypes(rawItem);
                 const genderVal = parseGender(rawItem);
                 
                 if (matchedClothing.name.includes('*') && !typeVal) {
@@ -5209,6 +5210,10 @@ function formatOtherAd(adBody, action, ctx) {
                 if (color) finalClothing += `${color} `;
                 
                 let namePart = matchedClothing.name;
+                if (typeVal && typeVal.includes("and")) {
+                    namePart = pluralizeItemName(namePart);
+                }
+                
                 if (namePart.includes('*')) {
                     namePart = namePart.replace('*', typeVal || 'X');
                 }
@@ -5275,6 +5280,36 @@ function extractTypeFromWildcard(text) {
             }
             return num;
         }
+    }
+    return null;
+}
+
+function parseMultipleTypes(text) {
+    const lower = text.toLowerCase();
+    const numbers = [];
+    const regex = /\b(\d+)\b/g;
+    let match;
+    const qty = parseQuantity(text);
+    
+    while ((match = regex.exec(lower)) !== null) {
+        const numStr = match[1];
+        const numIndex = match.index;
+        
+        // If this number is the quantity at the start of the text, skip it
+        if (qty && parseInt(numStr) === qty) {
+            const before = lower.substring(0, numIndex).trim();
+            if (before === "" || before === "selling" || before === "buying" || before === "trading" || before === "renting" || before === "wts" || before === "wtb") {
+                continue;
+            }
+        }
+        numbers.push(numStr);
+    }
+    
+    if (numbers.length > 1) {
+        const last = numbers.pop();
+        return `${numbers.join(", ")} and ${last}`;
+    } else if (numbers.length === 1) {
+        return numbers[0];
     }
     return null;
 }
@@ -6154,7 +6189,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 17:04</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 17:14</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

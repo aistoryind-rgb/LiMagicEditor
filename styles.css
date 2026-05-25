@@ -1014,7 +1014,7 @@ textarea:focus, input:focus, select:focus {
 }
 
 .policy-book-card {
-    height: 480px;
+    height: 680px !important; /* Increased height to make use of canvas area */
     display: flex;
     flex-direction: column;
 }
@@ -1031,44 +1031,51 @@ textarea:focus, input:focus, select:focus {
 }
 
 .book-header-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    padding-bottom: 6px !important; /* reduced to position page headings closer just under the line */
+    margin-bottom: 6px !important; /* reduced spacing below header line */
 }
 
 .book-search-box {
-    position: relative;
-    display: flex;
-    align-items: center;
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
 }
 
-.book-search-box i {
-    position: absolute;
-    left: 10px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    pointer-events: none;
+.policy-book-card .book-search-box i {
+    position: absolute !important;
+    left: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 10px !important;
+    color: var(--text-secondary) !important;
+    pointer-events: none !important;
+    margin: 0 !important;
+    display: block !important;
 }
 
-.book-search-box input {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 5px 10px 5px 28px;
-    border-radius: var(--radius-sm);
-    font-size: 11px;
-    width: 140px;
-    transition: all var(--transition-normal);
+.policy-book-card .book-search-box input {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 3px 8px 3px 22px !important; /* adjusted padding for smaller search box */
+    border-radius: var(--radius-sm) !important;
+    font-size: 10.5px !important;
+    width: 120px !important; /* small search box on the right edge */
+    height: 22px !important; /* smaller height */
+    margin: 0 !important;
+    transition: all var(--transition-normal) !important;
 }
 
-.book-search-box input:focus {
-    border-color: var(--color-primary);
-    background: rgba(0, 0, 0, 0.5);
-    outline: none;
-    width: 185px;
+.policy-book-card .book-search-box input:focus {
+    border-color: var(--color-primary) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    outline: none !important;
+    width: 150px !important;
 }
 
 .book-container {
@@ -1094,12 +1101,13 @@ textarea:focus, input:focus, select:focus {
 }
 
 .page-title-header {
-    font-size: 13.5px;
+    font-size: 12px !important; /* page headings a little smaller */
     font-weight: 600;
     color: var(--text-primary);
     border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    padding-bottom: 6px;
-    margin-bottom: 8px;
+    padding-bottom: 4px !important;
+    margin-top: 0 !important; /* more just under the line */
+    margin-bottom: 6px !important;
     flex-shrink: 0;
 }
 
@@ -1107,8 +1115,8 @@ textarea:focus, input:focus, select:focus {
     flex: 1;
     overflow-y: auto;
     padding-right: 6px;
-    font-size: 12px;
-    line-height: 1.55;
+    font-size: 11.5px !important; /* more compact text */
+    line-height: 1.45 !important;
     color: var(--text-secondary);
 }
 
@@ -1161,29 +1169,29 @@ textarea:focus, input:focus, select:focus {
 }
 
 .policy-section h4.policy-subtitle {
-    font-size: 12.5px;
+    font-size: 11px !important; /* text in subheadings a little smaller */
     font-family: var(--font-heading);
-    margin-top: 12px;
-    margin-bottom: 6px;
-    padding-bottom: 3px;
+    margin-top: 8px !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 2px !important;
     border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
 }
 
 .policy-meta {
-    font-size: 10.5px;
+    font-size: 10px !important;
     color: var(--color-primary);
     opacity: 0.8;
-    margin-bottom: 8px;
+    margin-bottom: 6px !important;
     font-style: italic;
 }
 
 .policy-tip {
     background: rgba(255, 214, 10, 0.04);
     border-left: 2px solid #ffd60a;
-    padding: 6px 10px;
-    margin-top: 10px;
+    padding: 4px 8px !important;
+    margin-top: 8px !important;
     border-radius: 0 4px 4px 0;
-    font-size: 11px;
+    font-size: 10px !important;
 }
 
 .policy-list-bullets {
@@ -1191,13 +1199,13 @@ textarea:focus, input:focus, select:focus {
     padding-left: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px !important;
 }
 
 .policy-list-bullets li {
     position: relative;
-    padding-left: 14px;
-    font-size: 11.5px;
+    padding-left: 12px !important;
+    font-size: 11px !important; /* slightly smaller list items */
 }
 
 .policy-list-bullets li::before {
@@ -1313,22 +1321,27 @@ textarea:focus, input:focus, select:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-top: 10px;
+    padding-top: 8px !important;
     border-top: 1px solid var(--border-color);
     margin-top: auto;
+    margin-left: -20px !important; /* pull all the way to left card padding edge */
+    margin-right: -20px !important; /* pull all the way to right card padding edge */
+    padding-left: 20px !important;
+    padding-right: 20px !important;
 }
 
 .book-nav-btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 5px 10px;
+    padding: 3px 8px !important; /* a little smaller prev/next button */
     border-radius: var(--radius-sm);
-    font-size: 11px;
+    font-size: 10px !important;
+    height: 22px !important;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px !important;
     transition: all var(--transition-normal);
 }
 
@@ -1344,7 +1357,7 @@ textarea:focus, input:focus, select:focus {
 }
 
 #book-page-indicator {
-    font-size: 11px;
+    font-size: 10.5px !important;
     color: var(--text-secondary);
     font-weight: 500;
 }

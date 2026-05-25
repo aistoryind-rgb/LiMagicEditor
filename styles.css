@@ -670,6 +670,14 @@ textarea:focus, input:focus, select:focus {
     border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
 }
 
+.processed-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.1);
+}
+
 /* Notice Warning Blocks */
 .notice-container {
     transition: var(--transition-smooth);

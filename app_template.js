@@ -1989,7 +1989,7 @@ function runValidationPipeline(ctx, override) {
     // Suppress price/budget label when category is Dating, Services, Discounts, when the raw text contains "beach market" / "beach markit", or when it is a party/wedding/car meet event.
     const lowerRaw = ctx.raw.toLowerCase();
     const isBeachMarket = (/beach\s*mar[kt]et/i.test(lowerRaw) || lowerRaw.includes("beach markit")) && 
-                          !(["Real Estate", "Auto", "Businesses"].includes(ctx.category) && ctx.isNegotiable);
+                          !["Real Estate", "Auto", "Businesses"].includes(ctx.category);
     const isEventAd = /^(?:pool\s+)?party\b/i.test(lowerRaw) || 
                       /^(?:wedding|car\s+meet)\b/i.test(lowerRaw) || 
                       /\b(?:party|wedding|car\s+meet)\s+at\b/i.test(lowerRaw);

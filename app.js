@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 20:35:30";
-const BUILD_TIMESTAMP_SHORT = "May 25 20:35";
+const BUILD_TIMESTAMP = "2026 May 25 20:48:31";
+const BUILD_TIMESTAMP_SHORT = "May 25 20:48";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -3142,7 +3142,7 @@ function runValidationPipeline(ctx, override) {
     // Suppress price/budget label when category is Dating, Services, Discounts, when the raw text contains "beach market" / "beach markit", or when it is a party/wedding/car meet event.
     const lowerRaw = ctx.raw.toLowerCase();
     const isBeachMarket = (/beach\s*mar[kt]et/i.test(lowerRaw) || lowerRaw.includes("beach markit")) && 
-                          !(["Real Estate", "Auto", "Businesses"].includes(ctx.category) && ctx.isNegotiable);
+                          !["Real Estate", "Auto", "Businesses"].includes(ctx.category);
     const isEventAd = /^(?:pool\s+)?party\b/i.test(lowerRaw) || 
                       /^(?:wedding|car\s+meet)\b/i.test(lowerRaw) || 
                       /\b(?:party|wedding|car\s+meet)\s+at\b/i.test(lowerRaw);
@@ -6301,7 +6301,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 20:35</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 20:48</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

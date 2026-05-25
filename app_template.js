@@ -455,6 +455,13 @@ function getClosestMatch(input, list, threshold = 0.6) {
 function correctSpelling(text, ctx) {
     let corrected = text;
     
+    // Protect type numbers (e.g. type 5, type 13, 14 and 19) from being spell-corrected (e.g. 5 -> lvl5)
+    const protectedTypes = [];
+    corrected = corrected.replace(/\b(type|types|extra|extras|of\s+type)\s+(\d+(?:\s*(?:,|and|or)\s*\d+)*)\b/gi, (match) => {
+        protectedTypes.push(match);
+        return `__PROTECTED_TYPE_${protectedTypes.length - 1}__`;
+    });
+    
     // Actions / Prefixes
     const actionMatch = corrected.match(/\b(sling|sellaing|seling|selaing|slling|selign|saling|sellin|seeling|sellig|sellng|selng|sel|sale)\b/i);
     if (actionMatch) {
@@ -628,6 +635,10 @@ function correctSpelling(text, ctx) {
         "chrion": "chiron",
         "contanr": "container",
         "contanrs": "containers",
+        "bio sparks": "biosparks",
+        "bio spark": "biospark",
+        "biosparcs": "biosparks",
+        "biosparc": "biospark",
         "privet": "private",
         "palt": "platinum",
         "busnss": "business",
@@ -699,6 +710,11 @@ function correctSpelling(text, ctx) {
     // Format property and shop numbers to use № symbol
     corrected = corrected.replace(/\b(house|apartment|mansion|penthouse|shop)\s*(?:no\.?|number|num\.?|#)?\s*(\d+)\b/gi, (match, prop, num) => {
         return `${prop} \u2116${num}`;
+    });
+
+    // Restore protected type numbers
+    corrected = corrected.replace(/__PROTECTED_TYPE_(\d+)__/g, (match, idx) => {
+        return protectedTypes[parseInt(idx)];
     });
 
     return corrected;
@@ -1121,21 +1137,7 @@ function initAdProcessing() {
         override.addEventListener("change", processAd);
     }
     
-    // Bind click events to main page category guide buttons
-    const mainCatBtns = document.querySelectorAll(".main-category-btn");
-    mainCatBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const targetCat = btn.getAttribute("data-category");
-            const currentOverride = override ? override.value : "auto";
-            
-            if (currentOverride === targetCat) {
-                if (override) override.value = "auto";
-            } else {
-                if (override) override.value = targetCat;
-            }
-            if (override) override.dispatchEvent(new Event("change"));
-        });
-    });
+    // Category guide buttons on main page are now visual reference only and not clickable
     
     if (btnCopy) {
         btnCopy.addEventListener("click", () => {
@@ -2087,6 +2089,12 @@ function detectCategory(text) {
         return "Other";
     }
     
+    // Check for cage pets and shoulder pets before vehicle matching to prevent false matches
+    // (e.g. "cage with a rat" matching "Rat Bike", "cage with a pug" matching "Peugeot" etc.)
+    if (/\b(?:cage\s+with|shoulder\s+pet|on\s+shoulder)\b/i.test(lower)) {
+        return "Other";
+    }
+    
     const vehCheck = matchVehicle(text);
     
     if (isTemplateAd(text)) {
@@ -2362,7 +2370,7 @@ function detectCategory(text) {
     const otherKeywords = [
         "ticket", "tcket", "tikcet", "tckets", "tikets", "juice", "battery", "batteries", "metal", "mask", "pet", "shoulder", 
         "fox", "cat", "dog", "drill", "sawmill", "pickaxe", "hookah", "sponge", "timber",
-        "copper", "emerald", "ruby", "diamond", "obsidian", "magma stone", "thread", "token",
+        "copper", "emerald", "ruby", "diamond", "obsidian", "magma stone", "luminous stone", "stone", "stones", "thread", "token",
         "tonic treat", "map", "wire", "plate", "container", "containers", "fuel",
         "party", "wedding", "car meet", "prime", "platinum", "plat",
         "salmon", "carp", "perch", "trout", "megalodon", "ray", "orca", "whale",
@@ -2399,7 +2407,7 @@ function detectCategory(text) {
         const otherKeywordsList = [
             "ticket", "tcket", "tikcet", "tckets", "tikets", "juice", "battery", "batteries", "metal", "mask", "pet", "shoulder", 
             "fox", "cat", "dog", "drill", "sawmill", "pickaxe", "hookah", "sponge", "timber",
-            "copper", "emerald", "ruby", "diamond", "obsidian", "magma stone", "thread", "token",
+            "copper", "emerald", "ruby", "diamond", "obsidian", "magma stone", "luminous stone", "stone", "stones", "thread", "token",
             "tonic treat", "map", "wire", "plate", "container", "containers", "fuel",
             "party", "wedding", "car meet", "prime", "platinum", "plat",
             "salmon", "carp", "perch", "trout", "megalodon", "ray", "orca", "whale",
@@ -5272,30 +5280,30 @@ function initFloatingClipboard() {
                                 <i class="fa-solid fa-folder-open"></i> Game Category Guide
                             </div>
                             <div class="pip-category-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;">
-                                <button type="button" class="category-btn pip-category-btn" data-category="Real Estate">
+                                <div class="category-btn pip-category-btn" data-category="Real Estate">
                                     <i class="fa-solid fa-house"></i> Real Estate
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Auto">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Auto">
                                     <i class="fa-solid fa-car"></i> Auto
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Businesses">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Businesses">
                                     <i class="fa-solid fa-briefcase"></i> Businesses
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Discounts">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Discounts">
                                     <i class="fa-solid fa-percent"></i> Discounts
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Work">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Work">
                                     <i class="fa-solid fa-helmet-safety"></i> Work
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Dating">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Dating">
                                     <i class="fa-solid fa-heart"></i> Dating
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Services">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Services">
                                     <i class="fa-solid fa-wrench"></i> Services
-                                </button>
-                                <button type="button" class="category-btn pip-category-btn" data-category="Other">
+                                </div>
+                                <div class="category-btn pip-category-btn" data-category="Other">
                                     <i class="fa-solid fa-infinity"></i> Other
-                                </button>
+                                </div>
                             </div>
                         </div>
 
@@ -5476,24 +5484,7 @@ function initFloatingClipboard() {
                 updatePipDisplay();
             });
 
-            // Bind click events to category guide buttons in PiP window
-            const pipCatBtns = pipWindow.document.querySelectorAll(".pip-category-btn");
-            pipCatBtns.forEach(btn => {
-                btn.addEventListener("click", () => {
-                    const targetCat = btn.getAttribute("data-category");
-                    const currentOverride = pipCategory.value;
-                    
-                    if (currentOverride === targetCat) {
-                        // Revert to Auto-Detect if clicking already active category
-                        pipCategory.value = "auto";
-                    } else {
-                        // Override to selected category
-                        pipCategory.value = targetCat;
-                    }
-                    pipCategory.dispatchEvent(new Event("change"));
-                    updatePipDisplay();
-                });
-            });
+            // Category guide buttons in PiP window are now visual reference only and not clickable
 
             pipSell.addEventListener("click", () => {
                 document.getElementById("btn-toggle-sell").click();

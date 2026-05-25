@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 01:05:05";
-const BUILD_TIMESTAMP_SHORT = "May 26 01:05";
+const BUILD_TIMESTAMP = "2026 May 26 01:13:46";
+const BUILD_TIMESTAMP_SHORT = "May 26 01:13";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6352,7 +6352,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 01:05</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 01:13</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6455,7 +6455,7 @@ function initFloatingClipboard() {
                         <!-- Applied Policy Rules & Corrections Container -->
                         <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
                             <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
-                            <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 80px; box-sizing: border-box; width: 100%;">
+                            <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; min-height: 45px; max-height: 180px; height: auto; overflow-y: auto; box-sizing: border-box; width: 100%;">
                                 <li class="log-empty">No corrections made.</li>
                             </ul>
                         </div>

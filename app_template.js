@@ -5302,7 +5302,7 @@ function initFloatingClipboard() {
                         <!-- Applied Policy Rules & Corrections Container -->
                         <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
                             <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
-                            <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 80px; box-sizing: border-box; width: 100%;">
+                            <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; min-height: 45px; max-height: 180px; height: auto; overflow-y: auto; box-sizing: border-box; width: 100%;">
                                 <li class="log-empty">No corrections made.</li>
                             </ul>
                         </div>

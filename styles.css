@@ -1753,11 +1753,13 @@ textarea:focus, input:focus, select:focus {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-md);
     color: #fff;
-    padding: 8px 12px;
+    padding: 6px 10px;
     font-size: 13px;
     font-family: inherit;
+    line-height: 1.4;
     resize: none;
-    height: 72px;
+    height: 80px;
+    min-height: 80px !important;
     outline: none;
     transition: var(--transition-smooth);
 }

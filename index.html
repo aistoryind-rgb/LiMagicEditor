@@ -559,6 +559,9 @@
                                 <button type="button" class="admin-tab-btn" data-target="tab-backup">
                                     <i class="fa-solid fa-file-shield"></i> Backup & Restore
                                 </button>
+                                <button type="button" class="admin-tab-btn" data-target="tab-users">
+                                    <i class="fa-solid fa-users"></i> Users
+                                </button>
                             </div>
 
                             <!-- Tab 1: Pending Access Requests -->
@@ -729,6 +732,17 @@
                                         <button type="button" id="btn-admin-import" class="btn-action glow-red" style="width: 100%;">
                                             <i class="fa-solid fa-upload"></i> Import Data
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 1b: Authorized Users -->
+                            <div id="tab-users" class="admin-tab-content hide">
+                                <p class="section-desc">View and manage authorized users who have access to the system. You can revoke their access at any time.</p>
+                                <div id="admin-users-list-container" class="access-requests-list" style="margin-top: 15px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                                    <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                                        <i class="fa-solid fa-users-slash" style="font-size: 24px; margin-bottom: 10px; display: block; color: var(--text-muted);"></i>
+                                        No authorized users found.
                                     </div>
                                 </div>
                             </div>

@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 06:43:29";
-const BUILD_TIMESTAMP_SHORT = "May 25 06:43";
+const BUILD_TIMESTAMP = "2026 May 25 06:52:35";
+const BUILD_TIMESTAMP_SHORT = "May 25 06:52";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5780,7 +5780,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 06:43</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 06:52</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -7024,6 +7024,7 @@ function initAdminPanel() {
 
 function loadAndRenderAccessRequests(passcode) {
     const container = document.getElementById("admin-access-requests-container");
+    const usersContainer = document.getElementById("admin-users-list-container");
     if (!container || !CONFIG.GOOGLE_SCRIPT_URL) return;
     
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
@@ -7039,13 +7040,22 @@ function loadAndRenderAccessRequests(passcode) {
         if (data.status === "success") {
             const pendingRequests = data.requests.filter(r => r.status === "pending");
             renderAccessRequestsList(container, pendingRequests, passcode);
+            
+            if (usersContainer) {
+                const approvedUsers = data.requests.filter(r => r.status === "approved");
+                renderApprovedUsersList(usersContainer, approvedUsers, passcode);
+            }
         } else {
-            container.innerHTML = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Failed to load access requests: ${data.message}</div>`;
+            const errMsg = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Failed to load access requests: ${data.message}</div>`;
+            container.innerHTML = errMsg;
+            if (usersContainer) usersContainer.innerHTML = errMsg;
         }
     })
     .catch(err => {
         console.error("Error loading access requests:", err);
-        container.innerHTML = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Network error loading access requests.</div>`;
+        const errMsg = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Network error loading access requests.</div>`;
+        container.innerHTML = errMsg;
+        if (usersContainer) usersContainer.innerHTML = errMsg;
     });
 }
 
@@ -7204,6 +7214,122 @@ function renderAccessRequestsList(container, requests, passcode) {
         actionsRow.appendChild(btnApprove);
         actionsRow.appendChild(btnReject);
         
+        card.appendChild(actionsRow);
+        container.appendChild(card);
+    });
+}
+
+function renderApprovedUsersList(container, requests, passcode) {
+    if (!container) return;
+    container.innerHTML = "";
+    
+    if (requests.length === 0) {
+        container.innerHTML = `
+            <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                <i class="fa-solid fa-users-slash" style="font-size: 24px; margin-bottom: 10px; display: block; color: var(--text-muted);"></i>
+                No authorized users found.
+            </div>`;
+        return;
+    }
+    
+    requests.forEach(req => {
+        const card = document.createElement("div");
+        card.className = "access-request-card";
+        card.style.background = "rgba(255, 255, 255, 0.02)";
+        card.style.border = "1px solid var(--border-color)";
+        card.style.padding = "15px";
+        card.style.borderRadius = "8px";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.justifyContent = "space-between";
+        card.style.transition = "transform 0.2s, box-shadow 0.2s";
+        
+        const details = document.createElement("div");
+        
+        const name = document.createElement("div");
+        name.style.fontSize = "14px";
+        name.style.fontWeight = "600";
+        name.style.color = "var(--text-color)";
+        name.textContent = `${req.firstname} ${req.lastname}`;
+        details.appendChild(name);
+        
+        const gameId = document.createElement("div");
+        gameId.style.fontSize = "12px";
+        gameId.style.color = "var(--text-muted)";
+        gameId.style.marginTop = "4px";
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
+        details.appendChild(gameId);
+        
+        const time = document.createElement("div");
+        time.style.fontSize = "11px";
+        time.style.color = "var(--text-muted)";
+        time.style.marginTop = "4px";
+        time.textContent = req.timestamp;
+        details.appendChild(time);
+        
+        const uuidInfo = document.createElement("div");
+        uuidInfo.style.fontSize = "10px";
+        uuidInfo.style.color = "var(--text-muted)";
+        uuidInfo.style.marginTop = "4px";
+        uuidInfo.style.wordBreak = "break-all";
+        uuidInfo.textContent = `UUID: ${req.clientUuid}`;
+        details.appendChild(uuidInfo);
+        
+        card.appendChild(details);
+        
+        const actionsRow = document.createElement("div");
+        actionsRow.style.display = "flex";
+        actionsRow.style.gap = "10px";
+        actionsRow.style.marginTop = "15px";
+        
+        const btnRevoke = document.createElement("button");
+        btnRevoke.type = "button";
+        btnRevoke.className = "btn-preset";
+        btnRevoke.style.flex = "1";
+        btnRevoke.style.padding = "6px 12px";
+        btnRevoke.style.borderRadius = "4px";
+        btnRevoke.style.border = "none";
+        btnRevoke.style.background = "#e63946";
+        btnRevoke.style.color = "white";
+        btnRevoke.style.fontWeight = "600";
+        btnRevoke.style.fontSize = "12px";
+        btnRevoke.style.cursor = "pointer";
+        btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+        
+        btnRevoke.addEventListener("click", () => {
+            if (confirm(`Are you sure you want to revoke access for ${req.firstname} ${req.lastname}?`)) {
+                btnRevoke.disabled = true;
+                btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                
+                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({
+                        action: "reject_access_request",
+                        passcode: passcode,
+                        clientUuid: req.clientUuid
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        loadAndRenderAccessRequests(passcode);
+                    } else {
+                        alert("Revocation failed: " + data.message);
+                        btnRevoke.disabled = false;
+                        btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Revoke access error:", err);
+                    alert("Network error revoking access.");
+                    btnRevoke.disabled = false;
+                    btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+                });
+            }
+        });
+        
+        actionsRow.appendChild(btnRevoke);
         card.appendChild(actionsRow);
         container.appendChild(card);
     });

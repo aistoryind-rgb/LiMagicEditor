@@ -2046,6 +2046,15 @@ textarea:focus, input:focus, select:focus {
     transform: translateY(0) scale(0.98);
 }
 
+.access-gate-card #btn-access-request-submit.glow-green {
+    background: linear-gradient(135deg, #30d158 0%, #28b84d 100%) !important;
+    box-shadow: 0 4px 15px rgba(48, 209, 88, 0.3) !important;
+}
+
+.access-gate-card #btn-access-request-submit.glow-green:hover {
+    box-shadow: 0 6px 20px rgba(48, 209, 88, 0.45) !important;
+}
+
 .access-gate-header {
     margin-bottom: 28px;
     display: flex;
@@ -2691,20 +2700,22 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pip-overlay-footnote {
-    font-size: 10.5px;
-    color: rgba(255, 255, 255, 0.4);
-    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 14px;
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: flex-start;
+    gap: 8px;
     font-family: var(--font-heading);
     font-weight: 500;
     letter-spacing: 0.3px;
+    line-height: 1.45;
 }
 
 .pip-overlay-footnote i {
     color: #ff9f0a;
-    opacity: 0.8;
+    opacity: 0.85;
+    margin-top: 2px;
 }
 
 .btn-restore-main {

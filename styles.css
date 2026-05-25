@@ -2593,52 +2593,91 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pip-overlay-card {
-    background: var(--bg-card);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--border-glow);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(185deg, rgba(20, 20, 28, 0.96) 0%, rgba(12, 12, 16, 0.98) 100%);
+    backdrop-filter: blur(25px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.055);
     border-radius: var(--radius-lg);
-    box-shadow: 0 0 45px rgba(255, 59, 48, 0.18);
-    padding: 32px 24px;
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(255, 59, 48, 0.06),
+        0 0 80px rgba(10, 132, 255, 0.04);
+    padding: 36px 30px;
     text-align: center;
     max-width: 460px;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
     animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.pip-overlay-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, #ff9f0a 50%, var(--color-info) 100%);
+    opacity: 0.85;
+}
+
 .pip-overlay-badge {
-    background: rgba(10, 132, 255, 0.15);
-    border: 1px solid rgba(10, 132, 255, 0.3);
-    color: var(--color-info);
+    background: rgba(48, 209, 88, 0.08);
+    border: 1px solid rgba(48, 209, 88, 0.25);
+    color: #30d158;
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 11px;
     padding: 6px 14px;
     border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 0 12px rgba(48, 209, 88, 0.1);
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #30d158;
+    border-radius: 50%;
+    display: inline-block;
+    animation: badgePulse 1.5s infinite;
+}
+
+@keyframes badgePulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px #30d158; }
+    100% { transform: scale(0.9); opacity: 0.6; }
 }
 
 .pip-overlay-text {
-    font-size: 16px;
-    color: var(--text-primary);
-    line-height: 1.5;
+    font-size: 14.5px;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.55;
+    font-weight: 500;
+    margin: 4px 0 2px 0;
 }
 
 .pip-overlay-note {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0.005) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--color-info);
     border-radius: var(--radius-md);
-    padding: 16px;
+    padding: 16px 18px;
     width: 100%;
     box-sizing: border-box;
     text-align: left;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
 }
 
 .pip-overlay-note .note-header {
@@ -2650,7 +2689,7 @@ textarea:focus, input:focus, select:focus {
     font-size: 11px;
     color: var(--color-info);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
 }
 
 .pip-overlay-note .note-header i {
@@ -2660,46 +2699,51 @@ textarea:focus, input:focus, select:focus {
 
 .pip-overlay-note p {
     margin: 0;
-    font-size: 12px;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 400;
 }
 
 .pip-overlay-footnote {
-    font-size: 11px;
-    color: rgba(255, 170, 0, 0.65);
-    margin-top: 10px;
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 8px;
     display: flex;
     align-items: center;
     gap: 6px;
     font-family: var(--font-heading);
     font-weight: 500;
+    letter-spacing: 0.3px;
 }
 
 .pip-overlay-footnote i {
-    color: rgba(255, 170, 0, 0.85);
+    color: #ff9f0a;
+    opacity: 0.8;
 }
 
 .btn-restore-main {
-    background: var(--color-primary) !important;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #ff453a 100%) !important;
     color: #fff !important;
-    border: none !important;
-    border-radius: var(--radius-md) !important;
+    border: 1px solid rgba(255, 69, 58, 0.3) !important;
+    border-radius: 30px !important;
     font-family: var(--font-heading);
     font-weight: 600;
-    font-size: 14px;
-    padding: 12px 24px;
+    font-size: 13.5px;
+    padding: 12px 28px;
     cursor: pointer;
-    transition: var(--transition-smooth);
-    box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 15px rgba(255, 59, 48, 0.2);
     width: auto !important;
-    margin-top: 10px;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
 }
 
 .btn-restore-main:hover {
-    background: var(--color-primary-hover) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 59, 48, 0.45);
+    background: linear-gradient(135deg, var(--color-primary-hover) 0%, #ff453a 100%) !important;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 59, 48, 0.4);
+    border-color: rgba(255, 69, 58, 0.5) !important;
 }
 
 .btn-restore-main:active {

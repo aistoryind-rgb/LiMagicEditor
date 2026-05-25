@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:27:04";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:27";
+const BUILD_TIMESTAMP = "2026 May 26 00:29:31";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:29";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6188,7 +6188,7 @@ function initFloatingClipboard() {
             // Request a Picture-in-Picture window
             const pipWindow = await window.documentPictureInPicture.requestWindow({
                 width: 420,
-                height: 850
+                height: 690
             });
             pipWindowInstance = pipWindow;
 
@@ -6324,7 +6324,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:27</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:29</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6433,7 +6433,8 @@ function initFloatingClipboard() {
                                 </div>
                                 <!-- Right Column: Rules List -->
                                 <div class="pip-logs-side" style="flex: 1.3; min-width: 0;">
-                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; min-height: 115px; box-sizing: border-box;">
+                                    <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; margin-bottom: 6px; visibility: hidden;">&nbsp;</div>
+                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 115px; box-sizing: border-box;">
                                         <li class="log-empty">No corrections made.</li>
                                     </ul>
                                 </div>

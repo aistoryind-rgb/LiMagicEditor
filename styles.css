@@ -746,11 +746,17 @@ textarea:focus, input:focus, select:focus {
     line-height: 1.4;
 }
 
+.audit-logs:has(.log-empty) {
+    justify-content: center;
+}
+
 .audit-logs li.log-empty {
     color: var(--text-muted);
     font-style: italic;
     justify-content: center;
-    padding: 12px 0;
+    padding: 0;
+    text-align: center;
+    width: 100%;
 }
 
 .audit-logs li i {

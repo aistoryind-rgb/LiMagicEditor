@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 04:04:45";
-const BUILD_TIMESTAMP_SHORT = "May 26 04:04";
+const BUILD_TIMESTAMP = "2026 May 26 04:07:53";
+const BUILD_TIMESTAMP_SHORT = "May 26 04:07";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6489,7 +6489,7 @@ function initFloatingClipboard() {
 
     btnFloat.addEventListener("click", async () => {
         if (!('documentPictureInPicture' in window)) {
-            alert("Floating Clipboard mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.");
+            alert("Magic Editor Mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.");
             return;
         }
 
@@ -6638,7 +6638,7 @@ function initFloatingClipboard() {
             pipWindow.document.head.appendChild(overflowStyle);
 
             // Add tab title
-            pipWindow.document.title = "LifeInvader Floating Clipboard";
+            pipWindow.document.title = "LifeInvader Magic Editor";
 
             // Inject the compact HTML layout
             pipWindow.document.body.innerHTML = `
@@ -6649,13 +6649,13 @@ function initFloatingClipboard() {
                                 <span class="li-logo">
                                     <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
                                 </span>
-                                <span class="pip-badge">Clipboard</span>
+                                <span class="pip-badge">Magic Mode</span>
                             </div>
                             <span class="pip-created-by" style="font-size: 9.5px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap; margin-left: 2px;">Created by Dopamine</span>
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 04:04</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 04:07</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

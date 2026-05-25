@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 05:07:49";
-const BUILD_TIMESTAMP_SHORT = "May 26 05:07";
+const BUILD_TIMESTAMP = "2026 May 26 05:18:16";
+const BUILD_TIMESTAMP_SHORT = "May 26 05:18";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6688,26 +6688,23 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 05:07</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 05:18</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;"><i class="fa-solid fa-file-import"></i> RAW ADVERTISEMENT CONTENT</label>
-                                <button id="pip-btn-paste" class="pip-uniform-btn btn-paste"><i class="fa-solid fa-paste"></i> Paste</button>
+                                <button id="pip-btn-clear-header" class="pip-uniform-btn btn-clear" style="width: auto !important; padding: 2px 8px !important; height: 20px !important; font-size: 9px !important; text-transform: uppercase;"><i class="fa-solid fa-trash-can"></i> Clear</button>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
-                            <div class="processed-action-row" style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                <button id="pip-btn-paste" class="pip-uniform-btn btn-paste"><i class="fa-solid fa-paste"></i> Paste</button>
                                 <button id="pip-btn-clear" class="pip-uniform-btn btn-clear"><i class="fa-solid fa-trash-can"></i> Clear</button>
                             </div>
                         </div>
-                        <div class="pip-form-row">
-                            <div class="pip-toggle-group">
-                                <button type="button" class="pip-toggle" id="pip-toggle-sell">Sell</button>
-                                <button type="button" class="pip-toggle" id="pip-toggle-buy">Buy</button>
-                            </div>
-                            <select id="pip-category-override">
+                        <div class="pip-form-row" style="display: flex; gap: 8px; align-items: center; margin-top: 8px; width: 100%;">
+                            <select id="pip-category-override" style="flex: 1; height: 28px !important; padding: 4px 8px !important; font-size: 11px !important; border-radius: 6px !important;">
                                 <option value="auto">Auto-Detect</option>
                                 <option value="Real Estate">Real Estate</option>
                                 <option value="Auto">Auto</option>
@@ -6718,6 +6715,10 @@ function initFloatingClipboard() {
                                 <option value="Discounts">Discounts</option>
                                 <option value="Other">Other</option>
                             </select>
+                            <div class="pip-toggle-group" style="flex-shrink: 0; width: 85px; display: flex; height: 28px !important; align-items: center; padding: 2px !important; border-radius: 6px !important;">
+                                <button type="button" class="pip-toggle" id="pip-toggle-sell" style="font-size: 10px !important; padding: 2px 4px !important; height: 100% !important; border-radius: 4px !important; font-weight: 700;">Sell</button>
+                                <button type="button" class="pip-toggle" id="pip-toggle-buy" style="font-size: 10px !important; padding: 2px 4px !important; height: 100% !important; border-radius: 4px !important; font-weight: 700;">Buy</button>
+                            </div>
                         </div>
                         
                         <div class="status-banner" id="pip-status-banner" data-status="pending">
@@ -6734,7 +6735,7 @@ function initFloatingClipboard() {
                                     <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                                 </div>
                             </div>
-                            <div class="processed-action-row" style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                            <div class="processed-action-row" style="display: flex; justify-content: flex-start; margin-top: 8px;">
                                 <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
                         </div>
@@ -6955,25 +6956,30 @@ function initFloatingClipboard() {
             }
 
             const pipClear = pipWindow.document.getElementById("pip-btn-clear");
+            const pipClearHeader = pipWindow.document.getElementById("pip-btn-clear-header");
+            const handleClear = () => {
+                pipRaw.value = "";
+                mainRaw.value = "";
+                document.getElementById("category-override").value = "auto";
+                
+                const btnSell = document.getElementById("btn-toggle-sell");
+                const btnBuy = document.getElementById("btn-toggle-buy");
+                if (btnSell && btnBuy) {
+                    userClickedAction = false;
+                    actionOverrideMode = "auto";
+                    btnSell.classList.add("active");
+                    btnBuy.classList.remove("active");
+                }
+                
+                mainRaw.dispatchEvent(new Event("input"));
+                updatePipDisplay();
+                pipRaw.focus();
+            };
             if (pipClear) {
-                pipClear.addEventListener("click", () => {
-                    pipRaw.value = "";
-                    mainRaw.value = "";
-                    document.getElementById("category-override").value = "auto";
-                    
-                    const btnSell = document.getElementById("btn-toggle-sell");
-                    const btnBuy = document.getElementById("btn-toggle-buy");
-                    if (btnSell && btnBuy) {
-                        userClickedAction = false;
-                        actionOverrideMode = "auto";
-                        btnSell.classList.add("active");
-                        btnBuy.classList.remove("active");
-                    }
-                    
-                    mainRaw.dispatchEvent(new Event("input"));
-                    updatePipDisplay();
-                    pipRaw.focus();
-                });
+                pipClear.addEventListener("click", handleClear);
+            }
+            if (pipClearHeader) {
+                pipClearHeader.addEventListener("click", handleClear);
             }
 
             const pipTextElement = pipWindow.document.getElementById("pip-processed-text");

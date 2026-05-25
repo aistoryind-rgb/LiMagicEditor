@@ -56,16 +56,16 @@ const REAL_ESTATE_ORDER = [
 const DEFAULT_PRESETS = [
     { label: "Sell: 10 Grand Tickets", raw: "selling 10 rp tickets for 350k each", count: 12 },
     { label: "Buy: Prime Platinum", raw: "buying prime platinum 30 days", count: 11 },
-    { label: "Auto: Truffade Chiron", raw: "selling truffade chiron full config drift", count: 10 },
-    { label: "RE: Vinewood House", raw: "selling house 1406 with helipad garden pool in vinewood hills", count: 9 },
-    { label: "Dating: Girlfriend", raw: "loking for girlfirnd", count: 8 },
-    { label: "Other: Juices Bulk", raw: "selling 10% and 20% juices", count: 7 },
-    { label: "Other: Scrap Metal", raw: "buying scrap metal", count: 6 },
-    { label: "Other: Play Dice", raw: "looking to play dice", count: 5 },
-    { label: "Biz: Pumpkin Plantation", raw: "selling pumpkin plantation with 10 beds 1.3 million", count: 4 },
-    { label: "Other: Solar Panels", raw: "selling solar panels", count: 3 },
-    { label: "Other: Video Cards", raw: "buying lvl5 graphic card", count: 2 },
-    { label: "Buy: Luminous Stone", raw: "buying luminous stones", count: 1 }
+    { label: "Auto: Sandking XL", raw: "selling fully upgraded sandking xl", count: 10 },
+    { label: "Buy: Truffade Chiron", raw: "buying truffade chiron", count: 9 },
+    { label: "Buy: Cage Pet", raw: "buying pet", count: 8 },
+    { label: "Sell: Cage Pet", raw: "selling pet 600k", count: 7 },
+    { label: "Sell: House №1406", raw: "selling house 1406", count: 6 },
+    { label: "Dating: Girlfriend", raw: "looking for girlfriend", count: 5 },
+    { label: "Sell: SIM Card", raw: "selling sim card 1111113", count: 4 },
+    { label: "Buy: SIM Card", raw: "buying sim card 7777777", count: 3 },
+    { label: "Sell: Charger", raw: "selling charger", count: 2 },
+    { label: "Sell: 10 Salmon", raw: "selling 10 salmon", count: 1 }
 ];
 
 function generatePresetLabel(raw) {
@@ -85,10 +85,15 @@ function generatePresetLabel(raw) {
     
     const lowerSubject = subject.toLowerCase();
     if (lowerSubject.includes("chiron")) return `${actionPrefix}: Truffade Chiron`;
+    if (lowerSubject.includes("sandking")) return `${actionPrefix}: Sandking XL`;
     if (lowerSubject.includes("house")) return `${actionPrefix}: Vinewood House`;
     if (lowerSubject.includes("ticket")) return `${actionPrefix}: Grand Tickets`;
     if (lowerSubject.includes("platinum")) return `${actionPrefix}: Prime Platinum`;
     if (lowerSubject.includes("girlfriend")) return `${actionPrefix}: Girlfriend`;
+    if (lowerSubject.includes("sim card") || lowerSubject.includes("simcard")) return `${actionPrefix}: SIM Card`;
+    if (lowerSubject.includes("pet") || lowerSubject.includes("cage")) return `${actionPrefix}: Cage Pet`;
+    if (lowerSubject.includes("charger")) return `${actionPrefix}: Charger`;
+    if (lowerSubject.includes("salmon")) return `${actionPrefix}: 10 Salmon`;
     if (lowerSubject.includes("juice")) return `${actionPrefix}: Juices`;
     if (lowerSubject.includes("scrap metal")) return `${actionPrefix}: Scrap Metal`;
     if (lowerSubject.includes("dice")) return `${actionPrefix}: Play Dice`;

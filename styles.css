@@ -640,7 +640,7 @@ textarea:focus, input:focus, select:focus {
 
 .processed-text {
     font-family: var(--font-mono);
-    font-size: 15px;
+    font-size: 14px;
     color: var(--text-primary);
     word-break: break-word;
     user-select: all;
@@ -2907,10 +2907,75 @@ textarea:focus, input:focus, select:focus {
 
 /* Compact rules text inside Floating Clipboard Popup */
 #pip-logs-list li {
-    font-size: 11.5px;
+    font-size: 11px;
     gap: 6px;
-    line-height: 1.35;
+    line-height: 1.3;
 }
 
+/* Compact Category Guide inside PiP window */
+.pip-layout .category-btn {
+    height: 20px !important;
+    padding: 2px 6px !important;
+    font-size: 8px !important;
+    gap: 5px !important;
+}
+.pip-layout .category-btn i {
+    font-size: 9px !important;
+    width: 10px !important;
+}
 
+/* Specific Style Targeting green text for processed final advertisement in PiP Pop-Up Clipboard */
+.pip-layout #pip-processed-text {
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
+}
 
+/* Uniform action buttons inside Floating Clipboard (History, Paste, Copy) */
+.pip-uniform-btn {
+    width: 76px !important;
+    height: 22px !important;
+    padding: 0 !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    font-family: 'Outfit', sans-serif !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    border-radius: 4px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    transition: var(--transition-smooth) !important;
+    text-transform: uppercase !important;
+}
+.pip-uniform-btn.btn-paste {
+    background: var(--color-success) !important;
+    color: #fff !important;
+}
+.pip-uniform-btn.btn-paste:hover {
+    opacity: 0.9 !important;
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.4) !important;
+}
+.pip-uniform-btn.btn-copy {
+    background: var(--color-info) !important;
+    color: #fff !important;
+}
+.pip-uniform-btn.btn-copy:hover:not(:disabled) {
+    opacity: 0.9 !important;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4) !important;
+}
+.pip-uniform-btn.btn-copy:disabled {
+    background: var(--text-muted) !important;
+    color: var(--text-secondary) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
+#pip-btn-history.pip-uniform-btn {
+    background: var(--color-info) !important;
+    color: #fff !important;
+}
+#pip-btn-history.pip-uniform-btn:hover {
+    opacity: 0.9 !important;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4) !important;
+}

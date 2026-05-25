@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:45:59";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:45";
+const BUILD_TIMESTAMP = "2026 May 26 00:49:40";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:49";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6351,17 +6351,15 @@ function initFloatingClipboard() {
                             <span class="pip-created-by" style="font-size: 9.5px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap; margin-left: 2px;">Created by Dopamine</span>
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
-                            <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:45</span>
+                            <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:49</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <button id="pip-btn-paste" class="btn-paste" style="padding: 4px 10px; font-size: 9.5px; line-height: 1.2;">
-                                    <i class="fa-solid fa-paste"></i> Paste
-                                </button>
+                                <button id="pip-btn-paste" class="pip-uniform-btn btn-paste"><i class="fa-solid fa-paste"></i> Paste</button>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6391,9 +6389,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label style="margin-bottom: 0; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT</label>
-                                <button id="pip-btn-copy" class="btn-copy" disabled style="padding: 4px 10px; font-size: 9.5px; line-height: 1.2;">
-                                    <i class="fa-solid fa-copy"></i> Copy
-                                </button>
+                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
                             <div class="processed-container" style="border-radius: var(--radius-md); overflow: hidden;">
                                 <div class="processed-text-wrapper">
@@ -6424,8 +6420,8 @@ function initFloatingClipboard() {
                         </div>
                         
                         <!-- Flipped Side-by-Side Category Guide & Policy Rules -->
-                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 12px;">
-                            <h3 style="margin-top: 0; margin-bottom: 10px;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
+                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
+                            <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
                             <div class="audit-logs-row" style="display: flex; gap: 12px; align-items: flex-start;">
                                 <!-- Left Column: Game Category Guide -->
                                 <div class="pip-category-side" style="flex: 1.1; min-width: 0;">
@@ -6462,7 +6458,7 @@ function initFloatingClipboard() {
                                 <!-- Right Column: Rules List -->
                                 <div class="pip-logs-side" style="flex: 1.3; min-width: 0;">
                                     <div style="font-family: 'Outfit', sans-serif; font-size: 9px; font-weight: 700; margin-bottom: 6px; visibility: hidden;">&nbsp;</div>
-                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 115px; box-sizing: border-box;">
+                                    <ul class="audit-logs" id="pip-logs-list" style="margin: 0; padding: 6px 8px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); list-style: none; height: 80px; box-sizing: border-box;">
                                         <li class="log-empty">No corrections made.</li>
                                     </ul>
                                 </div>

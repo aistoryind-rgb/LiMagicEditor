@@ -62,6 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initFloatingClipboard();
     initCustomData();
     initAdminPanel();
+    initPolicyBook();
     
     const lastUpdatedMain = document.getElementById("last-updated-main");
     if (lastUpdatedMain) {
@@ -6648,6 +6649,587 @@ function refreshMainHistory() {
         console.error("Error fetching history:", err);
         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #f87171; padding: 20px;">Network error loading history.</td></tr>`;
     });
+}
+
+/* ==========================================================================
+   Policy Reference Book
+   ========================================================================== */
+
+let currentPolicyPage = 0;
+
+const POLICY_PAGES = [
+    {
+        title: "Introduction & Overview",
+        content: `
+            <div class="policy-section">
+                <div class="policy-meta">Last updated: 04-05-2026</div>
+                <h4 class="policy-subtitle">What is LifeInvader about?</h4>
+                <p>Lifeinvader is a private state organization that specializes in editing ads, hosting events like the talent show, and making news articles and videos that are informative for the public.</p>
+                
+                <h4 class="policy-subtitle">How to benefit from this document?</h4>
+                <p>This document highlights our standards for editing ads as well as some important rules we must follow while we work for this organization.</p>
+                <div class="policy-tip"><strong>TIP:</strong> Please use "Ctrl + F" to find anything you are searching for in documents.</div>
+            </div>
+        `
+    },
+    {
+        title: "General Ad Rules",
+        content: `
+            <div class="policy-section">
+                <p>Always begin the ad with: <strong>"Buying" - "Selling" - "Trading" - "Selling or trading"</strong>.</p>
+                <ul class="policy-list-bullets">
+                    <li>For <strong>"Buying"</strong> put <strong>"Budget:"</strong>.</li>
+                    <li>For <strong>"Selling"</strong> put <strong>"Price:"</strong>.</li>
+                    <li>If the ad does not mention a Budget or Price, mention it as <strong>Negotiable</strong>.</li>
+                    <li>The first letter of the ad is <strong>ALWAYS</strong> capital, use a full stop (.) to end the sentence.</li>
+                    <li>The first letter in <em>Price</em>, <em>Budget</em> and <em>Negotiable</em> should be capitalized.</li>
+                    <li>A colon (:) should be used after <em>Price:</em> or <em>Budget:</em></li>
+                    <li>A dollar sign ($) must be used before the value.</li>
+                    <li>Can only trade a Business for business, Cars for Cars and Other categories.</li>
+                    <li>If the ad ends with a numerical value, there is no need for a period (.).</li>
+                    <li>Use a full stop (.) instead of a comma (,) for prices (e.g., <code>$200.000</code>).</li>
+                    <li>We do <strong>NOT</strong> use "k" to represent a thousand or "M" to represent a Million. Write it out in numbers instead (e.g., <code>$1k</code> &rarr; <code>$1.000</code>, <code>$1.7m</code> &rarr; <code>$1.7 Million</code>).</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Rules & Restricted Content",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle red-color"><i class="fa-solid fa-ban"></i> Illegal Items / Rejection (Blacklist Phone)</h4>
+                <p>If any of these terms/items are found in an ad, the phone number must be blacklisted immediately:</p>
+                <ul class="policy-list-bullets">
+                    <li>Firearms of any kind & Ammunition</li>
+                    <li>Bulletproof vests / Dark Lui Vi Armored Vest</li>
+                    <li>Weed / cannabis seeds or trees, Drugs and cocaine</li>
+                    <li>EMS surgical masks or medical masks</li>
+                    <li>Vehicle scanners and people scanners (radars), Anti-Radar</li>
+                    <li>Balaclava masks, Ropes, Lock picks</li>
+                    <li>Flash drive with a virus (USB)</li>
+                    <li>Engine Block, Smuggling Machine, Submodule</li>
+                    <li>Hacking the Search Database</li>
+                    <li>License plates containing offensive or inappropriate language</li>
+                </ul>
+                <h4 class="policy-subtitle orange-color"><i class="fa-solid fa-circle-exclamation"></i> Rejection Only (No Blacklist)</h4>
+                <p>Reject the ad only (do not blacklist):</p>
+                <ul class="policy-list-bullets">
+                    <li>Crowbar, All fabric, Head bag (except luminous), Animal skin, Armor skin</li>
+                    <li>Air Horn, Earplugs, Barricade, Trap, Poison dart, Army Uniform</li>
+                    <li>Tracking sensor, Dangerous razor, Resource scanners, Body armor plates, Body Armor</li>
+                    <li>Ingredients for cocaine, Paper for money, Satellite dish, Tincture of forest mushrooms</li>
+                    <li>First Aid Kits & all pills, Food items (except fish)</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Banned Content & Locations",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle red-color"><i class="fa-solid fa-xmark"></i> Things We Cannot Advertise</h4>
+                <ul class="policy-list-bullets">
+                    <li>Grand Coins (Premium Battlepass / Premium Plus Battlepass)</li>
+                    <li>Lockpicks, ropes, and crowbars</li>
+                    <li>Specific family names ("Looking for Playboy family members" is banned)</li>
+                    <li>Hype Body or branded armor</li>
+                    <li>Gangs, Nationality, sale of people, sexual content/hinting</li>
+                    <li>Health products (medkits, pills, tincture soup, etc.)</li>
+                    <li>Birthday advertisements</li>
+                    <li>State leaders and deputy leaders (unless in the official list)</li>
+                </ul>
+                <h4 class="policy-subtitle yellow-color"><i class="fa-solid fa-triangle-exclamation"></i> Places We Do Not Promote (Warning)</h4>
+                <ul class="policy-list-bullets">
+                    <li>Mega Mall, Gang Headquarters, Black Market</li>
+                    <li>Parties at LSPD, FIB, SAHP, EMS, LifeInvader, Government buildings, or the Ghetto.</li>
+                </ul>
+                <h4 class="policy-subtitle"><i class="fa-solid fa-circle-info"></i> Common Rejection Reasons</h4>
+                <ul class="policy-list-bullets">
+                    <li>Cannot advertise more than 1 vehicle at a time (unless trading).</li>
+                    <li>Cannot advertise more than 3 items at a time.</li>
+                    <li>Template not found. Contact LI to create a template.</li>
+                    <li>Person/Item not found in database.</li>
+                    <li>Family/Real Estate cannot be traded.</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Text Upgrades Dictionary",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle"><i class="fa-solid fa-spell-check"></i> Standard Replacements</h4>
+                <p>Change client abbreviations/slang to standard terms:</p>
+                <div class="dictionary-table-wrapper">
+                    <table class="dictionary-table">
+                        <thead>
+                            <tr>
+                                <th>Client Input</th>
+                                <th>Standard Term</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>max config / max tuning</code></td><td><strong>with full configuration</strong></td></tr>
+                            <tr><td><code>nearly max / lvl3 or below</code></td><td><strong>with partial configuration</strong></td></tr>
+                            <tr><td><code>body upgrades / body kit</code></td><td><strong>with visual upgrades</strong></td></tr>
+                            <tr><td><code>turbo</code></td><td><strong>turbo kit</strong></td></tr>
+                            <tr><td><code>drift / drift assistance</code></td><td><strong>drift kit</strong></td></tr>
+                            <tr><td><code>luminous rims / unique wheels</code></td><td><strong>luminous wheels</strong></td></tr>
+                            <tr><td><code>unique [X] rims</code></td><td><strong>luminous wheels of type [X]</strong></td></tr>
+                            <tr><td><code>Level 1/2/3/4</code></td><td><strong>low/medium/high/max quality</strong></td></tr>
+                            <tr><td><code>crates / cases</code></td><td><strong>containers</strong></td></tr>
+                            <tr><td><code>spray cans / spray balloons</code></td><td><strong>paint cans</strong></td></tr>
+                            <tr><td><code>extras</code></td><td><strong>of type</strong></td></tr>
+                            <tr><td><code>scarf</code> (if combined)</td><td><strong>mask</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `
+    },
+    {
+        title: "Real Estate Category",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">General Real Estate Rules</h4>
+                <ul class="policy-list-bullets">
+                    <li>A maximum of 1 numbered property per ad is allowed. If no numbers are provided, you can advertise up to 3 properties.</li>
+                    <li>Use the number symbol (№) if house/apartment/penthouse number is mentioned.</li>
+                    <li>"Casino apartment" &rarr; "Casino penthouse".</li>
+                    <li>Do NOT mention property stars.</li>
+                    <li>Furnished/different interiors &rarr; "custom interior".</li>
+                    <li>Garage spaces abbreviation: <strong>"g.s."</strong> (Only 2, 5, 9, 25, 30 g.s. allowed).</li>
+                    <li>Storage space / warehouse abbreviation: <strong>"w.h."</strong> (3, 4, 5 w.h. allowed).</li>
+                    <li>Renting properties &rarr; use <strong>"Renting out"</strong> and <strong>"Rent:"</strong> (instead of Budget/Price).</li>
+                </ul>
+                <h4 class="policy-subtitle">Order of Features</h4>
+                <p>If applicable, write features in this exact order:</p>
+                <ol class="ordered-features-list">
+                    <li>garden (use "a garden")</li>
+                    <li>garage spaces (e.g. 5 g.s.)</li>
+                    <li>warehouses (e.g. 3 w.h.)</li>
+                    <li>custom interior</li>
+                    <li>insurance (do not mention days)</li>
+                    <li>helipad</li>
+                    <li>swimming pool</li>
+                    <li>tennis court</li>
+                    <li>driveway</li>
+                    <li>backyard</li>
+                    <li>views</li>
+                    <li>location</li>
+                </ol>
+            </div>
+        `
+    },
+    {
+        title: "Dating Category Rules",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Allowed Dating Ads</h4>
+                <p>Only the following templates are allowed in this category:</p>
+                <ul class="policy-list-bullets">
+                    <li>Looking for (First and Last name).</li>
+                    <li>Looking for a family / family members.</li>
+                    <li>Looking for a date / wife / husband / valentine.</li>
+                    <li>Looking for a friend / friends / boyfriend(s) / girlfriend(s).</li>
+                    <li>Looking for Casino poker players.</li>
+                </ul>
+                <h4 class="policy-subtitle">State Leaders & Deputies Banned</h4>
+                <p>You cannot search for State Leaders and Deputy Leaders (excluding LI leaders) unless they are specifically in the official leader list. Reject with: <strong>"You cannot search for classified person."</strong></p>
+                <h4 class="policy-subtitle red-color"><i class="fa-solid fa-circle-exclamation"></i> Blacklist in Dating</h4>
+                <ul class="policy-list-bullets">
+                    <li>Buying a wife/husband.</li>
+                    <li>Troll ads like "looking for sugar daddy".</li>
+                    <li>Looking for a wife/husband with a price/budget.</li>
+                    <li>Looking for a lesbian/gay (add number to LI email blacklist).</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Work & Businesses",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Work Category</h4>
+                <ul class="policy-list-bullets">
+                    <li>Words like "Hiring", "looking to hire", "looking for a job" are allowed.</li>
+                    <li>Construction sites: use № (1, 2, 3) and specify location.</li>
+                    <li>No specific dollar amounts in construction ads unless using <em>"Awarding bonus"</em> or <em>"Salary: $[amount]"</em>.</li>
+                    <li>Do NOT use the word "level" for jobs &rarr; use <em>"years experience"</em>.</li>
+                    <li>Capitalize first letter of profession at the start of ad (e.g., <em>"DJ looking for work."</em>).</li>
+                </ul>
+                <h4 class="policy-subtitle">Business Category</h4>
+                <ul class="policy-list-bullets">
+                    <li>Only buying, trading, and selling of businesses are allowed. Can only trade Business for Business.</li>
+                    <li>Do not use personal business &rarr; use <strong>"private business"</strong>.</li>
+                    <li>"Burger shop drug lab" &rarr; <strong>"Burger shop"</strong> (mentioning drug lab gets a warning).</li>
+                    <li>Family businesses cannot be traded.</li>
+                    <li>If price exceeds $500 Million &rarr; change to <strong>Negotiable</strong>.</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Services, Discounts & Other Items",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Services & Discounts</h4>
+                <ul class="policy-list-bullets">
+                    <li><strong>Services:</strong> Business promotion ads (templates from LI discord). Only 1 service ad at a time. Templates not in database must be rejected.</li>
+                    <li><strong>Discounts:</strong> Ads promoting business services with a specific percentage discount (e.g., "up to 80% OFF").</li>
+                </ul>
+                <h4 class="policy-subtitle">Other Category</h4>
+                <ul class="policy-list-bullets">
+                    <li>A maximum of 3 items can be advertised in this category.</li>
+                    <li><strong>Play Dice & Poker:</strong> Max bet is <code>$10 Million</code>. If bet exceeds or is unspecified, write <code>Bet: Negotiable.</code></li>
+                    <li><strong>Pets:</strong> Leash, cage with a pet (Dog, Cougar, Rabbit, etc.), Futuristic Friend, Robobeast. Format: <code>Selling cage with a Panda. Price: Negotiable.</code></li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Specific Item Editing Rules",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Item Formats</h4>
+                <ul class="policy-list-bullets">
+                    <li><strong>Automatic Tools:</strong> Automatic drill, automatic sawmill, automatic rod, automatic oil well, automatic watering can.</li>
+                    <li><strong>Inventories:</strong> Format as <code>[Quality] quality inventory/inventories</code> (low/medium/high/max).</li>
+                    <li><strong>Christmas Resources:</strong> Christmas key(s) (capital C, lowercase k), Christmas copper, Christmas timber, Christmas seed(s), etc.</li>
+                    <li><strong>Gifts:</strong> New years gift(s), A Little gift(s), A Big gift(s), An Opened gift(s).</li>
+                    <li><strong>Containers:</strong> Do NOT use cases/crates &rarr; use <strong>"container"</strong> (e.g., valuable container, racer container, racer and drifter 2 containers).</li>
+                    <li><strong>Fish:</strong> perch, carp, salmon, trout, megalodon, ray, orca, humpback whale.</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Tuning Parts & Pets Detail",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Tuning Parts Rules</h4>
+                <ul class="policy-list-bullets">
+                    <li>Tuning parts: <code>low/medium/high quality [tires/brakes/suspension/transmission/engine] tuning</code>.</li>
+                    <li>If no specific parts mentioned &rarr; <code>[Quality] quality tuning parts</code>.</li>
+                    <li>For multiple parts of the same quality: <code>Selling high quality tires and transmission tunings</code>.</li>
+                    <li>For 2 same quality parts + 1 different item: <code>Selling 2 high quality engine and transmission tunings and 30 pineapple fruits</code>.</li>
+                </ul>
+                <h4 class="policy-subtitle">Shoulder Pets</h4>
+                <p>Format: <code>[name] on shoulder pet</code>. E.g. six tailed fox on shoulder pet, hamster on shoulder pet, black voron on shoulder pet.</p>
+                <h4 class="policy-subtitle">Caged Pets</h4>
+                <p>Format: <code>cage with a [Pet Name]</code>. E.g. cage with a Panther, cage with a Husky, cage with a Easter Bunny.</p>
+            </div>
+        `
+    },
+    {
+        title: "Animated Items, Sound & Beach Market",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Animated Items & Sound Effects</h4>
+                <ul class="policy-list-bullets">
+                    <li><strong>Animated Items:</strong> E.g., Fire Ring, Lightning Charge. Write using the Animated items list.</li>
+                    <li><strong>Spatial Sound Effects:</strong> Write full name in parentheses. E.g., <code>spatial sound effect (Suspicious Sound)</code>. For >1, do not mention names: <code>Buying 2 spatial sound effects.</code></li>
+                </ul>
+                <h4 class="policy-subtitle">Beach Market</h4>
+                <ul class="policy-list-bullets">
+                    <li>Do NOT mention "Negotiable" for Beach Market ads.</li>
+                    <li>Format: <code>Selling [item] at the beach market shop №[X]</code>.</li>
+                    <li>For cheap prices &rarr; change to <strong>"for good prices"</strong>.</li>
+                    <li>Cannot mention more than one item name in the ad. If multiple, write <strong>"various items"</strong>.</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Official Locations & Auto (Vehicles)",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Locations Capitalization</h4>
+                <ul class="policy-list-bullets">
+                    <li><strong>Official Places (Uppercase):</strong> Vinewood Hills, Rockford Hills, Richman, Sandy Shores, Paleto Bay, Capitol, FIB, Auto Fair, Diamond Resort Bar, Lifeinvader, etc. Use <em>"in/near Vinewood Hills"</em>.</li>
+                    <li><strong>Unofficial Places (Lowercase):</strong> airport, autosalon, beach, beach market, ghetto, yacht, city. Use <em>"in the city", "near the beach market"</em>.</li>
+                </ul>
+                <h4 class="policy-subtitle">Auto Category Rules</h4>
+                <ul class="policy-list-bullets">
+                    <li>Max 1 vehicle per ad (unless trading). Can only trade Vehicle for Vehicle.</li>
+                    <li>Brand and model MUST be in quotes, e.g., <code>"Obey R8"</code>.</li>
+                    <li>NOT SELLABLE CARS: only allowed to rent or rent out (no buying/selling).</li>
+                    <li>Upgrade clubbing: engine/transmission/brakes/suspension upgrades &rarr; <strong>configuration</strong>. Cosmetics/wheels upgrades &rarr; <strong>visual upgrades</strong>. Luminous rims &rarr; <strong>luminous wheels of type [X]</strong>.</li>
+                </ul>
+            </div>
+        `
+    },
+    {
+        title: "Editors & Credits",
+        content: `
+            <div class="policy-section">
+                <h4 class="policy-subtitle">Policy Credit List</h4>
+                <p><strong>Editors:</strong> White Rabbit, Mya Rae, Minxy Malono, Cherry Choo, Kim Abergil, Habib Rahman, Calvin Classic, Nate Blakely, Nyx Kleps, Frankie Hill, Azure Duke, Carl Jordan, Eve Mystbloom, Emazeo Ferry, Shikamaru Frankie, Lucio Escobar, Elite Alpha, Max Uchiha.</p>
+                <p><strong>CEOs:</strong> Max Uchiha, Ex: CEO Zandre Mortez, Nyx Kleps, Azure Duke, John Funchallez, Viking Nawab, Abdul Hadii, John Ice, Evee Smoke, Axon Drake, Captain Voax, Kiana Kaslana, Levi Pluxury, Hazem Prod, Rui Ace, Opti Pride, Josh Anton, Singham Vella, Broolz Hurmaci, Elizabeth Targaryen, Carlo Russo, Don Kiddick, Nyx Liu.</p>
+            </div>
+        `
+    }
+];
+
+let currentPolicySpread = 0;
+let isBookSearchMode = false;
+let bookSearchResults = [];
+let currentSearchMatchIndex = 0;
+
+// Helper to escape regex special characters
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Helper to strip HTML tags for search indexing
+function stripHTMLTags(html) {
+    return html.replace(/<[^>]*>/g, ' ');
+}
+
+// Helper to extract a snippet containing the keyword
+function getSearchSnippet(text, query) {
+    const index = text.toLowerCase().indexOf(query.toLowerCase());
+    if (index === -1) return "";
+    const start = Math.max(0, index - 35);
+    const end = Math.min(text.length, index + query.length + 35);
+    let snippet = text.slice(start, end);
+    if (start > 0) snippet = "..." + snippet;
+    if (end < text.length) snippet = snippet + "...";
+    
+    // Highlight matched query text
+    const regex = new RegExp(`(${escapeRegExp(query)})`, "gi");
+    return snippet.replace(regex, "<mark>$1</mark>");
+}
+
+// Highlight matched terms inside a DOM element safely
+function highlightHTMLContent(html, query) {
+    if (!query) return html;
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    
+    const highlightTextInNode = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lowerText = text.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            if (lowerText.includes(lowerQuery)) {
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                let matchIndex;
+                
+                while ((matchIndex = lowerText.indexOf(lowerQuery, lastIndex)) !== -1) {
+                    if (matchIndex > lastIndex) {
+                        fragment.appendChild(document.createTextNode(text.slice(lastIndex, matchIndex)));
+                    }
+                    const mark = document.createElement("span");
+                    mark.className = "book-highlight";
+                    mark.textContent = text.slice(matchIndex, matchIndex + query.length);
+                    fragment.appendChild(mark);
+                    
+                    lastIndex = matchIndex + query.length;
+                }
+                
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                node.parentNode.replaceChild(fragment, node);
+            }
+        } else {
+            const children = Array.from(node.childNodes);
+            children.forEach(highlightTextInNode);
+        }
+    };
+    
+    highlightTextInNode(temp);
+    return temp.innerHTML;
+}
+
+// Render normal side-by-side spread view
+function renderPolicySpread(spreadIndex) {
+    isBookSearchMode = false;
+    const leftPageIndex = 2 * spreadIndex;
+    const rightPageIndex = 2 * spreadIndex + 1;
+    
+    const leftPage = POLICY_PAGES[leftPageIndex];
+    const rightPage = POLICY_PAGES[rightPageIndex];
+
+    const leftTitle = document.getElementById("left-page-title");
+    const leftContent = document.getElementById("left-page-content");
+    const rightTitle = document.getElementById("right-page-title");
+    const rightContent = document.getElementById("right-page-content");
+
+    const prevBtn = document.getElementById("book-prev-btn");
+    const nextBtn = document.getElementById("book-next-btn");
+    const indicator = document.getElementById("book-page-indicator");
+
+    if (!leftTitle || !leftContent || !rightTitle || !rightContent || !prevBtn || !nextBtn || !indicator) return;
+
+    // Reset layout
+    leftTitle.style.display = "";
+    rightTitle.style.display = "";
+    document.querySelector(".book-divider-line").style.display = "";
+    document.querySelector(".right-page").style.display = "";
+
+    // Set page text and reset scroll
+    leftTitle.textContent = leftPage ? leftPage.title : "";
+    leftContent.innerHTML = leftPage ? leftPage.content : "";
+    leftContent.scrollTop = 0;
+
+    rightTitle.textContent = rightPage ? rightPage.title : "";
+    rightContent.innerHTML = rightPage ? rightPage.content : "";
+    rightContent.scrollTop = 0;
+
+    // Apply simple transitions
+    leftContent.classList.remove("fade-in");
+    rightContent.classList.remove("fade-in");
+    void leftContent.offsetWidth; // trigger reflow
+    leftContent.classList.add("fade-in");
+    rightContent.classList.add("fade-in");
+
+    // Page indicator: Total pages is 14
+    indicator.textContent = `Pages ${leftPageIndex + 1}-${rightPageIndex + 1} of ${POLICY_PAGES.length}`;
+
+    // Prev / Next button states
+    prevBtn.disabled = spreadIndex === 0;
+    nextBtn.disabled = spreadIndex === Math.ceil(POLICY_PAGES.length / 2) - 1;
+}
+
+// Render search results view
+function showBookSearchResults(query) {
+    isBookSearchMode = true;
+    bookSearchResults = [];
+
+    POLICY_PAGES.forEach((page, idx) => {
+        const plainText = stripHTMLTags(page.content);
+        const inTitle = page.title.toLowerCase().includes(query.toLowerCase());
+        const inContent = plainText.toLowerCase().includes(query.toLowerCase());
+
+        if (inTitle || inContent) {
+            bookSearchResults.push({
+                pageIndex: idx,
+                pageTitle: page.title,
+                snippet: inContent ? getSearchSnippet(plainText, query) : "Match found in page title."
+            });
+        }
+    });
+
+    const leftTitle = document.getElementById("left-page-title");
+    const leftContent = document.getElementById("left-page-content");
+    const rightTitle = document.getElementById("right-page-title");
+    const rightContent = document.getElementById("right-page-content");
+
+    const prevBtn = document.getElementById("book-prev-btn");
+    const nextBtn = document.getElementById("book-next-btn");
+    const indicator = document.getElementById("book-page-indicator");
+
+    if (!leftTitle || !leftContent || !rightTitle || !rightContent || !prevBtn || !nextBtn || !indicator) return;
+
+    leftTitle.textContent = "Search Results";
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    indicator.textContent = `${bookSearchResults.length} matches found`;
+
+    if (bookSearchResults.length === 0) {
+        leftContent.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding-top: 30px;">No policy matches found for "${query}"</div>`;
+        rightTitle.textContent = "";
+        rightContent.innerHTML = "";
+        return;
+    }
+
+    // Build the results list HTML
+    let listHTML = `<ul class="search-results-list">`;
+    bookSearchResults.forEach((res, i) => {
+        listHTML += `
+            <li class="search-result-item" data-index="${i}">
+                <div class="search-result-page-num">Page ${res.pageIndex + 1} • ${res.pageTitle}</div>
+                <div class="search-result-snippet">${res.snippet}</div>
+            </li>
+        `;
+    });
+    listHTML += `</ul>`;
+    leftContent.innerHTML = listHTML;
+    leftContent.scrollTop = 0;
+
+    // Set click handlers for result items
+    leftContent.querySelectorAll(".search-result-item").forEach(item => {
+        item.addEventListener("click", () => {
+            const idx = parseInt(item.getAttribute("data-index"));
+            selectSearchResult(idx, query);
+        });
+    });
+
+    // Select the first search result by default
+    selectSearchResult(0, query);
+}
+
+function selectSearchResult(index, query) {
+    currentSearchMatchIndex = index;
+    const match = bookSearchResults[index];
+    const rightTitle = document.getElementById("right-page-title");
+    const rightContent = document.getElementById("right-page-content");
+
+    if (!match || !rightTitle || !rightContent) return;
+
+    // Highlight active item in the list
+    const items = document.querySelectorAll(".search-result-item");
+    items.forEach((item, i) => {
+        if (i === index) {
+            item.style.background = "rgba(255, 255, 255, 0.08)";
+            item.style.borderColor = "var(--color-primary)";
+        } else {
+            item.style.background = "";
+            item.style.borderColor = "";
+        }
+    });
+
+    const targetPage = POLICY_PAGES[match.pageIndex];
+    rightTitle.textContent = `Page ${match.pageIndex + 1}: ${targetPage.title}`;
+    
+    // Highlight query text inside the content HTML safely
+    rightContent.innerHTML = highlightHTMLContent(targetPage.content, query);
+    rightContent.scrollTop = 0;
+
+    // Transition
+    rightContent.classList.remove("fade-in");
+    void rightContent.offsetWidth; // trigger reflow
+    rightContent.classList.add("fade-in");
+}
+
+function initPolicyBook() {
+    const prevBtn = document.getElementById("book-prev-btn");
+    const nextBtn = document.getElementById("book-next-btn");
+    const searchInput = document.getElementById("book-search-input");
+
+    if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+            if (!isBookSearchMode && currentPolicySpread > 0) {
+                currentPolicySpread--;
+                renderPolicySpread(currentPolicySpread);
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+            if (!isBookSearchMode && currentPolicySpread < Math.ceil(POLICY_PAGES.length / 2) - 1) {
+                currentPolicySpread++;
+                renderPolicySpread(currentPolicySpread);
+            }
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.trim();
+            if (query.length > 0) {
+                showBookSearchResults(query);
+            } else {
+                renderPolicySpread(currentPolicySpread);
+            }
+        });
+    }
+
+    renderPolicySpread(currentPolicySpread);
 }
 
 

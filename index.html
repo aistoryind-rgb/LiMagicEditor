@@ -350,22 +350,36 @@
                                     <li>First Aid Kits, all pills, Food items (except fish)</li>
                                 </ul>
                             </div>
-                            <div class="policy-card">
-                                <h3><i class="fa-solid fa-triangle-exclamation yellow-color"></i> Restricted Locations</h3>
-                                <ul>
-                                    <li><strong>Green Grass areas:</strong> No parties allowed. (e.g. Beach Market -> change to beach)</li>
-                                    <li><strong>Unadvertisable:</strong> Mega Mall, Black Market, Gang HQs, State Org party promotions (LSPD, FIB, EMS, LI, Govt buildings).</li>
-                                </ul>
-                            </div>
-                            <div class="policy-card">
-                                <h3><i class="fa-solid fa-code"></i> Text Upgrades Dictionary</h3>
-                                <ul>
-                                    <li><code>max tuning/max config</code> &rarr; <strong>with full configuration</strong></li>
-                                    <li><code>nearly max/lvl3 or below</code> &rarr; <strong>with partial configuration</strong></li>
-                                    <li><code>body upgrades/body kit</code> &rarr; <strong>with visual upgrades</strong></li>
-                                    <li><code>unique wheels/luminous rims</code> &rarr; <strong>luminous wheels of type X</strong></li>
-                                    <li><code>turbo</code> &rarr; <strong>turbo kit</strong> | <code>drift</code> &rarr; <strong>drift kit</strong></li>
-                                </ul>
+                            <div class="policy-card policy-book-card">
+                                <div class="book-header-wrapper">
+                                    <h3><i class="fa-solid fa-book-open text-primary"></i> <span id="policy-book-title">Policy Reference Book</span></h3>
+                                    <div class="book-search-box">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" id="book-search-input" placeholder="Search policy...">
+                                    </div>
+                                </div>
+                                <div class="book-container">
+                                    <div class="book-pages-wrapper">
+                                        <div class="book-page left-page">
+                                            <h4 id="left-page-title" class="page-title-header">Page Title</h4>
+                                            <div id="left-page-content" class="page-content-body">
+                                                <!-- Dynamic content -->
+                                            </div>
+                                        </div>
+                                        <div class="book-divider-line"></div>
+                                        <div class="book-page right-page">
+                                            <h4 id="right-page-title" class="page-title-header">Page Title</h4>
+                                            <div id="right-page-content" class="page-content-body">
+                                                <!-- Dynamic content -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="book-footer">
+                                    <button id="book-prev-btn" class="book-nav-btn"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                                    <span id="book-page-indicator">Pages 1-2 of 14</span>
+                                    <button id="book-next-btn" class="book-nav-btn">Next <i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>

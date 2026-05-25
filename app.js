@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 02:59:09";
-const BUILD_TIMESTAMP_SHORT = "May 26 02:59";
+const BUILD_TIMESTAMP = "2026 May 26 03:04:57";
+const BUILD_TIMESTAMP_SHORT = "May 26 03:04";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -3399,7 +3399,7 @@ function detectCategory(text) {
     
     // Check for cage pets and shoulder pets before vehicle matching to prevent false matches
     // (e.g. "cage with a rat" matching "Rat Bike", "cage with a pug" matching "Peugeot" etc.)
-    if (/\b(?:cage\s+with|shoulder\s+pet|on\s+shoulder)\b/i.test(lower)) {
+    if (/\b(?:cage|pet|shoulder\s+pet|on\s+shoulder)\b/i.test(lower) && !lower.includes("pet food")) {
         return "Other";
     }
     
@@ -5993,7 +5993,10 @@ function fuzzyCorrectItemName(rawItem, ctx) {
     }
     
     // 4. Cage pets
-    if ((cleanLower.includes("cage") && cleanLower.includes("pet")) || (cleaned.includes("cage") && cleaned.includes("pet"))) {
+    const hasCage = cleanLower.includes("cage") || cleaned.includes("cage");
+    const hasPet = cleanLower.includes("pet") || cleaned.includes("pet");
+    const hasPetFood = cleanLower.includes("pet food") || cleaned.includes("pet food");
+    if ((hasCage && hasPet) || (hasPet && !hasPetFood)) {
         const hasSpecificPet = ["panda", "duckling", "fancy bear", "kitty bunny", "cute hippo", "mini robot", "cyberdog", "robobeast", "mr candy cane", "futuristic friend", "husky", "new years husky", "border collie", "cougar", "poodle", "pug", "retriever", "rooster", "puma", "rottweiler", "cosmodog", "easter bunny", "santa claus", "christmas elf", "rabbit", "rat", "pig", "lion cub", "westie", "dog", "cat"].some(p => cleanLower.includes(p));
         if (!hasSpecificPet) {
             return "cage with a pet";
@@ -6612,7 +6615,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:59</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 03:04</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

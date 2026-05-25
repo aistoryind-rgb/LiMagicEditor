@@ -2246,7 +2246,7 @@ function detectCategory(text) {
     
     // Check for cage pets and shoulder pets before vehicle matching to prevent false matches
     // (e.g. "cage with a rat" matching "Rat Bike", "cage with a pug" matching "Peugeot" etc.)
-    if (/\b(?:cage\s+with|shoulder\s+pet|on\s+shoulder)\b/i.test(lower)) {
+    if (/\b(?:cage|pet|shoulder\s+pet|on\s+shoulder)\b/i.test(lower) && !lower.includes("pet food")) {
         return "Other";
     }
     
@@ -4840,7 +4840,10 @@ function fuzzyCorrectItemName(rawItem, ctx) {
     }
     
     // 4. Cage pets
-    if ((cleanLower.includes("cage") && cleanLower.includes("pet")) || (cleaned.includes("cage") && cleaned.includes("pet"))) {
+    const hasCage = cleanLower.includes("cage") || cleaned.includes("cage");
+    const hasPet = cleanLower.includes("pet") || cleaned.includes("pet");
+    const hasPetFood = cleanLower.includes("pet food") || cleaned.includes("pet food");
+    if ((hasCage && hasPet) || (hasPet && !hasPetFood)) {
         const hasSpecificPet = ["panda", "duckling", "fancy bear", "kitty bunny", "cute hippo", "mini robot", "cyberdog", "robobeast", "mr candy cane", "futuristic friend", "husky", "new years husky", "border collie", "cougar", "poodle", "pug", "retriever", "rooster", "puma", "rottweiler", "cosmodog", "easter bunny", "santa claus", "christmas elf", "rabbit", "rat", "pig", "lion cub", "westie", "dog", "cat"].some(p => cleanLower.includes(p));
         if (!hasSpecificPet) {
             return "cage with a pet";

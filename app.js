@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 20:50:23";
-const BUILD_TIMESTAMP_SHORT = "May 25 20:50";
+const BUILD_TIMESTAMP = "2026 May 25 23:07:12";
+const BUILD_TIMESTAMP_SHORT = "May 25 23:07";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6282,7 +6282,7 @@ function initFloatingClipboard() {
 
             // Inject the compact HTML layout
             pipWindow.document.body.innerHTML = `
-                <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
+                <div class="pip-layout" style="position: relative; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
                     <header class="pip-header">
                         <div class="pip-logo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -6295,10 +6295,10 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 25 20:50</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 25 23:07</span>
                         </div>
                     </header>
-                    <main class="pip-main" style="flex: 1; overflow-y: auto;">
+                    <main class="pip-main" style="flex: 1;">
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
@@ -6331,15 +6331,17 @@ function initFloatingClipboard() {
                             <span class="status-title">Awaiting Input...</span>
                         </div>
                         
-                        <div class="processed-container">
-                            <div class="processed-header">
-                                <span><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT</span>
-                                <button id="pip-btn-copy" class="btn-copy" disabled>
+                        <div class="pip-form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label style="margin-bottom: 0; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT</label>
+                                <button id="pip-btn-copy" class="btn-copy" disabled style="padding: 4px 10px; font-size: 9.5px; line-height: 1.2;">
                                     <i class="fa-solid fa-copy"></i> Copy
                                 </button>
                             </div>
-                            <div class="processed-text-wrapper">
-                                <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
+                            <div class="processed-container" style="border-radius: var(--radius-md); overflow: hidden;">
+                                <div class="processed-text-wrapper">
+                                    <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
+                                </div>
                             </div>
                         </div>
                         

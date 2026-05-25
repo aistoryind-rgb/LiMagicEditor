@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 05:03:57";
-const BUILD_TIMESTAMP_SHORT = "May 26 05:03";
+const BUILD_TIMESTAMP = "2026 May 26 05:07:49";
+const BUILD_TIMESTAMP_SHORT = "May 26 05:07";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -2508,6 +2508,24 @@ function initAdProcessing() {
                 }
                 processAd();
                 rawInput.focus();
+            }
+        });
+    }
+
+    const btnPasteRaw = document.getElementById("btn-paste-raw");
+    if (btnPasteRaw) {
+        btnPasteRaw.addEventListener("click", async () => {
+            const rawInput = document.getElementById("raw-ad");
+            if (rawInput) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    rawInput.value = text;
+                    rawInput.dispatchEvent(new Event("input"));
+                    rawInput.focus();
+                } catch (err) {
+                    console.error("Clipboard paste failed:", err);
+                    alert("Clipboard access denied. Please click the button again or paste manually.");
+                }
             }
         });
     }
@@ -6670,7 +6688,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 05:03</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 05:07</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

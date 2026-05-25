@@ -1358,6 +1358,24 @@ function initAdProcessing() {
             }
         });
     }
+
+    const btnPasteRaw = document.getElementById("btn-paste-raw");
+    if (btnPasteRaw) {
+        btnPasteRaw.addEventListener("click", async () => {
+            const rawInput = document.getElementById("raw-ad");
+            if (rawInput) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    rawInput.value = text;
+                    rawInput.dispatchEvent(new Event("input"));
+                    rawInput.focus();
+                } catch (err) {
+                    console.error("Clipboard paste failed:", err);
+                    alert("Clipboard access denied. Please click the button again or paste manually.");
+                }
+            }
+        });
+    }
 }
 
 function processAd() {

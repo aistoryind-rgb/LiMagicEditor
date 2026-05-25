@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 05:04:41";
-const BUILD_TIMESTAMP_SHORT = "May 25 05:04";
+const BUILD_TIMESTAMP = "2026 May 25 05:34:49";
+const BUILD_TIMESTAMP_SHORT = "May 25 05:34";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5673,6 +5673,49 @@ function initFloatingClipboard() {
                 console.warn("Could not shrink window:", err);
             }
 
+            let isMainWindowShrunk = true;
+
+            const handleMainFocus = () => {
+                if (isMainWindowShrunk) {
+                    const storedPos = sessionStorage.getItem('li_pwa_original_pos');
+                    if (storedPos) {
+                        try {
+                            const pos = JSON.parse(storedPos);
+                            window.resizeTo(pos.width, pos.height);
+                            window.moveTo(pos.x, pos.y);
+                            isMainWindowShrunk = false;
+                        } catch (err) {
+                            console.warn("Could not restore window on focus:", err);
+                        }
+                    }
+                }
+            };
+
+            const handleMainBlur = () => {
+                setTimeout(() => {
+                    if (!document.hasFocus() && pipWindowInstance && !isMainWindowShrunk) {
+                        const currentPos = {
+                            x: window.screenX || window.screenLeft || 0,
+                            y: window.screenY || window.screenTop || 0,
+                            width: window.outerWidth || window.innerWidth || 1200,
+                            height: window.outerHeight || window.innerHeight || 800
+                        };
+                        sessionStorage.setItem('li_pwa_original_pos', JSON.stringify(currentPos));
+                        
+                        try {
+                            window.resizeTo(160, 80);
+                            window.moveTo(0, window.screen.availHeight - 100);
+                            isMainWindowShrunk = true;
+                        } catch (err) {
+                            console.warn("Could not shrink window on blur:", err);
+                        }
+                    }
+                }, 150);
+            };
+
+            window.addEventListener("focus", handleMainFocus);
+            window.addEventListener("blur", handleMainBlur);
+
             // Bind Return to Main button on the overlay
             const btnRestore = document.getElementById("btn-restore-main");
             if (btnRestore) {
@@ -5736,7 +5779,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:04</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:34</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6120,6 +6163,9 @@ function initFloatingClipboard() {
             pipWindow.addEventListener("unload", () => {
                 pipWindowInstance = null;
                 mainObserver.disconnect();
+                
+                window.removeEventListener("focus", handleMainFocus);
+                window.removeEventListener("blur", handleMainBlur);
                 
                 // Restore main window content view
                 if (mainContainer && pipOverlay) {

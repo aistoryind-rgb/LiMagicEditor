@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:30:56";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:30";
+const BUILD_TIMESTAMP = "2026 May 26 00:33:49";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:33";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6188,7 +6188,7 @@ function initFloatingClipboard() {
             // Request a Picture-in-Picture window
             const pipWindow = await window.documentPictureInPicture.requestWindow({
                 width: 420,
-                height: 690
+                height: 770
             });
             pipWindowInstance = pipWindow;
 
@@ -6196,9 +6196,9 @@ function initFloatingClipboard() {
             const screenWidth = (window.screen && window.screen.availWidth) || 1920;
             const screenHeight = (window.screen && window.screen.availHeight) || 1080;
             const pipX = screenWidth - 440;
-            const pipY = Math.max(0, Math.floor((screenHeight - 690) / 2));
+            const pipY = Math.max(0, Math.floor((screenHeight - 770) / 2));
             try {
-                pipWindow.resizeTo(420, 690);
+                pipWindow.resizeTo(420, 770);
                 pipWindow.moveTo(pipX, pipY);
             } catch (posErr) {
                 console.warn("Could not position/resize PiP window:", posErr);
@@ -6318,12 +6318,17 @@ function initFloatingClipboard() {
                 }
             });
 
+            // Force overflow hidden on html/body of pip window to prevent scrollbars
+            const overflowStyle = pipWindow.document.createElement('style');
+            overflowStyle.textContent = 'html, body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; }';
+            pipWindow.document.head.appendChild(overflowStyle);
+
             // Add tab title
             pipWindow.document.title = "LifeInvader Floating Clipboard";
 
             // Inject the compact HTML layout
             pipWindow.document.body.innerHTML = `
-                <div class="pip-layout" style="position: relative; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
+                <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
                     <header class="pip-header">
                         <div class="pip-logo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -6336,7 +6341,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:30</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:33</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

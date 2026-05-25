@@ -5035,7 +5035,7 @@ function initFloatingClipboard() {
             // Request a Picture-in-Picture window
             const pipWindow = await window.documentPictureInPicture.requestWindow({
                 width: 420,
-                height: 690
+                height: 770
             });
             pipWindowInstance = pipWindow;
 
@@ -5043,9 +5043,9 @@ function initFloatingClipboard() {
             const screenWidth = (window.screen && window.screen.availWidth) || 1920;
             const screenHeight = (window.screen && window.screen.availHeight) || 1080;
             const pipX = screenWidth - 440;
-            const pipY = Math.max(0, Math.floor((screenHeight - 690) / 2));
+            const pipY = Math.max(0, Math.floor((screenHeight - 770) / 2));
             try {
-                pipWindow.resizeTo(420, 690);
+                pipWindow.resizeTo(420, 770);
                 pipWindow.moveTo(pipX, pipY);
             } catch (posErr) {
                 console.warn("Could not position/resize PiP window:", posErr);
@@ -5165,12 +5165,17 @@ function initFloatingClipboard() {
                 }
             });
 
+            // Force overflow hidden on html/body of pip window to prevent scrollbars
+            const overflowStyle = pipWindow.document.createElement('style');
+            overflowStyle.textContent = 'html, body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; }';
+            pipWindow.document.head.appendChild(overflowStyle);
+
             // Add tab title
             pipWindow.document.title = "LifeInvader Floating Clipboard";
 
             // Inject the compact HTML layout
             pipWindow.document.body.innerHTML = `
-                <div class="pip-layout" style="position: relative; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;">
+                <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
                     <header class="pip-header">
                         <div class="pip-logo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px;">
                             <div style="display: flex; align-items: center; gap: 6px;">

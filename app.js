@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:29:31";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:29";
+const BUILD_TIMESTAMP = "2026 May 26 00:30:56";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:30";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6192,6 +6192,18 @@ function initFloatingClipboard() {
             });
             pipWindowInstance = pipWindow;
 
+            // Position and size the PiP window on the right side of the screen
+            const screenWidth = (window.screen && window.screen.availWidth) || 1920;
+            const screenHeight = (window.screen && window.screen.availHeight) || 1080;
+            const pipX = screenWidth - 440;
+            const pipY = Math.max(0, Math.floor((screenHeight - 690) / 2));
+            try {
+                pipWindow.resizeTo(420, 690);
+                pipWindow.moveTo(pipX, pipY);
+            } catch (posErr) {
+                console.warn("Could not position/resize PiP window:", posErr);
+            }
+
             try {
                 pipWindow.focus();
                 window.blur();
@@ -6324,7 +6336,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:29</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:30</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

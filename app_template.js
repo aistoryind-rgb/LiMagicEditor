@@ -5039,6 +5039,18 @@ function initFloatingClipboard() {
             });
             pipWindowInstance = pipWindow;
 
+            // Position and size the PiP window on the right side of the screen
+            const screenWidth = (window.screen && window.screen.availWidth) || 1920;
+            const screenHeight = (window.screen && window.screen.availHeight) || 1080;
+            const pipX = screenWidth - 440;
+            const pipY = Math.max(0, Math.floor((screenHeight - 690) / 2));
+            try {
+                pipWindow.resizeTo(420, 690);
+                pipWindow.moveTo(pipX, pipY);
+            } catch (posErr) {
+                console.warn("Could not position/resize PiP window:", posErr);
+            }
+
             try {
                 pipWindow.focus();
                 window.blur();

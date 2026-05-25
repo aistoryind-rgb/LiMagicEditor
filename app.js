@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 03:48:35";
-const BUILD_TIMESTAMP_SHORT = "May 26 03:48";
+const BUILD_TIMESTAMP = "2026 May 26 03:50:08";
+const BUILD_TIMESTAMP_SHORT = "May 26 03:50";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1942,7 +1942,33 @@ function correctSpelling(text, ctx) {
         "drag lab": "Burger shop",
         "drug lab": "Burger shop",
         "draglab": "Burger shop",
-        "druglab": "Burger shop"
+        "druglab": "Burger shop",
+        "5": "lvl5",
+        "woman": "women",
+        "ievel": "Level",
+        "ivl": "Level",
+        "bizz": "business",
+        "t20": "T-20",
+        "charging": "chargers",
+        "electric charging": "chargers",
+        "biosprk": "biospark",
+        "bios": "biospark",
+        "lumins": "luminous",
+        "trosers": "trousers",
+        "tayp": "type",
+        "appart": "Apartment",
+        "arptmnt": "Apartment",
+        "platinom": "Platinum",
+        "quilty": "quality",
+        "tuing": "tuning",
+        "girl": "girlfriend",
+        "allience": "alliance",
+        "lf": "Looking for an",
+        "apartemnt": "apartment",
+        "platinyem": "Platinum",
+        "casno": "casino",
+        "panthouse": "penthouse",
+        "panthuse": "penthouse"
     };
 
     const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling);
@@ -6624,7 +6650,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 03:48</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 03:50</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

@@ -13,8 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheets -->
     <link rel="stylesheet" href="styles.css">
-    <!-- PWA Manifest & Icons -->
-    <link rel="manifest" href="manifest.json">
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
 </head>
 <body>
@@ -829,12 +828,14 @@
     <!-- Application Script -->
     <script src="app.js"></script>
     <script>
+        // Proactively unregister any previously registered Service Workers to ensure it behaves purely as a simple website
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registered successfully.', reg.scope))
-                    .catch(err => console.error('Service Worker registration failed:', err));
-            });
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (const registration of registrations) {
+                    registration.unregister()
+                        .then(success => success && console.log('Previous service worker unregistered successfully.'));
+                }
+            }).catch(err => console.error('Error clearing service workers:', err));
         }
     </script>
 </body>

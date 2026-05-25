@@ -556,7 +556,7 @@
                                     </div>
                                     
                                     <div id="spelling-single-container">
-                                        <p class="section-desc">Add spelling mapping corrections that apply before advertisement processing. e.g. mapping "batteys" to "battery".</p>
+                                        <p class="section-desc">Map misspelled words to correct terms (e.g., "batteys" to "battery").</p>
                                         <form id="form-admin-spelling" class="admin-form" style="margin-top: 15px;">
                                             <div class="form-row">
                                                 <div class="form-group col-6">
@@ -577,7 +577,7 @@
                                     </div>
 
                                     <div id="spelling-bulk-container" class="hide">
-                                        <p class="section-desc">Paste spelling corrections in bulk. Use the format: <code>wrong,right</code> (one per line).</p>
+                                        <p class="section-desc">Import spelling corrections in bulk. Format: <code>wrong,right</code> (one per line).</p>
                                         <form id="form-admin-spelling-bulk" class="admin-form" style="margin-top: 15px;">
                                             <div class="form-group">
                                                 <textarea id="spell-bulk-text" placeholder="e.g.&#10;batteys,battery&#10;prot,protection" rows="5" required style="font-family: monospace; font-size: 12px; min-height: 100px; padding: 10px;"></textarea>
@@ -612,7 +612,7 @@
                                     <div class="admin-section-header">
                                         <i class="fa-solid fa-file-invoice"></i> Train Custom Templates
                                     </div>
-                                    <p class="section-desc">Add new advertisement templates and specify their category and optional shorthands. Custom templates are parsed without deploying code.</p>
+                                    <p class="section-desc">Add templates with custom categories and optional shorthands.</p>
                                     <form id="form-admin-template" class="admin-form" style="margin-top: 15px;">
                                         <div class="form-group">
                                             <label for="template-text">Template Output Text</label>
@@ -667,7 +667,7 @@
                             <div class="admin-section-header" style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
                                 <i class="fa-solid fa-file-shield"></i> Backup & Restore trained configuration
                             </div>
-                            <p class="section-desc">You can copy/export your trained corrections and templates as a JSON string to backup your data, or paste it here to import/restore. This avoids data loss if local storage is cleared.</p>
+                            <p class="section-desc">Export your trained configurations as a JSON string, or paste a backup string here to restore.</p>
                             <div class="form-row" style="margin-top: 15px; gap: 15px;">
                                 <div class="form-group col-10">
                                     <textarea id="admin-backup-textarea" placeholder="JSON backup content will appear here or can be pasted here for restoration..." rows="2" style="font-family: monospace; font-size: 11px;"></textarea>

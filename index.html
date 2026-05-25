@@ -220,25 +220,25 @@
                         <h2>Processed Output</h2>
                     </div>
                     <div class="panel-body">
-                        <!-- Status Flag Badge -->
-                        <div class="status-banner" id="ad-status-banner" data-status="pending">
-                            <span class="status-icon"><i class="fa-solid fa-hourglass-half"></i></span>
-                            <span class="status-title">Awaiting Input...</span>
-                        </div>
-
                         <!-- Final Processed Advertisement Display -->
-                        <div class="processed-container">
-                            <div class="processed-header">
-                                <span><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT TEXT</span>
+                        <div class="form-group">
+                            <label for="processed-ad-text"><i class="fa-solid fa-bullhorn"></i> Final Advertisement Text</label>
+                            <div class="processed-container">
+                                <div class="processed-text-wrapper">
+                                    <div id="processed-ad-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
+                                </div>
                             </div>
-                            <div class="processed-text-wrapper">
-                                <div id="processed-ad-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
-                            </div>
-                            <div class="processed-footer">
+                            <div class="processed-action-row">
                                 <button id="btn-copy-ad" class="btn-copy" disabled>
                                     <i class="fa-solid fa-copy"></i> Copy
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Status Flag Badge -->
+                        <div class="status-banner" id="ad-status-banner" data-status="pending">
+                            <span class="status-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                            <span class="status-title">Awaiting Input...</span>
                         </div>
 
                         <!-- Rejection & Blacklist Feedbacks -->

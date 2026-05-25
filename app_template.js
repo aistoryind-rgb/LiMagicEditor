@@ -5244,12 +5244,14 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label style="margin-bottom: 0; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT</label>
-                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
-                            <div class="processed-container" style="border-radius: var(--radius-md); overflow: hidden;">
+                            <div class="processed-container">
                                 <div class="processed-text-wrapper">
                                     <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                                 </div>
+                            </div>
+                            <div class="processed-action-row" style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
                         </div>
                         

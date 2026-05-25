@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 02:06:19";
-const BUILD_TIMESTAMP_SHORT = "May 26 02:06";
+const BUILD_TIMESTAMP = "2026 May 26 02:14:05";
+const BUILD_TIMESTAMP_SHORT = "May 26 02:14";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6360,7 +6360,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:06</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:14</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6397,12 +6397,14 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label style="margin-bottom: 0; font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fa-solid fa-bullhorn"></i> FINAL ADVERTISEMENT</label>
-                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
-                            <div class="processed-container" style="border-radius: var(--radius-md); overflow: hidden;">
+                            <div class="processed-container">
                                 <div class="processed-text-wrapper">
                                     <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                                 </div>
+                            </div>
+                            <div class="processed-action-row" style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
                             </div>
                         </div>
                         

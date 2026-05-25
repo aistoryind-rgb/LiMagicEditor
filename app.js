@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 03:04:57";
-const BUILD_TIMESTAMP_SHORT = "May 26 03:04";
+const BUILD_TIMESTAMP = "2026 May 26 03:48:35";
+const BUILD_TIMESTAMP_SHORT = "May 26 03:48";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5953,7 +5953,16 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             return `${qtyText}SIM cards`;
         } else {
             if (numStr) {
-                return `SIM card \u2116 ${numStr}`;
+                let formattedNum = numStr;
+                if (!numStr.includes("-")) {
+                    const cleanNum = numStr.replace(/\D/g, "");
+                    if (cleanNum.length === 7 || cleanNum.length === 6 || cleanNum.length === 5) {
+                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2, 4)}-${cleanNum.slice(4)}`;
+                    } else if (cleanNum.length === 4) {
+                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2)}`;
+                    }
+                }
+                return `SIM card \u2116 ${formattedNum}`;
             } else {
                 return `SIM card`;
             }
@@ -6615,7 +6624,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 03:04</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 03:48</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

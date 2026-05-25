@@ -4800,7 +4800,16 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             return `${qtyText}SIM cards`;
         } else {
             if (numStr) {
-                return `SIM card \u2116 ${numStr}`;
+                let formattedNum = numStr;
+                if (!numStr.includes("-")) {
+                    const cleanNum = numStr.replace(/\D/g, "");
+                    if (cleanNum.length === 7 || cleanNum.length === 6 || cleanNum.length === 5) {
+                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2, 4)}-${cleanNum.slice(4)}`;
+                    } else if (cleanNum.length === 4) {
+                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2)}`;
+                    }
+                }
+                return `SIM card \u2116 ${formattedNum}`;
             } else {
                 return `SIM card`;
             }

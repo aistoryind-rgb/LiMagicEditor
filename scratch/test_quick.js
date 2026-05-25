@@ -39,7 +39,10 @@ const tests = [
     // License plate cases
     { raw: "selling a liesence plate number 1FIB123", expected: "Selling license plate (1FIB123). Price: Negotiable." },
     { raw: "buying plate (222)", expected: "Buying license plate (222). Budget: Negotiable." },
-    { raw: "selling a custom license plate", expected: "Selling a custom license plate. Price: Negotiable." }
+    { raw: "selling a custom license plate", expected: "Selling a custom license plate. Price: Negotiable." },
+    // SIM card
+    { raw: "selling sim card 1111113", expected: "Selling SIM card \u2116 11-11-113. Price: Negotiable." },
+    { raw: "buying sim card 7777777", expected: "Buying SIM card \u2116 77-77-777. Budget: Negotiable." }
 ];
 
 let failed = 0;

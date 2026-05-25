@@ -344,7 +344,7 @@
                         <i class="fa-solid fa-user-shield"></i> Admin Panel
                     </button>
                     <button class="tab-btn" data-tab="tab-contact" id="tab-btn-contact">
-                        <i class="fa-solid fa-envelope"></i> Get in Touch
+                        <i class="fa-solid fa-envelope"></i> Get in Touch & Credits
                     </button>
                 </div>
 
@@ -799,8 +799,9 @@
                     </div>
 
                     <div class="tab-content" id="tab-contact">
-                        <div class="contact-tab-container">
-                            <div class="contact-card">
+                        <div class="contact-tab-container" style="display: flex; gap: 30px; justify-content: center; align-items: stretch; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
+                            <!-- Left: Contact Card -->
+                            <div class="contact-card" style="flex: 1; min-width: 320px; max-width: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
                                 <div class="contact-avatar-wrapper">
                                     <div class="contact-pulse-ring"></div>
                                     <div class="contact-icon-circle">
@@ -813,6 +814,29 @@
                                 <a href="https://discord.com/users/776892627122520114" target="_blank" class="btn-action glow-red" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 280px; height: 48px; border-radius: var(--radius-md); font-family: var(--font-heading); font-weight: 700; font-size: 14.5px; text-transform: uppercase; letter-spacing: 0.5px;">
                                     <i class="fa-brands fa-discord" style="font-size: 18px;"></i> Contact on Discord
                                 </a>
+                            </div>
+
+                            <!-- Right: Special Thanks & Credits Card -->
+                            <div class="contact-card credits-card" style="flex: 1; min-width: 320px; max-width: 500px; display: flex; flex-direction: column; align-items: center; text-align: center; border-color: rgba(255, 59, 48, 0.2); background: linear-gradient(135deg, rgba(22, 22, 28, 0.9) 0%, rgba(22, 22, 28, 0.7) 100%);">
+                                <div class="contact-avatar-wrapper" style="margin-bottom: 24px;">
+                                    <div class="contact-icon-circle" style="border-color: rgba(255, 59, 48, 0.25); box-shadow: 0 0 15px rgba(255, 59, 48, 0.1);">
+                                        <i class="fa-solid fa-heart" style="color: var(--color-primary); filter: drop-shadow(0 0 6px rgba(255, 59, 48, 0.5));"></i>
+                                    </div>
+                                </div>
+                                <h2>Key Collaborators</h2>
+                                <p class="contact-subtitle" style="margin-bottom: 24px; max-width: 400px; font-size: 14px; line-height: 1.5;">This project could not have reached this level without the dedication, suggestions, testing, and support of these incredible contributors:</p>
+                                
+                                <div class="credits-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 420px; margin-bottom: 20px;">
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Anvy Rivera</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Eve Rivera</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Sanu</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Sananthi</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Henry</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">William</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Theepori DarkX</div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--text-primary); transition: all 0.2s ease;">Alan Sam</div>
+                                </div>
+                                <p class="contact-subtext" style="margin: 0; font-size: 11px; opacity: 0.6; letter-spacing: 0.5px; text-transform: uppercase;">Menders & Moderators of the System</p>
                             </div>
                         </div>
                     </div>

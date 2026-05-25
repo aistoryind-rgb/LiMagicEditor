@@ -159,11 +159,22 @@ function renderSearchResults(query, filter) {
     
     const term = query.toLowerCase().trim();
     let matches = [];
+
+    // --- Icon & gradient class map by category ---
+    const catIconMap = {
+        helicopters:       { icon: "fa-helicopter",   cls: "cat-helicopter" },
+        boats:             { icon: "fa-ship",          cls: "cat-boat" },
+        planes:            { icon: "fa-plane",         cls: "cat-plane" },
+        motorcycles:       { icon: "fa-motorcycle",    cls: "cat-motorcycle" },
+        sellable_cars:     { icon: "fa-car-side",      cls: "cat-car-sell" },
+        not_sellable_cars: { icon: "fa-car-side",      cls: "cat-car-rent" }
+    };
     
     // 1. Vehicle Matches
     if (filter === "all" || filter === "vehicles") {
         for (const cat in VEHICLE_DB) {
             const list = VEHICLE_DB[cat];
+            const iconInfo = catIconMap[cat] || { icon: "fa-car", cls: "cat-car-sell" };
             list.forEach(name => {
                 if (name.toLowerCase().includes(term) || term === "") {
                     const isNotSellable = cat === "not_sellable_cars";
@@ -174,7 +185,9 @@ function renderSearchResults(query, filter) {
                         badgeClass: "vehicle",
                         details: isNotSellable ? "RENT ONLY (Non-sellable)" : "Sellable & Rentable",
                         statusText: isNotSellable ? "RENT ONLY" : "SELLABLE",
-                        statusClass: isNotSellable ? "status-not-sellable" : "status-sellable"
+                        statusClass: isNotSellable ? "status-not-sellable" : "status-sellable",
+                        thumbIcon: iconInfo.icon,
+                        thumbClass: iconInfo.cls
                     });
                 }
             });
@@ -183,6 +196,12 @@ function renderSearchResults(query, filter) {
     
     // 2. Clothing Matches
     if (filter === "all" || filter === "clothing") {
+        const clothingIcons = {
+            MASKS: "fa-mask", BACKPACKS: "fa-backpack", ACCESSORY: "fa-gem",
+            WATCH: "fa-clock", Dress: "fa-shirt", PANTS: "fa-person",
+            SHOES: "fa-shoe-prints", TOPS: "fa-shirt", HATS: "fa-hat-cowboy",
+            GLASSES: "fa-glasses", CHAINS: "fa-link", EARRINGS: "fa-ear-listen"
+        };
         const addClothing = (gender, catName, list) => {
             list.forEach(name => {
                 if (name.toLowerCase().includes(term) || term === "") {
@@ -193,7 +212,9 @@ function renderSearchResults(query, filter) {
                         badgeClass: "clothing",
                         details: `Official clothing list item (${gender})`,
                         statusText: "VALID ITEM",
-                        statusClass: "status-sellable"
+                        statusClass: "status-sellable",
+                        thumbIcon: clothingIcons[catName] || "fa-shirt",
+                        thumbClass: "cat-clothing"
                     });
                 }
             });
@@ -219,14 +240,18 @@ function renderSearchResults(query, filter) {
         const card = document.createElement("div");
         card.className = "db-card";
         card.innerHTML = `
-            <div class="db-card-header">
-                <span class="db-item-name">${escapeHTML(item.name)}</span>
-                <span class="db-item-badge ${item.badgeClass}">${item.type}</span>
+            <div class="db-card-thumb ${item.thumbClass}">
+                <i class="fa-solid ${item.thumbIcon}"></i>
             </div>
-            <div class="db-item-detail">Category: <strong>${escapeHTML(item.subtype)}</strong></div>
-            <div class="db-item-detail">${item.details}</div>
-            <div class="db-item-status ${item.statusClass}">
-                <i class="fa-solid ${item.statusClass === 'status-sellable' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i> ${item.statusText}
+            <div class="db-card-body">
+                <div class="db-card-header">
+                    <span class="db-item-name">${escapeHTML(item.name)}</span>
+                    <span class="db-item-badge ${item.badgeClass}">${item.type}</span>
+                </div>
+                <div class="db-item-detail">Category: <strong>${escapeHTML(item.subtype)}</strong></div>
+                <div class="db-item-status ${item.statusClass}">
+                    <i class="fa-solid ${item.statusClass === 'status-sellable' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i> ${item.statusText}
+                </div>
             </div>
         `;
         resultsContainer.appendChild(card);
@@ -5516,6 +5541,24 @@ function initAccessGate() {
                         clearInterval(statusPollInterval);
                         statusPollInterval = null;
                     }
+                    // Store role for assistant admin auto-unlock
+                    const userRole = (data.role || "user").toLowerCase();
+                    sessionStorage.setItem("li_user_role", userRole);
+                    if (userRole === "assistant_admin") {
+                        // Auto-unlock admin panel for assistant admins
+                        sessionStorage.setItem("li_admin_authenticated", "true");
+                        sessionStorage.setItem("li_admin_role", "assistant");
+                        const adminTabBtn = document.getElementById("tab-btn-admin");
+                        if (adminTabBtn) adminTabBtn.style.display = "";
+                        const authContainer = document.getElementById("admin-auth-container");
+                        const panelContent = document.getElementById("admin-panel-content");
+                        if (authContainer) authContainer.classList.add("hide");
+                        if (panelContent) panelContent.classList.remove("hide");
+                        renderCustomSpelling();
+                        renderCustomTemplates();
+                        refreshMainHistory();
+                        loadAndRenderAccessRequests(null, getOrCreateClientUuid(), false);
+                    }
                     if (showFeedback) {
                         alert("Access granted successfully! Welcome to LifeInvader Ad Editor.");
                     }
@@ -5631,6 +5674,11 @@ function initAccessGate() {
                     if (data.status === "success") {
                         transitionToApproveScreen();
                         startPolling();
+                    } else if (data.status === "already_approved") {
+                        // User already has access - unlock directly
+                        localStorage.setItem("li_approved_token", "APPROVED");
+                        alert("You already have access! Refreshing...");
+                        window.location.reload();
                     } else {
                         alert("Error submitting request: " + data.message);
                     }
@@ -6007,10 +6055,18 @@ function initAdminPanel() {
     if (sessionStorage.getItem("li_admin_authenticated") === "true") {
         if (authContainer) authContainer.classList.add("hide");
         if (panelContent) panelContent.classList.remove("hide");
+        const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+        // Hide restricted tabs for assistant admins
+        if (isAssistant) {
+            const backupTab = document.querySelector('.admin-tab-btn[data-target="tab-backup"]');
+            if (backupTab) backupTab.style.display = "none";
+        }
         renderCustomSpelling();
         renderCustomTemplates();
         refreshMainHistory();
-        loadAndRenderAccessRequests(sessionStorage.getItem("li_admin_passcode") || "DopamineAdmin2026!");
+        const storedPasscode = sessionStorage.getItem("li_admin_passcode");
+        const authUuid = isAssistant ? getOrCreateClientUuid() : null;
+        loadAndRenderAccessRequests(storedPasscode || null, authUuid, !isAssistant);
     }
 
     // Handle Authentication Click
@@ -6019,13 +6075,14 @@ function initAdminPanel() {
         if (password === "DopamineAdmin2026!") {
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", password);
+            sessionStorage.setItem("li_admin_role", "super");
             if (authError) authError.classList.add("hide");
             if (authContainer) authContainer.classList.add("hide");
             if (panelContent) panelContent.classList.remove("hide");
             renderCustomSpelling();
             renderCustomTemplates();
             refreshMainHistory();
-            loadAndRenderAccessRequests(password);
+            loadAndRenderAccessRequests(password, null, true);
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -6166,28 +6223,30 @@ function initAdminPanel() {
     }
 }
 
-function loadAndRenderAccessRequests(passcode) {
+function loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin) {
     const container = document.getElementById("admin-access-requests-container");
     const usersContainer = document.getElementById("admin-users-list-container");
     if (!container || !CONFIG.GOOGLE_SCRIPT_URL) return;
     
+    const requestBody = { action: "get_access_requests" };
+    if (passcode) requestBody.passcode = passcode;
+    if (authUuid) requestBody.authUuid = authUuid;
+    
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-            action: "get_access_requests",
-            passcode: passcode
-        })
+        body: JSON.stringify(requestBody)
     })
     .then(r => r.json())
     .then(data => {
         if (data.status === "success") {
+            const serverIsSuperAdmin = data.isSuperAdmin !== undefined ? data.isSuperAdmin : isSuperAdmin;
             const pendingRequests = data.requests.filter(r => r.status === "pending");
-            renderAccessRequestsList(container, pendingRequests, passcode);
+            renderAccessRequestsList(container, pendingRequests, passcode, authUuid);
             
             if (usersContainer) {
                 const approvedUsers = data.requests.filter(r => r.status === "approved");
-                renderApprovedUsersList(usersContainer, approvedUsers, passcode);
+                renderApprovedUsersList(usersContainer, approvedUsers, passcode, authUuid, serverIsSuperAdmin);
             }
         } else {
             const errMsg = `<div class="no-requests-msg" style="grid-column: 1 / -1; color: #e63946; text-align: center; padding: 20px;">Failed to load access requests: ${data.message}</div>`;
@@ -6203,7 +6262,7 @@ function loadAndRenderAccessRequests(passcode) {
     });
 }
 
-function renderAccessRequestsList(container, requests, passcode) {
+function renderAccessRequestsList(container, requests, passcode, authUuid) {
     if (!container) return;
     container.innerHTML = "";
     
@@ -6214,6 +6273,13 @@ function renderAccessRequestsList(container, requests, passcode) {
                 No pending access requests.
             </div>`;
         return;
+    }
+    
+    function buildAuthBody(extraFields) {
+        const body = {};
+        if (passcode) body.passcode = passcode;
+        if (authUuid) body.authUuid = authUuid;
+        return Object.assign(body, extraFields);
     }
     
     requests.forEach(req => {
@@ -6287,16 +6353,15 @@ function renderAccessRequestsList(container, requests, passcode) {
             fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({
+                body: JSON.stringify(buildAuthBody({
                     action: "approve_access_request",
-                    passcode: passcode,
                     clientUuid: req.clientUuid
-                })
+                }))
             })
             .then(r => r.json())
             .then(data => {
                 if (data.status === "success") {
-                    loadAndRenderAccessRequests(passcode);
+                    loadAndRenderAccessRequests(passcode, authUuid, false);
                 } else {
                     alert("Approval failed: " + data.message);
                     btnApprove.disabled = false;
@@ -6331,16 +6396,15 @@ function renderAccessRequestsList(container, requests, passcode) {
             fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify({
+                body: JSON.stringify(buildAuthBody({
                     action: "reject_access_request",
-                    passcode: passcode,
                     clientUuid: req.clientUuid
-                })
+                }))
             })
             .then(r => r.json())
             .then(data => {
                 if (data.status === "success") {
-                    loadAndRenderAccessRequests(passcode);
+                    loadAndRenderAccessRequests(passcode, authUuid, false);
                 } else {
                     alert("Rejection failed: " + data.message);
                     btnReject.disabled = false;
@@ -6363,7 +6427,7 @@ function renderAccessRequestsList(container, requests, passcode) {
     });
 }
 
-function renderApprovedUsersList(container, requests, passcode) {
+function renderApprovedUsersList(container, requests, passcode, authUuid, isSuperAdmin) {
     if (!container) return;
     container.innerHTML = "";
     
@@ -6374,6 +6438,13 @@ function renderApprovedUsersList(container, requests, passcode) {
                 No authorized users found.
             </div>`;
         return;
+    }
+    
+    function buildAuthBody(extraFields) {
+        const body = {};
+        if (passcode) body.passcode = passcode;
+        if (authUuid) body.authUuid = authUuid;
+        return Object.assign(body, extraFields);
     }
     
     requests.forEach(req => {
@@ -6388,14 +6459,45 @@ function renderApprovedUsersList(container, requests, passcode) {
         card.style.justifyContent = "space-between";
         card.style.transition = "transform 0.2s, box-shadow 0.2s";
         
+        const isAssistantAdmin = (req.role || "").toLowerCase() === "assistant_admin";
+        
+        // Add a subtle left border for assistant admins
+        if (isAssistantAdmin) {
+            card.style.borderLeft = "3px solid #f0a500";
+        }
+        
         const details = document.createElement("div");
+        
+        // Name row with role badge
+        const nameRow = document.createElement("div");
+        nameRow.style.display = "flex";
+        nameRow.style.alignItems = "center";
+        nameRow.style.gap = "8px";
+        nameRow.style.flexWrap = "wrap";
         
         const name = document.createElement("div");
         name.style.fontSize = "14px";
         name.style.fontWeight = "600";
         name.style.color = "var(--text-color)";
         name.textContent = `${req.firstname} ${req.lastname}`;
-        details.appendChild(name);
+        nameRow.appendChild(name);
+        
+        if (isAssistantAdmin) {
+            const badge = document.createElement("span");
+            badge.style.fontSize = "9px";
+            badge.style.fontWeight = "700";
+            badge.style.padding = "2px 8px";
+            badge.style.borderRadius = "4px";
+            badge.style.background = "rgba(240, 165, 0, 0.15)";
+            badge.style.color = "#f0a500";
+            badge.style.border = "1px solid rgba(240, 165, 0, 0.3)";
+            badge.style.textTransform = "uppercase";
+            badge.style.letterSpacing = "0.5px";
+            badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="margin-right: 3px;"></i>Assistant Admin`;
+            nameRow.appendChild(badge);
+        }
+        
+        details.appendChild(nameRow);
         
         const gameId = document.createElement("div");
         gameId.style.fontSize = "12px";
@@ -6423,57 +6525,140 @@ function renderApprovedUsersList(container, requests, passcode) {
         
         const actionsRow = document.createElement("div");
         actionsRow.style.display = "flex";
-        actionsRow.style.gap = "10px";
+        actionsRow.style.gap = "8px";
         actionsRow.style.marginTop = "15px";
+        actionsRow.style.flexWrap = "wrap";
         
-        const btnRevoke = document.createElement("button");
-        btnRevoke.type = "button";
-        btnRevoke.className = "btn-preset";
-        btnRevoke.style.flex = "1";
-        btnRevoke.style.padding = "6px 12px";
-        btnRevoke.style.borderRadius = "4px";
-        btnRevoke.style.border = "none";
-        btnRevoke.style.background = "#e63946";
-        btnRevoke.style.color = "white";
-        btnRevoke.style.fontWeight = "600";
-        btnRevoke.style.fontSize = "12px";
-        btnRevoke.style.cursor = "pointer";
-        btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
-        
-        btnRevoke.addEventListener("click", () => {
-            if (confirm(`Are you sure you want to revoke access for ${req.firstname} ${req.lastname}?`)) {
-                btnRevoke.disabled = true;
-                btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+        // Only super admin can see management buttons
+        if (isSuperAdmin) {
+            // Promote / Demote button
+            const btnRole = document.createElement("button");
+            btnRole.type = "button";
+            btnRole.className = "btn-preset";
+            btnRole.style.flex = "1";
+            btnRole.style.padding = "6px 10px";
+            btnRole.style.borderRadius = "4px";
+            btnRole.style.border = "none";
+            btnRole.style.fontWeight = "600";
+            btnRole.style.fontSize = "11px";
+            btnRole.style.cursor = "pointer";
+            btnRole.style.minWidth = "120px";
+            
+            if (isAssistantAdmin) {
+                btnRole.style.background = "rgba(240, 165, 0, 0.15)";
+                btnRole.style.color = "#f0a500";
+                btnRole.style.border = "1px solid rgba(240, 165, 0, 0.3)";
+                btnRole.innerHTML = `<i class="fa-solid fa-user-minus"></i> Remove Assistant`;
+            } else {
+                btnRole.style.background = "rgba(46, 196, 182, 0.15)";
+                btnRole.style.color = "#2ec4b6";
+                btnRole.style.border = "1px solid rgba(46, 196, 182, 0.3)";
+                btnRole.innerHTML = `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
+            }
+            
+            btnRole.addEventListener("click", () => {
+                const newRole = isAssistantAdmin ? "user" : "assistant_admin";
+                const confirmMsg = isAssistantAdmin 
+                    ? `Remove assistant admin role from ${req.firstname} ${req.lastname}?`
+                    : `Promote ${req.firstname} ${req.lastname} to Assistant Admin?\n\nThey will be able to:\n- Access the Admin Panel\n- Approve/Reject access requests\n- View Spelling & Templates\n\nThey will NOT be able to:\n- Revoke user access\n- Promote/demote users\n- Manage backups`;
                 
-                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify({
-                        action: "reject_access_request",
-                        passcode: passcode,
-                        clientUuid: req.clientUuid
+                if (confirm(confirmMsg)) {
+                    btnRole.disabled = true;
+                    btnRole.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                    
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain" },
+                        body: JSON.stringify({
+                            action: "set_user_role",
+                            passcode: passcode,
+                            clientUuid: req.clientUuid,
+                            role: newRole
+                        })
                     })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        loadAndRenderAccessRequests(passcode);
-                    } else {
-                        alert("Revocation failed: " + data.message);
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                        } else {
+                            alert("Role change failed: " + data.message);
+                            btnRole.disabled = false;
+                            btnRole.innerHTML = isAssistantAdmin 
+                                ? `<i class="fa-solid fa-user-minus"></i> Remove Assistant`
+                                : `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Set role error:", err);
+                        alert("Network error changing role.");
+                        btnRole.disabled = false;
+                    });
+                }
+            });
+            
+            actionsRow.appendChild(btnRole);
+            
+            // Revoke Access button
+            const btnRevoke = document.createElement("button");
+            btnRevoke.type = "button";
+            btnRevoke.className = "btn-preset";
+            btnRevoke.style.flex = "1";
+            btnRevoke.style.padding = "6px 10px";
+            btnRevoke.style.borderRadius = "4px";
+            btnRevoke.style.border = "none";
+            btnRevoke.style.background = "#e63946";
+            btnRevoke.style.color = "white";
+            btnRevoke.style.fontWeight = "600";
+            btnRevoke.style.fontSize = "11px";
+            btnRevoke.style.cursor = "pointer";
+            btnRevoke.style.minWidth = "120px";
+            btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+            
+            btnRevoke.addEventListener("click", () => {
+                if (confirm(`Are you sure you want to revoke access for ${req.firstname} ${req.lastname}?`)) {
+                    btnRevoke.disabled = true;
+                    btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                    
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain" },
+                        body: JSON.stringify(buildAuthBody({
+                            action: "reject_access_request",
+                            clientUuid: req.clientUuid
+                        }))
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                        } else {
+                            alert("Revocation failed: " + data.message);
+                            btnRevoke.disabled = false;
+                            btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Revoke access error:", err);
+                        alert("Network error revoking access.");
                         btnRevoke.disabled = false;
                         btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
-                    }
-                })
-                .catch(err => {
-                    console.error("Revoke access error:", err);
-                    alert("Network error revoking access.");
-                    btnRevoke.disabled = false;
-                    btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
-                });
-            }
-        });
+                    });
+                }
+            });
+            
+            actionsRow.appendChild(btnRevoke);
+        } else {
+            // Assistant admin view - just show a read-only role indicator
+            const roleLabel = document.createElement("div");
+            roleLabel.style.fontSize = "11px";
+            roleLabel.style.color = "var(--text-muted)";
+            roleLabel.style.fontStyle = "italic";
+            roleLabel.innerHTML = isAssistantAdmin 
+                ? `<i class="fa-solid fa-shield-halved" style="color: #f0a500;"></i> Assistant Admin`
+                : `<i class="fa-solid fa-user" style="color: var(--text-muted);"></i> Regular User`;
+            actionsRow.appendChild(roleLabel);
+        }
         
-        actionsRow.appendChild(btnRevoke);
         card.appendChild(actionsRow);
         container.appendChild(card);
     });

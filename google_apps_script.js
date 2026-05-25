@@ -107,6 +107,8 @@ function doPost(e) {
       return handleApproveAccessRequest(payload, headers);
     } else if (action === "reject_access_request") {
       return handleRejectAccessRequest(payload, headers);
+    } else if (action === "set_user_role") {
+      return handleSetUserRole(payload, headers);
     } else if (action === "validate_key") {
       return handleValidateKey(payload, headers);
     } else if (action === "bug_report") {
@@ -165,7 +167,13 @@ function getOrCreateAccessRequestsSheet() {
   let sheet = ss.getSheetByName("Access_Requests");
   if (!sheet) {
     sheet = ss.insertSheet("Access_Requests");
-    sheet.appendRow(["Timestamp", "First Name", "Last Name", "In-Game ID", "UUID", "Status"]);
+    sheet.appendRow(["Timestamp", "First Name", "Last Name", "In-Game ID", "UUID", "Status", "Role"]);
+  } else {
+    // Migrate: add Role header if missing (column 7)
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (headers.length < 7 || headers[6] !== "Role") {
+      sheet.getRange(1, 7).setValue("Role");
+    }
   }
   return sheet;
 }
@@ -187,13 +195,23 @@ function handleAccessRequest(data, headers) {
   const sheet = getOrCreateAccessRequestsSheet();
   const rows = sheet.getDataRange().getValues();
   let foundRowIdx = -1;
+  let existingStatus = "";
   
   // Look for existing request by clientUuid
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][4] === clientUuid) {
       foundRowIdx = i + 1; // 1-based index
+      existingStatus = (rows[i][5] || "").toString().toLowerCase().trim();
       break;
     }
+  }
+  
+  // If user is already approved, don't create a new pending request
+  if (foundRowIdx !== -1 && existingStatus === "approved") {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "already_approved",
+      message: "You already have access to the system. No new request needed."
+    })).setMimeType(ContentService.MimeType.JSON);
   }
   
   if (foundRowIdx !== -1) {
@@ -226,10 +244,13 @@ function handleCheckAccess(data, headers) {
   const sheet = getOrCreateAccessRequestsSheet();
   const rows = sheet.getDataRange().getValues();
   let requestStatus = "none";
+  let userRole = "user";
   
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][4] === clientUuid) {
       requestStatus = rows[i][5] || "pending";
+      userRole = (rows[i][6] || "user").toString().trim().toLowerCase();
+      if (!userRole) userRole = "user";
       break;
     }
   }
@@ -237,13 +258,47 @@ function handleCheckAccess(data, headers) {
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
     approved: (requestStatus === "approved"),
-    requestStatus: requestStatus
+    requestStatus: requestStatus,
+    role: userRole
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
-function handleGetAccessRequests(data, headers) {
+// Helper: check if a UUID has assistant_admin or higher role
+function isAssistantAdmin(sheet, clientUuid) {
+  if (!clientUuid) return false;
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      const status = (rows[i][5] || "").toString().toLowerCase().trim();
+      const role = (rows[i][6] || "").toString().toLowerCase().trim();
+      return status === "approved" && role === "assistant_admin";
+    }
+  }
+  return false;
+}
+
+// Helper: check auth - returns { authorized, isSuperAdmin }
+function checkAdminAuth(data) {
   const passcode = data.passcode || "";
-  if (passcode !== ADMIN_PASSCODE) {
+  const clientUuid = data.authUuid || "";
+  
+  if (passcode === ADMIN_PASSCODE) {
+    return { authorized: true, isSuperAdmin: true };
+  }
+  
+  if (clientUuid) {
+    const sheet = getOrCreateAccessRequestsSheet();
+    if (isAssistantAdmin(sheet, clientUuid)) {
+      return { authorized: true, isSuperAdmin: false };
+    }
+  }
+  
+  return { authorized: false, isSuperAdmin: false };
+}
+
+function handleGetAccessRequests(data, headers) {
+  const auth = checkAdminAuth(data);
+  if (!auth.authorized) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
       message: "Unauthorized access. Invalid passcode."
@@ -261,27 +316,28 @@ function handleGetAccessRequests(data, headers) {
       lastname: rows[i][2] || "",
       id: rows[i][3] || "",
       clientUuid: rows[i][4] || "",
-      status: rows[i][5] || "pending"
+      status: rows[i][5] || "pending",
+      role: (rows[i][6] || "user").toString().trim().toLowerCase() || "user"
     });
   }
   
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
-    requests: requests.reverse()
+    requests: requests.reverse(),
+    isSuperAdmin: auth.isSuperAdmin
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleApproveAccessRequest(data, headers) {
-  const passcode = data.passcode || "";
-  const clientUuid = data.clientUuid || "";
-  
-  if (passcode !== ADMIN_PASSCODE) {
+  const auth = checkAdminAuth(data);
+  if (!auth.authorized) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
-      message: "Unauthorized access. Invalid passcode."
+      message: "Unauthorized access."
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
+  const clientUuid = data.clientUuid || "";
   if (!clientUuid) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
@@ -296,6 +352,8 @@ function handleApproveAccessRequest(data, headers) {
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][4] === clientUuid) {
       sheet.getRange(i + 1, 6).setValue("approved");
+      // Set default role if empty
+      if (!rows[i][6]) sheet.getRange(i + 1, 7).setValue("user");
       updated = true;
       break;
     }
@@ -315,16 +373,15 @@ function handleApproveAccessRequest(data, headers) {
 }
 
 function handleRejectAccessRequest(data, headers) {
-  const passcode = data.passcode || "";
-  const clientUuid = data.clientUuid || "";
-  
-  if (passcode !== ADMIN_PASSCODE) {
+  const auth = checkAdminAuth(data);
+  if (!auth.authorized) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
-      message: "Unauthorized access. Invalid passcode."
+      message: "Unauthorized access."
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
+  const clientUuid = data.clientUuid || "";
   if (!clientUuid) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
@@ -336,9 +393,19 @@ function handleRejectAccessRequest(data, headers) {
   const rows = sheet.getDataRange().getValues();
   let updated = false;
   
+  // If revoking an approved user, only super admin can do that
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][4] === clientUuid) {
+      const currentStatus = (rows[i][5] || "").toString().toLowerCase().trim();
+      if (currentStatus === "approved" && !auth.isSuperAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "error",
+          message: "Only the super admin can revoke approved users."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
       sheet.getRange(i + 1, 6).setValue("rejected");
+      // Clear role on rejection
+      sheet.getRange(i + 1, 7).setValue("");
       updated = true;
       break;
     }
@@ -353,6 +420,60 @@ function handleRejectAccessRequest(data, headers) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
       message: "Request not found."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleSetUserRole(data, headers) {
+  // Only super admin (passcode) can change roles
+  const passcode = data.passcode || "";
+  if (passcode !== ADMIN_PASSCODE) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Only the super admin can change user roles."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const clientUuid = data.clientUuid || "";
+  const newRole = data.role || "user";
+  
+  if (!clientUuid) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing UUID."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // Validate role value
+  const validRoles = ["user", "assistant_admin"];
+  if (!validRoles.includes(newRole)) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Invalid role. Must be 'user' or 'assistant_admin'."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateAccessRequestsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let updated = false;
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][4] === clientUuid) {
+      sheet.getRange(i + 1, 7).setValue(newRole);
+      updated = true;
+      break;
+    }
+  }
+  
+  if (updated) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "User role updated to " + newRole + "."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "User not found."
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }

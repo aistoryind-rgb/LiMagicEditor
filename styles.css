@@ -873,73 +873,136 @@ textarea:focus, input:focus, select:focus {
 
 .db-results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    max-height: 450px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+    max-height: 520px;
     overflow-y: auto;
-    padding-right: 8px;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 
+.db-results-grid::-webkit-scrollbar { width: 4px; }
+.db-results-grid::-webkit-scrollbar-track { background: transparent; }
+.db-results-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+/* --- DB Card: Compact horizontal layout --- */
 .db-card {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px;
+    background: rgba(12, 14, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: var(--transition-smooth);
+    flex-direction: row;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
 }
 
 .db-card:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(18, 22, 32, 0.8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Compact thumbnail icon area */
+.db-card-thumb {
+    width: 50px;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.db-card-thumb i {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.85);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+    transition: transform 0.25s ease;
+}
+
+.db-card:hover .db-card-thumb i {
+    transform: scale(1.1);
+}
+
+/* Category gradient themes */
+.db-card-thumb.cat-helicopter { background: linear-gradient(135deg, #1a3a5c 0%, #0d7377 100%); }
+.db-card-thumb.cat-boat      { background: linear-gradient(135deg, #0c3547 0%, #1565a7 100%); }
+.db-card-thumb.cat-plane     { background: linear-gradient(135deg, #2d1b4e 0%, #5b3a8c 100%); }
+.db-card-thumb.cat-motorcycle { background: linear-gradient(135deg, #4a1c1c 0%, #b33a3a 100%); }
+.db-card-thumb.cat-car-sell  { background: linear-gradient(135deg, #1a2f1a 0%, #2e7d32 100%); }
+.db-card-thumb.cat-car-rent  { background: linear-gradient(135deg, #3e2723 0%, #e65100 100%); }
+.db-card-thumb.cat-clothing  { background: linear-gradient(135deg, #2e1a47 0%, #8e24aa 100%); }
+
+/* Card body (right side) */
+.db-card-body {
+    flex: 1;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
 }
 
 .db-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 6px;
 }
 
 .db-item-name {
     font-family: var(--font-heading);
     font-weight: 600;
-    font-size: 15px;
+    font-size: 12.5px;
     color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
 }
 
 .db-item-badge {
-    font-size: 10px;
+    font-size: 8px;
     font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 5px;
+    border-radius: 3px;
     text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .db-item-badge.vehicle {
-    background: rgba(10, 132, 255, 0.15);
-    color: var(--color-info);
-    border: 1px solid rgba(10, 132, 255, 0.3);
+    background: rgba(10, 132, 255, 0.12);
+    color: #5ac8fa;
+    border: 1px solid rgba(10, 132, 255, 0.2);
 }
 
 .db-item-badge.clothing {
-    background: rgba(191, 90, 242, 0.15);
-    color: #bf5af2;
-    border: 1px solid rgba(191, 90, 242, 0.3);
+    background: rgba(191, 90, 242, 0.12);
+    color: #c77dff;
+    border: 1px solid rgba(191, 90, 242, 0.2);
 }
 
 .db-item-detail {
-    font-size: 12px;
+    font-size: 10px;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
 }
 
 .db-item-status {
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    margin-top: 1px;
 }
 
 .status-sellable {

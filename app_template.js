@@ -948,6 +948,13 @@ function matchVehicle(inputText) {
         if (score > maxScore) {
             maxScore = score;
             bestVeh = veh;
+        } else if (score === maxScore && score > 0 && bestVeh) {
+            const bestVehClean = bestVeh.toLowerCase().replace(/[()]/g, '');
+            const bestVehTokens = bestVehClean.split(/[\s-]+/).length;
+            const currentVehTokens = vehClean.split(/[\s-]+/).length;
+            if (currentVehTokens < bestVehTokens) {
+                bestVeh = veh;
+            }
         }
     }
     
@@ -2627,12 +2634,12 @@ function parsePriceAndBudget(text, action, ctx) {
     
     // Sequential price matches
     const regexes = [
-        /(?:price|budget|rent|bet|cost|cash|salary|wage)\s*(?::|is)?\s*(?:\$)?\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\$\s*(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\b(?:for|at)\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
-        /\beach\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\b/gi,
-        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)?\s*each\b/gi,
-        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|thousand|b|billion|trillion)\b/gi,
+        /(?:price|budget|rent|bet|cost|cash|salary|wage)\s*(?::|is)?\s*(?:\$)?\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)?\b/gi,
+        /\$\s*(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)?\b/gi,
+        /\b(?:for|at)\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)\b/gi,
+        /\beach\s+(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)?\b/gi,
+        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)?\s*each\b/gi,
+        /\b(\d+(?:[\.,]\d+)*)\s*(k|m|mil|ml|million|milliom|milion|miliom|millio|thousand|thousant|b|billion|billiom|bilion|biliom|trillion)\b/gi,
         /\b(\d{5,})\b/g
     ];
     
@@ -2703,11 +2710,11 @@ function parsePriceAndBudget(text, action, ctx) {
             let numericVal = item.numericVal;
             let suffix = item.suffix;
             let normalizedVal = numericVal;
-            if (suffix === "m" || suffix === "mil" || suffix === "ml" || suffix === "million") {
+            if (suffix === "m" || suffix === "mil" || suffix === "ml" || suffix === "million" || suffix === "milliom" || suffix === "milion" || suffix === "miliom" || suffix === "millio") {
                 normalizedVal = numericVal * 1000000;
-            } else if (suffix === "k" || suffix === "thousand") {
+            } else if (suffix === "k" || suffix === "thousand" || suffix === "thousant") {
                 normalizedVal = numericVal * 1000;
-            } else if (suffix === "b" || suffix === "billion") {
+            } else if (suffix === "b" || suffix === "billion" || suffix === "billiom" || suffix === "bilion" || suffix === "biliom") {
                 normalizedVal = numericVal * 1000000000;
             }
             if (normalizedVal > 10000000) {
@@ -2737,10 +2744,10 @@ function parsePriceAndBudget(text, action, ctx) {
         let normalizedVal = numericVal;
         let formattedString = "";
         
-        if (suffix === "m" || suffix === "mil" || suffix === "ml" || suffix === "million") {
+        if (suffix === "m" || suffix === "mil" || suffix === "ml" || suffix === "million" || suffix === "milliom" || suffix === "milion" || suffix === "miliom" || suffix === "millio") {
             normalizedVal = numericVal * 1000000;
             formattedString = `$${numericVal} Million`;
-        } else if (suffix === "k" || suffix === "thousand") {
+        } else if (suffix === "k" || suffix === "thousand" || suffix === "thousant") {
             normalizedVal = numericVal * 1000;
             if (numericVal >= 1000) {
                 const mil = (numericVal / 1000).toFixed(2);
@@ -2748,7 +2755,7 @@ function parsePriceAndBudget(text, action, ctx) {
             } else {
                 formattedString = `$${formatNumberDots(numericVal * 1000)}`;
             }
-        } else if (suffix === "b" || suffix === "billion") {
+        } else if (suffix === "b" || suffix === "billion" || suffix === "billiom" || suffix === "bilion" || suffix === "biliom") {
             normalizedVal = numericVal * 1000000000;
             formattedString = `$${numericVal} Billion`;
         } else if (suffix === "trillion") {

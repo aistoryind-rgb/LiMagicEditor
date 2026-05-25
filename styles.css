@@ -599,13 +599,13 @@ textarea:focus, input:focus, select:focus {
 }
 
 .btn-copy {
-    background: var(--color-info);
+    background: var(--color-success);
     border: none;
     border-radius: var(--radius-sm);
-    color: #fff;
+    color: #0c0e12;
     cursor: pointer;
     font-family: var(--font-heading);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 12px;
     padding: 6px 12px;
     display: flex;
@@ -616,7 +616,7 @@ textarea:focus, input:focus, select:focus {
 
 .btn-copy:hover:not(:disabled) {
     opacity: 0.9;
-    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.45);
 }
 
 .btn-copy:disabled {
@@ -627,8 +627,9 @@ textarea:focus, input:focus, select:focus {
 }
 
 .btn-copy.copied {
-    background: var(--color-success);
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
+    background: var(--color-info);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
 }
 
 .btn-paste {
@@ -2951,14 +2952,14 @@ textarea:focus, input:focus, select:focus {
 }
 
 .category-btn.active {
-    background: var(--color-success); /* Green */
-    border-color: var(--color-success);
-    color: #0c0e12;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.35);
+    background: var(--color-info); /* Tech Blue */
+    border-color: var(--color-info);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
 }
 
 .category-btn.active i {
-    color: #0c0e12;
+    color: #ffffff;
 }
 
 .category-btn i {
@@ -3022,11 +3023,16 @@ textarea:focus, input:focus, select:focus {
     box-shadow: 0 0 10px rgba(48, 209, 88, 0.4) !important;
 }
 .pip-uniform-btn.btn-copy {
-    background: var(--color-info) !important;
-    color: #fff !important;
+    background: var(--color-success) !important;
+    color: #0c0e12 !important;
 }
 .pip-uniform-btn.btn-copy:hover:not(:disabled) {
     opacity: 0.9 !important;
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.45) !important;
+}
+.pip-uniform-btn.btn-copy.copied {
+    background: var(--color-info) !important;
+    color: #fff !important;
     box-shadow: 0 0 10px rgba(10, 132, 255, 0.4) !important;
 }
 .pip-uniform-btn.btn-copy:disabled {

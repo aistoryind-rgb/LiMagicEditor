@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 02:46:31";
-const BUILD_TIMESTAMP_SHORT = "May 26 02:46";
+const BUILD_TIMESTAMP = "2026 May 26 02:52:30";
+const BUILD_TIMESTAMP_SHORT = "May 26 02:52";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -2293,9 +2293,21 @@ function matchClothingItem(inputText) {
         }
     }
     
+    const lowerInput = inputText.toLowerCase();
+    const nonClothingKeywords = [
+        "cage", "pet", "plate", "license", "fish", "salmon", "carp", "perch", "trout",
+        "drill", "sawmill", "gpu", "graphics card", "video card", "battery", "batteries",
+        "wires", "wire", "sponge", "sponges", "hookah", "poker", "dice",
+        "seed", "seeds", "emerald", "ruby", "diamond", "obsidian", "magma stone", "copper",
+        "driver", "lawyer", "dancer", "singer", "dj", "fuel", "canister", "tonic"
+    ];
+    if (nonClothingKeywords.some(kw => lowerInput.includes(kw))) {
+        return null;
+    }
+
     const actionPrefixes = /^(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(?:a\s+|an\s+)?/i;
     const actionSuffixes = /\s+(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i;
-    
+
     let cleanInput = mapClothingBrands(inputText.trim().toLowerCase().replace(/__has_each__/g, ""));
     cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     
@@ -6593,7 +6605,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:46</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 02:52</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

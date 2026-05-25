@@ -1140,9 +1140,21 @@ function matchClothingItem(inputText) {
         }
     }
     
+    const lowerInput = inputText.toLowerCase();
+    const nonClothingKeywords = [
+        "cage", "pet", "plate", "license", "fish", "salmon", "carp", "perch", "trout",
+        "drill", "sawmill", "gpu", "graphics card", "video card", "battery", "batteries",
+        "wires", "wire", "sponge", "sponges", "hookah", "poker", "dice",
+        "seed", "seeds", "emerald", "ruby", "diamond", "obsidian", "magma stone", "copper",
+        "driver", "lawyer", "dancer", "singer", "dj", "fuel", "canister", "tonic"
+    ];
+    if (nonClothingKeywords.some(kw => lowerInput.includes(kw))) {
+        return null;
+    }
+
     const actionPrefixes = /^(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(?:a\s+|an\s+)?/i;
     const actionSuffixes = /\s+(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i;
-    
+
     let cleanInput = mapClothingBrands(inputText.trim().toLowerCase().replace(/__has_each__/g, ""));
     cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     

@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 19:07:47";
-const BUILD_TIMESTAMP_SHORT = "May 25 19:07";
+const BUILD_TIMESTAMP = "2026 May 25 20:09:49";
+const BUILD_TIMESTAMP_SHORT = "May 25 20:09";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5955,7 +5955,7 @@ function parseQuantity(text) {
         const end = regex.lastIndex;
         // check prefix
         const prefixText = lower.substring(Math.max(0, start - 15), start).trim();
-        if (/(?:house|apartment|mansion|penthouse|shop|card|cards|sim|\u2116|#|no\.?|level|lvl|type|t\.?|volex|kolex|trousers?|masks?|shoes?|t-shirts?|sweatshirts?|jackets?|hoodies?|dress|watch(?:es)?|glasses|caps?|hats?|shorts?|leggings?|suits?|accessory|accessories|skirts?|vests?|pants|piercings?|horns?|earphones?|headphones?|ears?|capes?|crowns?|gloves?)$/i.test(prefixText.replace(/[:#\s\u2116]+$/g, "").trim())) {
+        if (/(?:\bhouse|\bapartment|\bmansion|\bpenthouse|\bshop|\bcard|\bcards|\bsim|\u2116|#|\bno\.?|\blevel|\blvl|\btype|\bt\.?|\bvolex|\bkolex|\btrousers?|\bmasks?|\bshoes?|\bt-shirts?|\bsweatshirts?|\bjackets?|\bhoodies?|\bdress|\bwatch(?:es)?|\bglasses|\bcaps?|\bhats?|\bshorts?|\bleggings?|\bsuits?|\baccessory|\baccessories|\bskirts?|\bvests?|\bpants|\bpiercings?|\bhorns?|\bearphones?|\bheadphones?|\bears?|\bcapes?|\bcrowns?|\bgloves?)$/i.test(prefixText.replace(/[:#\s\u2116]+$/g, "").trim())) {
             continue;
         }
         // check suffix
@@ -6292,7 +6292,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 19:07</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 20:09</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

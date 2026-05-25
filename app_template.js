@@ -4259,7 +4259,7 @@ function fuzzyCorrectItemName(rawItem, ctx) {
     const hasEach = /\beach\b/i.test(cleanLower) || cleanLower.includes("__has_each__");
     
     // 1. Ticket check
-    if (cleanLower.includes("ticket") || cleanLower.includes("tcket") || cleanLower.includes("tikcet") || cleanLower.includes("tick") || cleaned.includes("ticket")) {
+    if (cleanLower.includes("ticket") || cleanLower.includes("tcket") || cleanLower.includes("tikcet") || cleanLower.includes("tick") || cleaned.includes("ticket") || cleanLower.includes("cayo") || cleanLower.includes("perico")) {
         let canonical = "";
         if (cleanLower.includes("cayo") || cleanLower.includes("perico")) canonical = "Cayo Perico ticket";
         else if (cleanLower.includes("car")) canonical = "Car ticket";

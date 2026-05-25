@@ -4057,9 +4057,6 @@ function formatOtherAd(adBody, action, ctx) {
                 if (color) finalClothing += `${color} `;
                 
                 let namePart = matchedClothing.name;
-                if (typeVal && typeVal.includes("and")) {
-                    namePart = pluralizeItemName(namePart);
-                }
                 
                 if (namePart.includes('*')) {
                     namePart = namePart.replace('*', typeVal || 'X');

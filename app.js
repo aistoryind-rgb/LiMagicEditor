@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 06:19:11";
-const BUILD_TIMESTAMP_SHORT = "May 25 06:19";
+const BUILD_TIMESTAMP = "2026 May 25 06:22:29";
+const BUILD_TIMESTAMP_SHORT = "May 25 06:22";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5779,7 +5779,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 06:19</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 06:22</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6832,6 +6832,31 @@ function initAdminPanel() {
     const textareaBackup = document.getElementById("admin-backup-textarea");
 
     if (!btnAuth) return;
+
+    // Admin Tabs Logic
+    const tabBtns = document.querySelectorAll(".admin-tab-btn");
+    const tabContents = document.querySelectorAll(".admin-tab-content");
+    
+    if (tabBtns.length > 0 && tabContents.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const targetId = btn.getAttribute("data-target");
+                
+                // Active button class
+                tabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                
+                // Show/hide content panels
+                tabContents.forEach(content => {
+                    if (content.id === targetId) {
+                        content.classList.remove("hide");
+                    } else {
+                        content.classList.add("hide");
+                    }
+                });
+            });
+        });
+    }
 
     // Check existing authentication session
     if (sessionStorage.getItem("li_admin_authenticated") === "true") {

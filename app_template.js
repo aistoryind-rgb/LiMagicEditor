@@ -5977,6 +5977,31 @@ function initAdminPanel() {
 
     if (!btnAuth) return;
 
+    // Admin Tabs Logic
+    const tabBtns = document.querySelectorAll(".admin-tab-btn");
+    const tabContents = document.querySelectorAll(".admin-tab-content");
+    
+    if (tabBtns.length > 0 && tabContents.length > 0) {
+        tabBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const targetId = btn.getAttribute("data-target");
+                
+                // Active button class
+                tabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                
+                // Show/hide content panels
+                tabContents.forEach(content => {
+                    if (content.id === targetId) {
+                        content.classList.remove("hide");
+                    } else {
+                        content.classList.add("hide");
+                    }
+                });
+            });
+        });
+    }
+
     // Check existing authentication session
     if (sessionStorage.getItem("li_admin_authenticated") === "true") {
         if (authContainer) authContainer.classList.add("hide");

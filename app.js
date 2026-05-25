@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 17:56:49";
-const BUILD_TIMESTAMP_SHORT = "May 25 17:56";
+const BUILD_TIMESTAMP = "2026 May 25 18:45:17";
+const BUILD_TIMESTAMP_SHORT = "May 25 18:45";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -2024,6 +2024,7 @@ function matchVehicle(inputText) {
         
         let score = 0;
         let matchedNonNumeric = false;
+        let hasExactMatch = false;
         for (const token of inputTokens) {
             if (token.length < 2) continue;
             
@@ -2047,6 +2048,9 @@ function matchVehicle(inputText) {
                     if (stopWords.includes(token)) {
                         continue;
                     }
+                    if (dist === 0) {
+                        hasExactMatch = true;
+                    }
                     score += 3;
                     matchedToken = true;
                     if (!/^\d+$/.test(token)) {
@@ -2057,6 +2061,9 @@ function matchVehicle(inputText) {
             }
             if (!matchedToken && vehClean.includes(token)) {
                 score += 1;
+                if (vehTokens.includes(token)) {
+                    hasExactMatch = true;
+                }
                 if (!/^\d+$/.test(token)) {
                     matchedNonNumeric = true;
                 }
@@ -2071,6 +2078,9 @@ function matchVehicle(inputText) {
                 const maxLen = Math.max(token.length, modelId.length);
                 const sim = 1 - (dist / maxLen);
                 if (sim >= 0.75) {
+                    if (dist === 0) {
+                        hasExactMatch = true;
+                    }
                     score += 5;
                     if (!/^\d+$/.test(token)) {
                         matchedNonNumeric = true;
@@ -2081,6 +2091,10 @@ function matchVehicle(inputText) {
         
         const hasNumericTokenInVeh = vehTokens.some(vt => /^\d+$/.test(vt));
         if (hasNumericTokenInVeh && !matchedNonNumeric) {
+            score = 0;
+        }
+        
+        if (inputTokens.length > 1 && !hasExactMatch) {
             score = 0;
         }
         
@@ -3050,6 +3064,10 @@ function runValidationPipeline(ctx, override) {
         }
     }
     
+    if (action === "Trading" && !lowerText.includes(" for ")) {
+        action = "Selling or trading";
+        ctx.logs.push({ text: `Normalized starting action from "Trading" to "Selling or trading" because no target was specified with "for"`, type: 'correction' });
+    }
     ctx.action = action;
     
     // 5. Price / Budget / Rent Parsing
@@ -5695,6 +5713,7 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "thread": ["thread", "threads"],
         "timber": ["timber"],
         "token": ["token", "tokens"],
+        "seeds": ["seeds", "seed"],
         "tonic treat": ["tonic treat", "tonic", "treat"],
         "Treasure Map": ["treasure map", "treasuremap"],
         "wires": ["wires", "wire"],
@@ -6190,7 +6209,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 17:56</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 18:45</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

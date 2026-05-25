@@ -871,6 +871,7 @@ function matchVehicle(inputText) {
         
         let score = 0;
         let matchedNonNumeric = false;
+        let hasExactMatch = false;
         for (const token of inputTokens) {
             if (token.length < 2) continue;
             
@@ -894,6 +895,9 @@ function matchVehicle(inputText) {
                     if (stopWords.includes(token)) {
                         continue;
                     }
+                    if (dist === 0) {
+                        hasExactMatch = true;
+                    }
                     score += 3;
                     matchedToken = true;
                     if (!/^\d+$/.test(token)) {
@@ -904,6 +908,9 @@ function matchVehicle(inputText) {
             }
             if (!matchedToken && vehClean.includes(token)) {
                 score += 1;
+                if (vehTokens.includes(token)) {
+                    hasExactMatch = true;
+                }
                 if (!/^\d+$/.test(token)) {
                     matchedNonNumeric = true;
                 }
@@ -918,6 +925,9 @@ function matchVehicle(inputText) {
                 const maxLen = Math.max(token.length, modelId.length);
                 const sim = 1 - (dist / maxLen);
                 if (sim >= 0.75) {
+                    if (dist === 0) {
+                        hasExactMatch = true;
+                    }
                     score += 5;
                     if (!/^\d+$/.test(token)) {
                         matchedNonNumeric = true;
@@ -928,6 +938,10 @@ function matchVehicle(inputText) {
         
         const hasNumericTokenInVeh = vehTokens.some(vt => /^\d+$/.test(vt));
         if (hasNumericTokenInVeh && !matchedNonNumeric) {
+            score = 0;
+        }
+        
+        if (inputTokens.length > 1 && !hasExactMatch) {
             score = 0;
         }
         
@@ -1897,6 +1911,10 @@ function runValidationPipeline(ctx, override) {
         }
     }
     
+    if (action === "Trading" && !lowerText.includes(" for ")) {
+        action = "Selling or trading";
+        ctx.logs.push({ text: `Normalized starting action from "Trading" to "Selling or trading" because no target was specified with "for"`, type: 'correction' });
+    }
     ctx.action = action;
     
     // 5. Price / Budget / Rent Parsing
@@ -4542,6 +4560,7 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "thread": ["thread", "threads"],
         "timber": ["timber"],
         "token": ["token", "tokens"],
+        "seeds": ["seeds", "seed"],
         "tonic treat": ["tonic treat", "tonic", "treat"],
         "Treasure Map": ["treasure map", "treasuremap"],
         "wires": ["wires", "wire"],

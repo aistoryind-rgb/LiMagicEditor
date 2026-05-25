@@ -610,6 +610,8 @@ function correctSpelling(text, ctx) {
         "transmision": "transmission",
         "transmition": "transmission",
         "transmisin": "transmission",
+        "transmion": "transmission",
+        "tranmission": "transmission",
         "bataris": "batteries",
         "balk": "bulk",
         "buget": "budget",
@@ -3998,7 +4000,7 @@ function formatOtherAd(adBody, action, ctx) {
                 
                 let qty = parseQuantity(adBody);
                 let qtyText = qty ? `${qty} ` : "";
-                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "";
+                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "high quality ";
                 
                 const groupedTuningText = `${qtyText}${qualityText}${partsListText}${suffix}`;
                 formattedItems.push(groupedTuningText);
@@ -4330,8 +4332,8 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             quality = "high quality ";
         } else if (cleanLower.includes("max") || cleanLower.includes("lvl 4") || cleanLower.includes("lvl4") || cleanLower.includes("level 4") || cleanLower.includes("4lvl") || cleanLower.includes("4 lvl")) {
             quality = "max quality ";
-        } else if (cleanLower.includes("advanced")) {
-            quality = "advanced quality ";
+        } else {
+            quality = "high quality ";
         }
         
         let qty = parseQuantity(rawItem);

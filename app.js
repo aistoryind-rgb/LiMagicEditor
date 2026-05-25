@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 17:46:10";
-const BUILD_TIMESTAMP_SHORT = "May 25 17:46";
+const BUILD_TIMESTAMP = "2026 May 25 17:49:47";
+const BUILD_TIMESTAMP_SHORT = "May 25 17:49";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1763,6 +1763,8 @@ function correctSpelling(text, ctx) {
         "transmision": "transmission",
         "transmition": "transmission",
         "transmisin": "transmission",
+        "transmion": "transmission",
+        "tranmission": "transmission",
         "bataris": "batteries",
         "balk": "bulk",
         "buget": "budget",
@@ -5151,7 +5153,7 @@ function formatOtherAd(adBody, action, ctx) {
                 
                 let qty = parseQuantity(adBody);
                 let qtyText = qty ? `${qty} ` : "";
-                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "";
+                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "high quality ";
                 
                 const groupedTuningText = `${qtyText}${qualityText}${partsListText}${suffix}`;
                 formattedItems.push(groupedTuningText);
@@ -5483,8 +5485,8 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             quality = "high quality ";
         } else if (cleanLower.includes("max") || cleanLower.includes("lvl 4") || cleanLower.includes("lvl4") || cleanLower.includes("level 4") || cleanLower.includes("4lvl") || cleanLower.includes("4 lvl")) {
             quality = "max quality ";
-        } else if (cleanLower.includes("advanced")) {
-            quality = "advanced quality ";
+        } else {
+            quality = "high quality ";
         }
         
         let qty = parseQuantity(rawItem);
@@ -6186,7 +6188,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 17:46</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 17:49</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

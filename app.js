@@ -861,8 +861,8 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 05:34:49";
-const BUILD_TIMESTAMP_SHORT = "May 25 05:34";
+const BUILD_TIMESTAMP = "2026 May 25 05:53:36";
+const BUILD_TIMESTAMP_SHORT = "May 25 05:53";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5779,7 +5779,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:34</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 05:53</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>
@@ -6846,6 +6846,26 @@ function initAdminPanel() {
         }
     });
 
+    // Toggle Spelling Mode (Single / Bulk)
+    const btnSpellingToggle = document.getElementById("btn-spelling-mode-toggle");
+    const spellingSingleContainer = document.getElementById("spelling-single-container");
+    const spellingBulkContainer = document.getElementById("spelling-bulk-container");
+    const formSpellingBulk = document.getElementById("form-admin-spelling-bulk");
+
+    if (btnSpellingToggle && spellingSingleContainer && spellingBulkContainer) {
+        btnSpellingToggle.addEventListener("click", () => {
+            if (spellingBulkContainer.classList.contains("hide")) {
+                spellingBulkContainer.classList.remove("hide");
+                spellingSingleContainer.classList.add("hide");
+                btnSpellingToggle.innerHTML = '<i class="fa-solid fa-pen"></i> Single Mode';
+            } else {
+                spellingBulkContainer.classList.add("hide");
+                spellingSingleContainer.classList.remove("hide");
+                btnSpellingToggle.innerHTML = '<i class="fa-solid fa-file-import"></i> Bulk Mode';
+            }
+        });
+    }
+
     // Form: Train Spelling
     if (formSpelling) {
         formSpelling.addEventListener("submit", (e) => {
@@ -6858,6 +6878,45 @@ function initAdminPanel() {
                 saveCustomDataToBackend();
                 renderCustomSpelling();
                 formSpelling.reset();
+            }
+        });
+    }
+
+    // Form: Train Spelling Bulk
+    if (formSpellingBulk) {
+        formSpellingBulk.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const textVal = document.getElementById("spell-bulk-text").value.trim();
+            if (!textVal) return;
+            
+            const lines = textVal.split("\n");
+            let addedCount = 0;
+            lines.forEach(line => {
+                const parts = line.split(",");
+                if (parts.length >= 2) {
+                    const wrong = parts[0].trim().toLowerCase();
+                    const right = parts.slice(1).join(",").trim();
+                    if (wrong && right) {
+                        customSpelling[wrong] = right;
+                        addedCount++;
+                    }
+                }
+            });
+            
+            if (addedCount > 0) {
+                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                saveCustomDataToBackend();
+                renderCustomSpelling();
+                formSpellingBulk.reset();
+                // Toggle back to single
+                spellingBulkContainer.classList.add("hide");
+                spellingSingleContainer.classList.remove("hide");
+                if (btnSpellingToggle) {
+                    btnSpellingToggle.innerHTML = '<i class="fa-solid fa-file-import"></i> Bulk Mode';
+                }
+                alert(`Successfully imported ${addedCount} spelling corrections!`);
+            } else {
+                alert("No valid corrections found. Make sure the format is 'wrong,right' with one entry per line.");
             }
         });
     }

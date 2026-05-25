@@ -51,7 +51,7 @@
                     </div>
                 </div>
                 
-                <button type="button" id="btn-access-request-submit" class="btn-action" style="margin-top: 20px;">
+                <button type="button" id="btn-access-request-submit" class="btn-action glow-green" style="margin-top: 20px;">
                     <i class="fa-solid fa-paper-plane"></i> Submit Access Request
                 </button>
 
@@ -73,7 +73,9 @@
                         <label for="access-admin-key-1">Enter Admin Key</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="password" id="access-admin-key-1" placeholder="Enter global admin key" style="flex-grow: 1;">
-                            <button type="button" id="btn-access-admin-submit-1" class="btn-preset">Login</button>
+                            <button type="button" id="btn-access-admin-submit-1" class="btn-action glow-green" style="width: 44px; padding: 0; flex-shrink: 0;">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -108,7 +110,9 @@
                         <label for="access-admin-key-2">Enter Admin Key</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="password" id="access-admin-key-2" placeholder="Enter global admin key" style="flex-grow: 1;">
-                            <button type="button" id="btn-access-admin-submit-2" class="btn-preset">Login</button>
+                            <button type="button" id="btn-access-admin-submit-2" class="btn-action glow-green" style="width: 44px; padding: 0; flex-shrink: 0;">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -550,27 +554,49 @@
                                 
                                 <!-- Left: Manage Custom Spelling Corrections -->
                                 <div class="admin-col">
-                                    <div class="admin-section-header">
-                                        <i class="fa-solid fa-spell-check"></i> Train Spelling Corrections
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div class="admin-section-header" style="margin-bottom: 0;">
+                                            <i class="fa-solid fa-spell-check"></i> Train Spelling Corrections
+                                        </div>
+                                        <button type="button" id="btn-spelling-mode-toggle" class="btn-preset" style="max-width: 110px; font-size: 10px; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-file-import"></i> Bulk Mode
+                                        </button>
                                     </div>
-                                    <p class="section-desc">Add spelling mapping corrections that apply before advertisement processing. e.g. mapping "batteys" to "battery".</p>
-                                    <form id="form-admin-spelling" class="admin-form" style="margin-top: 15px;">
-                                        <div class="form-row">
-                                            <div class="form-group col-6">
-                                                <label for="spell-wrong">Misspelled Word</label>
-                                                <input type="text" id="spell-wrong" placeholder="e.g. batteys" required>
+                                    
+                                    <div id="spelling-single-container">
+                                        <p class="section-desc">Add spelling mapping corrections that apply before advertisement processing. e.g. mapping "batteys" to "battery".</p>
+                                        <form id="form-admin-spelling" class="admin-form" style="margin-top: 15px;">
+                                            <div class="form-row">
+                                                <div class="form-group col-6">
+                                                    <label for="spell-wrong">Misspelled Word</label>
+                                                    <input type="text" id="spell-wrong" placeholder="e.g. batteys" required>
+                                                </div>
+                                                <div class="form-group col-6">
+                                                    <label for="spell-right">Correct Word/Phrase</label>
+                                                    <input type="text" id="spell-right" placeholder="e.g. battery" required>
+                                                </div>
                                             </div>
-                                            <div class="form-group col-6">
-                                                <label for="spell-right">Correct Word/Phrase</label>
-                                                <input type="text" id="spell-right" placeholder="e.g. battery" required>
+                                            <div class="form-row" style="margin-top: 15px; text-align: right;">
+                                                <button type="submit" class="btn-action glow-red" style="max-width: 180px;">
+                                                    <i class="fa-solid fa-plus"></i> Train Correction
+                                                </button>
                                             </div>
-                                        </div>
-                                        <div class="form-row" style="margin-top: 15px; text-align: right;">
-                                            <button type="submit" class="btn-action glow-red" style="max-width: 180px;">
-                                                <i class="fa-solid fa-plus"></i> Train Correction
-                                            </button>
-                                        </div>
-                                    </form>
+                                        </form>
+                                    </div>
+
+                                    <div id="spelling-bulk-container" class="hide">
+                                        <p class="section-desc">Paste spelling corrections in bulk. Use the format: <code>wrong,right</code> (one per line).</p>
+                                        <form id="form-admin-spelling-bulk" class="admin-form" style="margin-top: 15px;">
+                                            <div class="form-group">
+                                                <textarea id="spell-bulk-text" placeholder="e.g.&#10;batteys,battery&#10;prot,protection" rows="5" required style="font-family: monospace; font-size: 12px; min-height: 100px; padding: 10px;"></textarea>
+                                            </div>
+                                            <div class="form-row" style="margin-top: 15px; text-align: right;">
+                                                <button type="submit" class="btn-action glow-green" style="max-width: 180px;">
+                                                    <i class="fa-solid fa-file-import"></i> Import Bulk
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
 
                                     <h4 style="margin-top: 25px; margin-bottom: 10px; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Active Trained Corrections</h4>
                                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">

@@ -5267,7 +5267,7 @@ function initFloatingClipboard() {
                         </div>
                         
                         <!-- Flipped Side-by-Side Category Guide & Policy Rules -->
-                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
+                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: auto;">
                             <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
                             <div class="audit-logs-row" style="display: flex; gap: 12px; align-items: flex-start;">
                                 <!-- Left Column: Game Category Guide -->

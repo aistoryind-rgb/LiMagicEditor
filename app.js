@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:53:14";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:53";
+const BUILD_TIMESTAMP = "2026 May 26 01:00:42";
+const BUILD_TIMESTAMP_SHORT = "May 26 01:00";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6352,7 +6352,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:53</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 01:00</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6420,7 +6420,7 @@ function initFloatingClipboard() {
                         </div>
                         
                         <!-- Flipped Side-by-Side Category Guide & Policy Rules -->
-                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
+                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: auto;">
                             <h3 style="margin-top: 0; margin-bottom: 6px; font-size: 11px; color: #a1a1a6;"><i class="fa-solid fa-list-check"></i> Applied Policy Rules &amp; Corrections</h3>
                             <div class="audit-logs-row" style="display: flex; gap: 12px; align-items: flex-start;">
                                 <!-- Left Column: Game Category Guide -->

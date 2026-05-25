@@ -4746,7 +4746,18 @@ function fuzzyCorrectItemName(rawItem, ctx) {
 function formatGeneralItem(text, ctx) {
     const lower = text.toLowerCase();
     
-    if (lower.includes("various items") && (lower.includes("beach market") || lower.includes("beach markit"))) {
+    const hasBeachMarket = lower.includes("beach market") || lower.includes("beach markit");
+    const hasVariousIndicator = lower.includes("various") || 
+                                lower.includes("things") || 
+                                lower.includes("goods") || 
+                                lower.includes("items") || 
+                                lower.includes("everything") || 
+                                lower.includes("anything") ||
+                                lower.includes("all items") ||
+                                lower.includes("all things") ||
+                                lower.includes("low price") ||
+                                lower.includes("cheap");
+    if (hasBeachMarket && hasVariousIndicator) {
         const shopMatch = text.match(/(?:shop|\u2116|#|no\.?|number|num\.?)\s*(?:no\.?|number|num\.?|#|\u2116)?\s*(\d+)/i);
         let shopStr = shopMatch ? ` shop \u2116${shopMatch[1]}` : "";
         return `various items at the beach market${shopStr}`;
@@ -4970,7 +4981,7 @@ function updateUI(ctx) {
         document.getElementById("blacklist-reason-text").textContent = ctx.blacklistReason;
         
         rejectionBox.classList.remove("hide");
-        blacklistBox.classList.remove("hide");
+        blacklistBox.classList.add("hide");
         btnCopy.disabled = true;
         
         if (btnCopyRej) {

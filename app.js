@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:33:49";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:33";
+const BUILD_TIMESTAMP = "2026 May 26 00:39:38";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:39";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -5899,7 +5899,18 @@ function fuzzyCorrectItemName(rawItem, ctx) {
 function formatGeneralItem(text, ctx) {
     const lower = text.toLowerCase();
     
-    if (lower.includes("various items") && (lower.includes("beach market") || lower.includes("beach markit"))) {
+    const hasBeachMarket = lower.includes("beach market") || lower.includes("beach markit");
+    const hasVariousIndicator = lower.includes("various") || 
+                                lower.includes("things") || 
+                                lower.includes("goods") || 
+                                lower.includes("items") || 
+                                lower.includes("everything") || 
+                                lower.includes("anything") ||
+                                lower.includes("all items") ||
+                                lower.includes("all things") ||
+                                lower.includes("low price") ||
+                                lower.includes("cheap");
+    if (hasBeachMarket && hasVariousIndicator) {
         const shopMatch = text.match(/(?:shop|\u2116|#|no\.?|number|num\.?)\s*(?:no\.?|number|num\.?|#|\u2116)?\s*(\d+)/i);
         let shopStr = shopMatch ? ` shop \u2116${shopMatch[1]}` : "";
         return `various items at the beach market${shopStr}`;
@@ -6123,7 +6134,7 @@ function updateUI(ctx) {
         document.getElementById("blacklist-reason-text").textContent = ctx.blacklistReason;
         
         rejectionBox.classList.remove("hide");
-        blacklistBox.classList.remove("hide");
+        blacklistBox.classList.add("hide");
         btnCopy.disabled = true;
         
         if (btnCopyRej) {
@@ -6341,7 +6352,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:33</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:39</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

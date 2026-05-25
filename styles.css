@@ -2647,6 +2647,34 @@ textarea:focus, input:focus, select:focus {
     font-size: 14px;
 }
 
+.pip-overlay-note {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.45;
+    text-align: left;
+    max-width: 100%;
+    margin-top: 2px;
+}
+
+.pip-overlay-note i {
+    color: var(--color-info);
+    font-size: 13px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.pip-overlay-note strong {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+}
+
 .btn-restore-main {
     background: var(--color-primary) !important;
     color: #fff !important;

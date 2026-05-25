@@ -528,7 +528,46 @@ const CLOTHING_DB = {
                                  ],
                    "ACCESSORY":  [
                                      "navel piercing accessory",
-                                     "gloves"
+                                     "gloves",
+                                     "accessory",
+                                     "Ak-47 Chain",
+                                     "black voron shoulder accessory",
+                                     "boxing gloves",
+                                     "Bracelet",
+                                     "Chain",
+                                     "chain around the body accessory",
+                                     "chain lost treasure neon accessory",
+                                     "Chain With Star Pendant",
+                                     "Clown Chain",
+                                     "deer antler accessory",
+                                     "deer antlers with a red nose accessory",
+                                     "Eagle Necklace",
+                                     "El Primo Corazon Krawl On The Shoulder Accessory",
+                                     "Fluorescent Cat Ears",
+                                     "flying bear on the shoulder accessory",
+                                     "Glasses With Glowing Snow",
+                                     "glowing nails",
+                                     "Grand Chain",
+                                     "Hamster On The Shoulder Accessory",
+                                     "hearts Pride glasses",
+                                     "Leon Krawl On The Shoulder Accessory",
+                                     "Lovely Bird Egg On The Shoulder Accessory",
+                                     "neck scarf accessory",
+                                     "Necklace",
+                                     "Neon Rabbit Ears",
+                                     "Owl On The Shoulder Accessory",
+                                     "pixel glasses",
+                                     "Satanic Wings",
+                                     "Scarf",
+                                     "shiny deer antler headband accessory",
+                                     "Six-Tailed Fox On The Shoulder Accessory",
+                                     "snowflake glasses",
+                                     "Strong Chicken On The Shoulder Accessory",
+                                     "Tie",
+                                     "Toothless Dragon On The Shoulder Accessory",
+                                     "wristband accessory",
+                                     "beads accessory",
+                                     "Onelove Chain"
                                  ],
                    "WATCH":  [
                                  "Volex watch of type *",
@@ -697,7 +736,31 @@ const CLOTHING_DB = {
                                    "shiny deer antler headband accessory",
                                    "snowflake glasses",
                                    "Snake around the body accessory",
-                                   "wristband accessory"
+                                   "wristband accessory",
+                                   "accessory",
+                                   "Ak-47 Chain",
+                                   "black voron shoulder accessory",
+                                   "Bracelet",
+                                   "Chain",
+                                   "Chain With Star Pendant",
+                                   "Clown Chain",
+                                   "Eagle Necklace",
+                                   "El Primo Corazon Krawl On The Shoulder Accessory",
+                                   "Fluorescent Cat Ears",
+                                   "glowing nails",
+                                   "Hamster On The Shoulder Accessory",
+                                   "Leon Krawl On The Shoulder Accessory",
+                                   "Lovely Bird Egg On The Shoulder Accessory",
+                                   "Necklace",
+                                   "Neon Rabbit Ears",
+                                   "Owl On The Shoulder Accessory",
+                                   "Scarf",
+                                   "Six-Tailed Fox On The Shoulder Accessory",
+                                   "Strong Chicken On The Shoulder Accessory",
+                                   "Tie",
+                                   "Toothless Dragon On The Shoulder Accessory",
+                                   "beads accessory",
+                                   "Onelove Chain"
                                ],
                  "WATCH":  [
                                "Vasio G-Shock watch",
@@ -861,8 +924,243 @@ const CLOTHING_DB = {
              }
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 25 07:41:54";
-const BUILD_TIMESTAMP_SHORT = "May 25 07:41";
+const ITEMS_DB = {
+    "tickets": [
+        "Car Ticket",
+        "Cayo Perico Ticket",
+        "Flame and Water Lottery Ticket",
+        "Grand Ticket",
+        "Lottery Ticket",
+        "Rare Lottery Ticket",
+        "Resource Miners Ticket",
+        "Secret Ticket",
+        "Secret Ticket Fragment",
+        "regular lottery ticket",
+        "Royal Artifacts lottery ticket"
+    ],
+    "containers": [
+        "Daily Container",
+        "Gardeners Container",
+        "Unique Love Container",
+        "Desert Scarf Mask Container",
+        "Valuable Container",
+        "Benefactor Container",
+        "Love Container",
+        "Resources Container",
+        "School Container",
+        "Caravan Container",
+        "Burglarized House Container",
+        "Trezor Container",
+        "Container For Bikers 1/2/3/4/5",
+        "Container For Branded Shorts",
+        "Container For Branded T-Shirts",
+        "Sphere Of Influence Container",
+        "Container For Drifters 1/2/3",
+        "Container For Men 1/2",
+        "Container For Racers 1/2/3/4/5",
+        "Study Of The Organisation Container",
+        "Container For Women 1/2",
+        "Container With Wheels 1/2/3",
+        "Progen Container",
+        "Ocelot Container",
+        "Ingrand Container",
+        "Old Autumn Gold Container",
+        "Old Summer Gold Container",
+        "Old Winter Gold Container",
+        "Arena Container",
+        "Organisation Container",
+        "Exclusive Truckers Container",
+        "valuable container",
+        "biker container",
+        "Brand T-shirts 2 container",
+        "Brand shorts 2 container",
+        "trucker container",
+        "racer container",
+        "Grand racers container",
+        "Maserati container",
+        "gardener container",
+        "rare love container",
+        "regular love container",
+        "Renault container",
+        "diver container",
+        "organization container",
+        "wheels 1 container",
+        "wheels 2 container",
+        "wheels 3 container",
+        "daily container",
+        "Halloween container",
+        "womens gift container of type 1",
+        "womens gift container of type 2",
+        "males gift container of type 1",
+        "males gift container of type 2",
+        "blue womens top container of type 4",
+        "black womens top container of type 4",
+        "Benefactor E500 (W124) container",
+        "daily study of the organization container",
+        "Captured caravans container",
+        "Delivered caravans container",
+        "Valentine 2025 container",
+        "case of delivered caravans container"
+    ],
+    "pets": [
+        "Pet",
+        "Pet Border Collie",
+        "Pet Cat",
+        "Pet Chicken",
+        "Pet Christmas Elf",
+        "Pet Cute Hippo",
+        "Pet Dog",
+        "Pet Duckling",
+        "Pet Fancy Bear",
+        "Pet Food",
+        "Pet Ghost",
+        "Pet Golden Retriever",
+        "Pet Huggy Wuggy",
+        "Pet Husky",
+        "Pet Kitty Bunny",
+        "Pet Lion Cub",
+        "Pet Monkey",
+        "Pet Panda",
+        "Pet Panther",
+        "Pet Pig",
+        "Pet Poodle",
+        "Pet Pug",
+        "Pet Puma",
+        "Pet Pumpkin Guardian",
+        "Pet Rabbit",
+        "Pet Rat",
+        "Pet Rooster",
+        "Pet Rottweiler",
+        "Pet Santa Claus",
+        "Pet Treat",
+        "Pet Voodoo Doll",
+        "Pet Westie",
+        "Pet X-mas Husky",
+        "Pet Mini Robot",
+        "Pet Cyberdog",
+        "Pet Robobeast",
+        "Mr Candy Cane Pet",
+        "Futuristic Friend",
+        "Cougar Pet"
+    ],
+    "tools": [
+        "low quality pickaxe",
+        "medium quality pickaxe",
+        "high quality pickaxe",
+        "max quality pickaxe",
+        "advanced quality pickaxe",
+        "low quality fishing rod",
+        "medium quality fishing rod",
+        "high quality fishing rod",
+        "max quality fishing rod",
+        "advanced quality fishing rod",
+        "automatic drill",
+        "automatic sawmill",
+        "automatic rod",
+        "automatic oil well",
+        "automatic watering can"
+    ],
+    "resources": [
+        "battery",
+        "fuel canister",
+        "premium fuel canister",
+        "charger",
+        "solar barrel",
+        "gasoline barrel",
+        "kerene barrel",
+        "fuel for resource extraction",
+        "paint can",
+        "wire",
+        "thread",
+        "solar panel",
+        "sponges",
+        "scrap metal",
+        "top quality metal",
+        "copper",
+        "emerald",
+        "ruby",
+        "diamond",
+        "obsidian",
+        "magma stone"
+    ],
+    "fish": [
+        "perch",
+        "carp",
+        "salmon",
+        "trout",
+        "megalodon",
+        "ray",
+        "orca",
+        "humpback whale"
+    ],
+    "gardening": [
+        "cabbage vegetables",
+        "pumpkin fruits",
+        "mandarin fruits",
+        "strawberry fruits",
+        "pineapple fruits",
+        "cabbage seeds",
+        "pumpkin seeds",
+        "mandarin seeds",
+        "strawberry seeds",
+        "pineapple seeds",
+        "mushroom seeds"
+    ],
+    "juices": [
+        "attack juice",
+        "protection juice",
+        "endurance juice",
+        "riding juice",
+        "power juice",
+        "immunity juice",
+        "juice on becoming an animal",
+        "juice for double the payment",
+        "fast running juice"
+    ],
+    "subscriptions": [
+        "Prime",
+        "Prime Platinum"
+    ],
+    "others": [
+        "GrandPro BodyCam",
+        "Treasure Map",
+        "video card",
+        "hookah",
+        "dice",
+        "Leash",
+        "SIM card",
+        "token",
+        "tonic treat",
+        "Dirty Statue",
+        "Purified Statue",
+        "Drawing",
+        "letter \"G\"",
+        "letter \"R\"",
+        "letter \"A\"",
+        "letter \"N\"",
+        "letter \"D\"",
+        "custom license plate",
+        "Christmas key",
+        "Christmas copper",
+        "Christmas timber",
+        "Christmas perch",
+        "Christmas seed",
+        "Christmas lollipop",
+        "New years gift",
+        "A Little gift",
+        "A Big gift",
+        "An Opened gift",
+        "luminous wheels of type 1",
+        "luminous wheels of type 2",
+        "luminous wheels of type 3",
+        "luminous wheels of type 4",
+        "luminous wheels of type 5",
+        "luminous wheels of type 6"
+    ]
+}
+;
+const BUILD_TIMESTAMP = "2026 May 25 16:31:53";
+const BUILD_TIMESTAMP_SHORT = "May 25 16:31";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1081,6 +1379,55 @@ function renderSearchResults(query, filter) {
         }
         for (const cat in CLOTHING_DB.female) {
             addClothing("female", cat, CLOTHING_DB.female[cat]);
+        }
+    }
+    
+    // 3. Item Matches
+    if (filter === "all" || filter === "items") {
+        const itemIcons = {
+            tickets: "fa-ticket",
+            containers: "fa-box-open",
+            pets: "fa-paw",
+            tools: "fa-screwdriver-wrench",
+            resources: "fa-gem",
+            fish: "fa-fish",
+            gardening: "fa-seedling",
+            juices: "fa-flask",
+            subscriptions: "fa-star",
+            others: "fa-icons"
+        };
+        const itemClasses = {
+            tickets: "cat-ticket",
+            containers: "cat-container",
+            pets: "cat-pet",
+            tools: "cat-tools",
+            resources: "cat-resources",
+            fish: "cat-fish",
+            gardening: "cat-gardening",
+            juices: "cat-juices",
+            subscriptions: "cat-subscriptions",
+            others: "cat-others"
+        };
+        
+        for (const cat in ITEMS_DB) {
+            const list = ITEMS_DB[cat];
+            const icon = itemIcons[cat] || "fa-cubes";
+            const cls = itemClasses[cat] || "cat-item";
+            list.forEach(name => {
+                if (name.toLowerCase().includes(term) || term === "") {
+                    matches.push({
+                        name: name,
+                        type: "Item",
+                        subtype: cat.charAt(0).toUpperCase() + cat.slice(1),
+                        badgeClass: "item",
+                        details: `Official database item (${cat})`,
+                        statusText: "VALID ITEM",
+                        statusClass: "status-sellable",
+                        thumbIcon: icon,
+                        thumbClass: cls
+                    });
+                }
+            });
         }
     }
     
@@ -5805,7 +6152,7 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
-                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 07:41</span>
+                                <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px;">UPDATED: May 25 16:31</span>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                         </div>

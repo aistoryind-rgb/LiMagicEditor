@@ -934,6 +934,16 @@ textarea:focus, input:focus, select:focus {
 .db-card-thumb.cat-car-sell  { background: linear-gradient(135deg, #1a2f1a 0%, #2e7d32 100%); }
 .db-card-thumb.cat-car-rent  { background: linear-gradient(135deg, #3e2723 0%, #e65100 100%); }
 .db-card-thumb.cat-clothing  { background: linear-gradient(135deg, #2e1a47 0%, #8e24aa 100%); }
+.db-card-thumb.cat-ticket    { background: linear-gradient(135deg, #4a2c00 0%, #d4af37 100%); }
+.db-card-thumb.cat-container { background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%); }
+.db-card-thumb.cat-pet       { background: linear-gradient(135deg, #3a1c1c 0%, #a855f7 100%); }
+.db-card-thumb.cat-tools     { background: linear-gradient(135deg, #114b3e 0%, #06b6d4 100%); }
+.db-card-thumb.cat-resources { background: linear-gradient(135deg, #4c1d95 0%, #3b82f6 100%); }
+.db-card-thumb.cat-fish      { background: linear-gradient(135deg, #064e3b 0%, #10b981 100%); }
+.db-card-thumb.cat-gardening { background: linear-gradient(135deg, #3f6212 0%, #84cc16 100%); }
+.db-card-thumb.cat-juices    { background: linear-gradient(135deg, #831843 0%, #db2777 100%); }
+.db-card-thumb.cat-subscriptions { background: linear-gradient(135deg, #701a75 0%, #f43f5e 100%); }
+.db-card-thumb.cat-others    { background: linear-gradient(135deg, #1f2937 0%, #6b7280 100%); }
 
 /* Card body (right side) */
 .db-card-body {
@@ -985,6 +995,12 @@ textarea:focus, input:focus, select:focus {
     background: rgba(191, 90, 242, 0.12);
     color: #c77dff;
     border: 1px solid rgba(191, 90, 242, 0.2);
+}
+
+.db-item-badge.item {
+    background: rgba(255, 159, 10, 0.12);
+    color: #ff9f0a;
+    border: 1px solid rgba(255, 159, 10, 0.2);
 }
 
 .db-item-detail {

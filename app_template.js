@@ -5,6 +5,7 @@
 // Datasets will be injected here during build
 const VEHICLE_DB = __VEHICLES_JSON__;
 const CLOTHING_DB = __CLOTHING_JSON__;
+const ITEMS_DB = __ITEMS_JSON__;
 const BUILD_TIMESTAMP = "__BUILD_TIMESTAMP__";
 const BUILD_TIMESTAMP_SHORT = "__BUILD_TIMESTAMP_SHORT__";
 
@@ -225,6 +226,55 @@ function renderSearchResults(query, filter) {
         }
         for (const cat in CLOTHING_DB.female) {
             addClothing("female", cat, CLOTHING_DB.female[cat]);
+        }
+    }
+    
+    // 3. Item Matches
+    if (filter === "all" || filter === "items") {
+        const itemIcons = {
+            tickets: "fa-ticket",
+            containers: "fa-box-open",
+            pets: "fa-paw",
+            tools: "fa-screwdriver-wrench",
+            resources: "fa-gem",
+            fish: "fa-fish",
+            gardening: "fa-seedling",
+            juices: "fa-flask",
+            subscriptions: "fa-star",
+            others: "fa-icons"
+        };
+        const itemClasses = {
+            tickets: "cat-ticket",
+            containers: "cat-container",
+            pets: "cat-pet",
+            tools: "cat-tools",
+            resources: "cat-resources",
+            fish: "cat-fish",
+            gardening: "cat-gardening",
+            juices: "cat-juices",
+            subscriptions: "cat-subscriptions",
+            others: "cat-others"
+        };
+        
+        for (const cat in ITEMS_DB) {
+            const list = ITEMS_DB[cat];
+            const icon = itemIcons[cat] || "fa-cubes";
+            const cls = itemClasses[cat] || "cat-item";
+            list.forEach(name => {
+                if (name.toLowerCase().includes(term) || term === "") {
+                    matches.push({
+                        name: name,
+                        type: "Item",
+                        subtype: cat.charAt(0).toUpperCase() + cat.slice(1),
+                        badgeClass: "item",
+                        details: `Official database item (${cat})`,
+                        statusText: "VALID ITEM",
+                        statusClass: "status-sellable",
+                        thumbIcon: icon,
+                        thumbClass: cls
+                    });
+                }
+            });
         }
     }
     

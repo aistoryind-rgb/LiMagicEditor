@@ -52,6 +52,129 @@ const REAL_ESTATE_ORDER = [
     "swimming pool", "tennis court", "driveway", "backyard", "views", "location"
 ];
 
+// Dynamic Most Used Advertisement Presets System (Upgraded to 12 dynamic slots)
+const DEFAULT_PRESETS = [
+    { label: "Sell: 10 Grand Tickets", raw: "selling 10 rp tickets for 350k each", count: 12 },
+    { label: "Buy: Prime Platinum", raw: "buying prime platinum 30 days", count: 11 },
+    { label: "Auto: Truffade Chiron", raw: "selling truffade chiron full config drift", count: 10 },
+    { label: "RE: Vinewood House", raw: "selling house 1406 with helipad garden pool in vinewood hills", count: 9 },
+    { label: "Dating: Girlfriend", raw: "loking for girlfirnd", count: 8 },
+    { label: "Other: Juices Bulk", raw: "selling 10% and 20% juices", count: 7 },
+    { label: "Other: Scrap Metal", raw: "buying scrap metal", count: 6 },
+    { label: "Other: Play Dice", raw: "looking to play dice", count: 5 },
+    { label: "Biz: Pumpkin Plantation", raw: "selling pumpkin plantation with 10 beds 1.3 million", count: 4 },
+    { label: "Other: Solar Panels", raw: "selling solar panels", count: 3 },
+    { label: "Other: Video Cards", raw: "buying lvl5 graphic card", count: 2 },
+    { label: "Buy: Luminous Stone", raw: "buying luminous stones", count: 1 }
+];
+
+function generatePresetLabel(raw) {
+    const clean = raw.replace(/\s+/g, " ").trim();
+    const lower = clean.toLowerCase();
+    
+    let actionPrefix = "Auto";
+    if (/^(?:selling|wts|sell)\b/i.test(lower)) actionPrefix = "Sell";
+    else if (/^(?:buying|wtb|buy)\b/i.test(lower)) actionPrefix = "Buy";
+    else if (/^(?:trading|wtt|trade)\b/i.test(lower)) actionPrefix = "Trade";
+    else if (/^(?:renting out|rent out)\b/i.test(lower)) actionPrefix = "Rent";
+    else if (/^(?:renting|rent)\b/i.test(lower)) actionPrefix = "Rent";
+    else if (/^(?:hiring|hire)\b/i.test(lower)) actionPrefix = "Hire";
+    else if (/^(?:looking for|look for|searching for)\b/i.test(lower)) actionPrefix = "Dating";
+    
+    let subject = clean.replace(/^(buying|selling or trading|selling|trading|renting out|renting|hiring|wtb|wts|wtt|buy|sell|trade|rent|hire|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(a\s+|an\s+)?/i, "").trim();
+    
+    const lowerSubject = subject.toLowerCase();
+    if (lowerSubject.includes("chiron")) return `${actionPrefix}: Truffade Chiron`;
+    if (lowerSubject.includes("house")) return `${actionPrefix}: Vinewood House`;
+    if (lowerSubject.includes("ticket")) return `${actionPrefix}: Grand Tickets`;
+    if (lowerSubject.includes("platinum")) return `${actionPrefix}: Prime Platinum`;
+    if (lowerSubject.includes("girlfriend")) return `${actionPrefix}: Girlfriend`;
+    if (lowerSubject.includes("juice")) return `${actionPrefix}: Juices`;
+    if (lowerSubject.includes("scrap metal")) return `${actionPrefix}: Scrap Metal`;
+    if (lowerSubject.includes("dice")) return `${actionPrefix}: Play Dice`;
+    if (lowerSubject.includes("pumpkin")) return `${actionPrefix}: Pumpkin Plantation`;
+    if (lowerSubject.includes("solar panel")) return `${actionPrefix}: Solar Panels`;
+    if (lowerSubject.includes("graphic card") || lowerSubject.includes("video card")) return `${actionPrefix}: Video Cards`;
+    if (lowerSubject.includes("luminous stone")) return `${actionPrefix}: Luminous Stone`;
+    
+    const words = subject.split(" ").slice(0, 3).map(w => {
+        const cw = w.replace(/[^\w]/g, "");
+        if (!cw) return "";
+        return cw.charAt(0).toUpperCase() + cw.slice(1).toLowerCase();
+    }).filter(w => w !== "");
+    
+    let subjectText = words.join(" ");
+    if (subjectText.length > 20) {
+        subjectText = subjectText.substring(0, 17) + "...";
+    }
+    return `${actionPrefix}: ${subjectText || "Ad"}`;
+}
+
+function initPresetButtons() {
+    if (!localStorage.getItem("li_most_used_ads")) {
+        localStorage.setItem("li_most_used_ads", JSON.stringify(DEFAULT_PRESETS));
+    }
+    renderPresetButtons();
+}
+
+function renderPresetButtons() {
+    const container = document.querySelector(".preset-buttons");
+    if (!container) return;
+    
+    let presets = [];
+    try {
+        presets = JSON.parse(localStorage.getItem("li_most_used_ads")) || DEFAULT_PRESETS;
+    } catch (e) {
+        presets = DEFAULT_PRESETS;
+    }
+    
+    presets.sort((a, b) => b.count - a.count);
+    const topPresets = presets.slice(0, 12);
+    
+    container.innerHTML = "";
+    topPresets.forEach(preset => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-preset";
+        btn.setAttribute("data-ad", preset.raw);
+        btn.title = preset.raw;
+        btn.textContent = preset.label;
+        
+        btn.addEventListener("click", () => {
+            userClickedAction = false;
+            actionOverrideMode = "auto";
+            document.getElementById("raw-ad").value = preset.raw;
+            document.getElementById("category-override").value = "auto";
+            processAd();
+        });
+        
+        container.appendChild(btn);
+    });
+}
+
+function trackCopiedAd(rawVal) {
+    if (!rawVal || !rawVal.trim()) return;
+    const clean = rawVal.replace(/\s+/g, " ").trim();
+    
+    let presets = [];
+    try {
+        presets = JSON.parse(localStorage.getItem("li_most_used_ads")) || DEFAULT_PRESETS;
+    } catch (e) {
+        presets = DEFAULT_PRESETS;
+    }
+    
+    const existing = presets.find(p => p.raw.toLowerCase() === clean.toLowerCase());
+    if (existing) {
+        existing.count += 1;
+    } else {
+        const label = generatePresetLabel(clean);
+        presets.push({ label, raw: clean, count: 1 });
+    }
+    
+    localStorage.setItem("li_most_used_ads", JSON.stringify(presets));
+    renderPresetButtons();
+}
+
 // Initialise application on DOM load
 document.addEventListener("DOMContentLoaded", () => {
     initAccessGate();
@@ -70,17 +193,8 @@ document.addEventListener("DOMContentLoaded", () => {
         lastUpdatedMain.textContent = `Last Updated: ${BUILD_TIMESTAMP}`;
     }
     
-    // Bind quick test presets
-    document.querySelectorAll(".btn-preset").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const adText = btn.getAttribute("data-ad");
-            userClickedAction = false;
-            actionOverrideMode = "auto";
-            document.getElementById("raw-ad").value = adText;
-            document.getElementById("category-override").value = "auto";
-            processAd();
-        });
-    });
+    // Initialize dynamic most used ad presets
+    initPresetButtons();
     
     // Bind action toggle group buttons
     const btnSell = document.getElementById("btn-toggle-sell");
@@ -455,6 +569,13 @@ function getClosestMatch(input, list, threshold = 0.6) {
 function correctSpelling(text, ctx) {
     let corrected = text;
     
+    // Normalize percentage prefixes like %20 -> 20%
+    const pctPrefixMatch = corrected.match(/%(\d+)\b/);
+    if (pctPrefixMatch) {
+        corrected = corrected.replace(/%(\d+)\b/g, "$1%");
+        ctx.logs.push({ text: `Normalized percentage notation: <strong>%${pctPrefixMatch[1]}</strong> corrected to <strong>${pctPrefixMatch[1]}%</strong>`, type: 'correction' });
+    }
+    
     // Protect type numbers (e.g. type 5, type 13, 14 and 19) from being spell-corrected (e.g. 5 -> lvl5)
     const protectedTypes = [];
     corrected = corrected.replace(/\b(type|types|extra|extras|of\s+type)\s+(\d+(?:\s*(?:,|and|or)\s*\d+)*)\b/gi, (match) => {
@@ -685,7 +806,7 @@ function correctSpelling(text, ctx) {
     // Space out adjacent digit + days (e.g. 7days -> 7 days)
     corrected = corrected.replace(/\b(\d+)\s*days?\b/gi, "$1 days");
     corrected = corrected.replace(/\b(\d+)\s*beds*\b/gi, "$1 beds");
-    corrected = corrected.replace(/\bbeds*\s*(\d+)\b/gi, "$1 beds");
+    corrected = corrected.replace(/\bbeds*\s*(\d+)\b(?![.,]\d)/gi, "$1 beds");
 
     // Complex replacements with regex
     const graphicCardRegex = /\b(grapic\s+card|graphic\s+card|graphics\s+card)\b/gi;
@@ -1153,7 +1274,29 @@ function initAdProcessing() {
                     
                     const rawVal = document.getElementById("raw-ad").value;
                     logAdToBackend(rawVal, textElement.textContent, "passed");
+                    trackCopiedAd(rawVal);
                 });
+            }
+        });
+    }
+
+    const btnClearRaw = document.getElementById("btn-clear-raw");
+    if (btnClearRaw) {
+        btnClearRaw.addEventListener("click", () => {
+            const rawInput = document.getElementById("raw-ad");
+            if (rawInput) {
+                rawInput.value = "";
+                document.getElementById("category-override").value = "auto";
+                const btnSell = document.getElementById("btn-toggle-sell");
+                const btnBuy = document.getElementById("btn-toggle-buy");
+                if (btnSell && btnBuy) {
+                    userClickedAction = false;
+                    actionOverrideMode = "auto";
+                    btnSell.classList.add("active");
+                    btnBuy.classList.remove("active");
+                }
+                processAd();
+                rawInput.focus();
             }
         });
     }
@@ -4777,24 +4920,51 @@ function formatGeneralItem(text, ctx) {
         let qtyText = qty ? `${qty} ` : "";
         let isPlural = lower.includes("juices") || lower.includes("juises") || lower.includes("juses") || (qty && qty > 1);
         
+        let adjectives = [];
+        let postnominal = "";
+        
         if (lower.includes("becoming an animal") || lower.includes("becoming animal") || lower.includes("become animal") || lower.includes("becomng animal") || lower.includes("animal")) {
-            juiceName = isPlural ? "juices on becoming an animal" : "juice on becoming an animal";
+            postnominal = "on becoming an animal";
         } else if (lower.includes("double the payment") || lower.includes("double payment") || lower.includes("double pay") || lower.includes("paycheck") || lower.includes("pay check")) {
-            juiceName = isPlural ? "juices for double the payment" : "juice for double the payment";
-        } else if (lower.includes("fast running") || lower.includes("fastrun") || lower.includes("running") || /\brun\b/i.test(lower)) {
-            juiceName = isPlural ? "fast running juices" : "fast running juice";
-        } else if (lower.includes("attack")) {
-            juiceName = isPlural ? "attack juices" : "attack juice";
-        } else if (lower.includes("protection")) {
-            juiceName = isPlural ? "protection juices" : "protection juice";
-        } else if (lower.includes("endurance")) {
-            juiceName = isPlural ? "endurance juices" : "endurance juice";
-        } else if (lower.includes("riding")) {
-            juiceName = isPlural ? "riding juices" : "riding juice";
-        } else if (lower.includes("power")) {
-            juiceName = isPlural ? "power juices" : "power juice";
-        } else if (lower.includes("immunity")) {
-            juiceName = isPlural ? "immunity juices" : "immunity juice";
+            postnominal = "for double the payment";
+        } else {
+            if (lower.includes("fast running") || lower.includes("fastrun") || lower.includes("running") || /\brun\b/i.test(lower)) {
+                adjectives.push("fast running");
+            }
+            if (lower.includes("attack")) {
+                adjectives.push("attack");
+            }
+            if (lower.includes("protection")) {
+                adjectives.push("protection");
+            }
+            if (lower.includes("endurance")) {
+                adjectives.push("endurance");
+            }
+            if (lower.includes("riding")) {
+                adjectives.push("riding");
+            }
+            if (lower.includes("power")) {
+                adjectives.push("power");
+            }
+            if (lower.includes("immunity")) {
+                adjectives.push("immunity");
+            }
+        }
+        
+        if (postnominal) {
+            juiceName = isPlural ? `juices ${postnominal}` : `juice ${postnominal}`;
+        } else if (adjectives.length > 0) {
+            let adjText = "";
+            if (adjectives.length === 1) {
+                adjText = adjectives[0];
+            } else if (adjectives.length === 2) {
+                adjText = `${adjectives[0]} and ${adjectives[1]}`;
+            } else {
+                const lastAdj = adjectives.pop();
+                adjText = `${adjectives.join(", ")} and ${lastAdj}`;
+            }
+            const plural = isPlural || adjectives.length > 1;
+            juiceName = plural ? `${adjText} juices` : `${adjText} juice`;
         }
         
         if (juiceName) {
@@ -5213,10 +5383,13 @@ function initFloatingClipboard() {
                     <main class="pip-main" style="flex: 1;">
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label for="pip-raw-ad" style="margin-bottom: 0;">RAW ADVERTISEMENT CONTENT</label>
+                                <label for="pip-raw-ad" style="margin-bottom: 0;"><i class="fa-solid fa-file-import"></i> RAW ADVERTISEMENT CONTENT</label>
                                 <button id="pip-btn-paste" class="pip-uniform-btn btn-paste"><i class="fa-solid fa-paste"></i> Paste</button>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
+                            <div class="processed-action-row" style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                <button id="pip-btn-clear" class="pip-uniform-btn btn-clear"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                            </div>
                         </div>
                         <div class="pip-form-row">
                             <div class="pip-toggle-group">
@@ -5470,6 +5643,28 @@ function initFloatingClipboard() {
                 });
             }
 
+            const pipClear = pipWindow.document.getElementById("pip-btn-clear");
+            if (pipClear) {
+                pipClear.addEventListener("click", () => {
+                    pipRaw.value = "";
+                    mainRaw.value = "";
+                    document.getElementById("category-override").value = "auto";
+                    
+                    const btnSell = document.getElementById("btn-toggle-sell");
+                    const btnBuy = document.getElementById("btn-toggle-buy");
+                    if (btnSell && btnBuy) {
+                        userClickedAction = false;
+                        actionOverrideMode = "auto";
+                        btnSell.classList.add("active");
+                        btnBuy.classList.remove("active");
+                    }
+                    
+                    mainRaw.dispatchEvent(new Event("input"));
+                    updatePipDisplay();
+                    pipRaw.focus();
+                });
+            }
+
             const pipTextElement = pipWindow.document.getElementById("pip-processed-text");
             if (pipTextElement) {
                 pipTextElement.addEventListener("input", () => {
@@ -5516,6 +5711,7 @@ function initFloatingClipboard() {
                     
                     const rawVal = pipWindow.document.getElementById("pip-raw-ad").value;
                     logAdToBackend(rawVal, textVal, "passed");
+                    trackCopiedAd(rawVal);
                 });
             });
 

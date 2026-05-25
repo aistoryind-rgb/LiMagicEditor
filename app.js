@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 00:17:26";
-const BUILD_TIMESTAMP_SHORT = "May 26 00:17";
+const BUILD_TIMESTAMP = "2026 May 26 00:19:36";
+const BUILD_TIMESTAMP_SHORT = "May 26 00:19";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -6297,7 +6297,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" style="background: var(--color-info); border: none; color: white; padding: 4px 10px; font-size: 9.5px; border-radius: 4px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; line-height: 1.2; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:17</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 00:19</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -6368,19 +6368,12 @@ function initFloatingClipboard() {
                             </div>
                         </div>
                         
-                        <div class="audit-logs-container">
-                            <h3><i class="fa-solid fa-list-check"></i> Applied Rules &amp; Corrections</h3>
-                            <ul class="audit-logs" id="pip-logs-list">
-                                <li class="log-empty">No corrections made.</li>
-                            </ul>
-                        </div>
-
                         <!-- Game Category Guide Grid -->
-                        <div class="pip-category-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 5px;">
-                            <div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <div class="pip-category-section" style="margin-top: 12px; margin-bottom: 5px;">
+                            <div style="font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
                                 <i class="fa-solid fa-folder-open"></i> Game Category Guide
                             </div>
-                            <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <div class="pip-category-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
                                 <button type="button" class="pip-category-btn" data-category="Real Estate">
                                     <i class="fa-solid fa-house"></i> Real Estate
                                 </button>
@@ -6406,6 +6399,13 @@ function initFloatingClipboard() {
                                     <i class="fa-solid fa-infinity"></i> Other
                                 </button>
                             </div>
+                        </div>
+
+                        <div class="audit-logs-container" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 12px;">
+                            <h3><i class="fa-solid fa-list-check"></i> Applied Rules &amp; Corrections</h3>
+                            <ul class="audit-logs" id="pip-logs-list">
+                                <li class="log-empty">No corrections made.</li>
+                            </ul>
                         </div>
                     </main>
                     <div class="pip-history-overlay hide" id="pip-history-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 20, 0.97); z-index: 1000; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; font-family: 'Outfit', sans-serif;">

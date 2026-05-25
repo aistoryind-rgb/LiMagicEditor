@@ -2844,19 +2844,19 @@ textarea:focus, input:focus, select:focus {
     color: #c7c7cc;
     cursor: pointer;
     font-family: var(--font-heading);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    padding: 8px 10px;
+    padding: 5px 8px;
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
+    gap: 6px;
     text-transform: uppercase;
     transition: var(--transition-smooth);
     user-select: none;
     text-align: left;
     outline: none;
-    height: 32px;
+    height: 25px;
     box-sizing: border-box;
 }
 
@@ -2870,7 +2870,7 @@ textarea:focus, input:focus, select:focus {
     background: var(--color-success); /* Green */
     border-color: var(--color-success);
     color: #0c0e12;
-    box-shadow: 0 0 12px rgba(48, 209, 88, 0.35);
+    box-shadow: 0 0 10px rgba(48, 209, 88, 0.3);
 }
 
 .pip-category-btn.active i {
@@ -2878,8 +2878,8 @@ textarea:focus, input:focus, select:focus {
 }
 
 .pip-category-btn i {
-    font-size: 11px;
-    width: 14px;
+    font-size: 10px;
+    width: 12px;
     text-align: center;
     color: #8e8e93;
     transition: var(--transition-smooth);

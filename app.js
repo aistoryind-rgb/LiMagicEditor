@@ -9175,7 +9175,7 @@ function initAdminPanel() {
         const holdDuration = 3000; // 3 seconds
         let elapsed = 0;
         let isHolding = false;
-        const originalHtml = `<i class="fa-solid fa-trash-can"></i> Clear All Bug Reports`;
+        const originalHtml = `<i class="fa-solid fa-trash-can"></i> Clear Bug Reports`;
 
         const updateButtonProgress = (pct) => {
             const remainingSecs = ((holdDuration - elapsed) / 1000).toFixed(1);
@@ -9318,6 +9318,184 @@ function initAdminPanel() {
 
         // Block accidental normal click behavior
         btnClearBugs.addEventListener("click", (e) => {
+            e.preventDefault();
+        });
+    }
+
+    // --- Targeted Spelling Cleanup (search + clear matching entries) ---
+    const inputClearSearch = document.getElementById("input-clear-spelling-search");
+    const btnClearMatching = document.getElementById("btn-admin-clear-spelling");
+    const clearPreview = document.getElementById("clear-spelling-preview");
+
+    if (inputClearSearch && btnClearMatching) {
+        // Live preview: show how many entries match as the user types
+        inputClearSearch.addEventListener("input", () => {
+            const query = inputClearSearch.value.trim().toLowerCase();
+            if (!query) {
+                if (clearPreview) clearPreview.textContent = "";
+                return;
+            }
+            const entries = Object.entries(customSpelling);
+            const matching = entries.filter(([wrong, right]) =>
+                wrong.toLowerCase().includes(query) || right.toLowerCase().includes(query)
+            );
+            if (clearPreview) {
+                if (matching.length === 0) {
+                    clearPreview.innerHTML = `<span style="color: rgba(255,255,255,0.3);">No matching entries found.</span>`;
+                } else {
+                    const preview = matching.slice(0, 5).map(([w, r]) =>
+                        `<span style="color:#ff453a;">${w}</span> → <span style="color:#30d158;">${r}</span>`
+                    ).join(", ");
+                    const extra = matching.length > 5 ? ` <span style="color:rgba(255,255,255,0.3);">and ${matching.length - 5} more...</span>` : "";
+                    clearPreview.innerHTML = `<span style="color:#ff9f0a;">${matching.length} match${matching.length > 1 ? 'es' : ''}:</span> ${preview}${extra}`;
+                }
+            }
+        });
+
+        btnClearMatching.addEventListener("click", () => {
+            const query = inputClearSearch.value.trim().toLowerCase();
+            if (!query) {
+                showCustomNotification("Please type a keyword to find matching entries (e.g. 'pezy', '700').", "warning");
+                return;
+            }
+
+            const entries = Object.entries(customSpelling);
+            const matching = entries.filter(([wrong, right]) =>
+                wrong.toLowerCase().includes(query) || right.toLowerCase().includes(query)
+            );
+
+            if (matching.length === 0) {
+                showCustomNotification(`No trained spelling entries match "${query}".`, "warning");
+                return;
+            }
+
+            showCustomConfirmDialog(
+                `Found ${matching.length} trained spelling entry${matching.length > 1 ? 'ies' : 'y'} matching "${query}":\n\n${matching.slice(0, 10).map(([w, r]) => `• "${w}" → "${r}"`).join('\n')}${matching.length > 10 ? `\n...and ${matching.length - 10} more` : ''}\n\nRemove ${matching.length === 1 ? 'this entry' : 'these entries'}?`,
+                () => {
+                    // Delete matching entries
+                    matching.forEach(([wrong]) => {
+                        delete customSpelling[wrong];
+                    });
+                    localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                    saveCustomDataToBackend();
+                    renderCustomSpelling();
+                    inputClearSearch.value = "";
+                    if (clearPreview) clearPreview.textContent = "";
+                    showCustomNotification(`Removed ${matching.length} spelling correction${matching.length > 1 ? 's' : ''} matching "${query}".`, "success");
+                },
+                null,
+                "Remove Entries",
+                true
+            );
+        });
+    }
+
+    // --- Clear ALL Trained Spelling (nuclear hold-to-confirm) ---
+    const btnClearAllSpelling = document.getElementById("btn-admin-clear-all-spelling");
+    if (btnClearAllSpelling) {
+        let spHoldInterval = null;
+        const spHoldDuration = 3000;
+        let spElapsed = 0;
+        let spIsHolding = false;
+        const spOriginalHtml = `<i class="fa-solid fa-spell-check"></i> Clear All Spelling`;
+
+        const spUpdateProgress = (pct) => {
+            const remaining = ((spHoldDuration - spElapsed) / 1000).toFixed(1);
+            const progressBg = `linear-gradient(90deg, rgba(255, 59, 48, 0.45) ${pct}%, rgba(22, 22, 28, 0.9) ${pct}%)`;
+            btnClearAllSpelling.style.background = progressBg;
+            if (pct < 100) {
+                btnClearAllSpelling.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin"></i> Hold (${remaining}s)...`;
+            }
+        };
+
+        const spStartHold = (e) => {
+            if (btnClearAllSpelling.disabled || spIsHolding) return;
+            const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+            if (isAssistant) return;
+
+            spIsHolding = true;
+            spElapsed = 0;
+            e.preventDefault();
+
+            btnClearAllSpelling.style.transition = "none";
+            btnClearAllSpelling.style.transform = "scale(0.97)";
+            spUpdateProgress(0);
+
+            spHoldInterval = setInterval(() => {
+                spElapsed += 100;
+                const pct = Math.min((spElapsed / spHoldDuration) * 100, 100);
+                spUpdateProgress(pct);
+
+                if (spElapsed >= spHoldDuration) {
+                    clearInterval(spHoldInterval);
+                    spHoldInterval = null;
+                    spIsHolding = false;
+
+                    const entryCount = Object.keys(customSpelling).length;
+                    showCustomConfirmDialog(
+                        `Are you sure you want to clear ALL ${entryCount} trained spelling corrections? This wipes the Custom_Spelling database (local + Google Sheets). Hardcoded corrections are NOT affected. This cannot be undone.`,
+                        () => {
+                            customSpelling = {};
+                            localStorage.removeItem("li_custom_spelling");
+                            saveCustomDataToBackend();
+                            renderCustomSpelling();
+
+                            btnClearAllSpelling.disabled = true;
+                            btnClearAllSpelling.style.transition = "background 0.3s ease";
+                            btnClearAllSpelling.style.background = "#30d158";
+                            btnClearAllSpelling.style.borderColor = "#30d158";
+                            btnClearAllSpelling.style.boxShadow = "0 4px 20px rgba(48, 209, 88, 0.5)";
+                            btnClearAllSpelling.innerHTML = `<i class="fa-solid fa-circle-check"></i> All Cleared`;
+                            showCustomNotification(`Wiped all ${entryCount} trained spelling corrections. Hardcoded corrections remain active.`, "success");
+
+                            setTimeout(() => {
+                                btnClearAllSpelling.disabled = false;
+                                btnClearAllSpelling.style.background = "";
+                                btnClearAllSpelling.style.borderColor = "";
+                                btnClearAllSpelling.style.boxShadow = "";
+                                btnClearAllSpelling.innerHTML = spOriginalHtml;
+                            }, 3000);
+                        },
+                        () => {
+                            spResetButton();
+                        },
+                        "Wipe All Spelling",
+                        true
+                    );
+                }
+            }, 100);
+        };
+
+        const spCancelHold = () => {
+            if (!spIsHolding) return;
+            spIsHolding = false;
+            if (spHoldInterval) {
+                clearInterval(spHoldInterval);
+                spHoldInterval = null;
+            }
+            btnClearAllSpelling.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearAllSpelling.style.transform = "";
+            btnClearAllSpelling.style.background = "";
+            btnClearAllSpelling.innerHTML = spOriginalHtml;
+        };
+
+        const spResetButton = () => {
+            btnClearAllSpelling.disabled = false;
+            btnClearAllSpelling.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearAllSpelling.style.transform = "";
+            btnClearAllSpelling.style.background = "";
+            btnClearAllSpelling.style.borderColor = "";
+            btnClearAllSpelling.style.boxShadow = "";
+            btnClearAllSpelling.innerHTML = spOriginalHtml;
+        };
+
+        btnClearAllSpelling.addEventListener("mousedown", spStartHold);
+        btnClearAllSpelling.addEventListener("mouseup", spCancelHold);
+        btnClearAllSpelling.addEventListener("mouseleave", spCancelHold);
+        btnClearAllSpelling.addEventListener("touchstart", spStartHold);
+        btnClearAllSpelling.addEventListener("touchend", spCancelHold);
+        btnClearAllSpelling.addEventListener("touchcancel", spCancelHold);
+        btnClearAllSpelling.addEventListener("click", (e) => {
             e.preventDefault();
         });
     }

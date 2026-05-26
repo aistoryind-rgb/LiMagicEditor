@@ -749,10 +749,26 @@
                                             </div>
                                         </div>
                                         
-                                        <div style="margin-top: 15px; width: 100%;">
-                                            <button type="button" id="btn-admin-clear-bugs" class="btn-action glow-red" style="width: 100%; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
-                                                <i class="fa-solid fa-trash-can"></i> Clear All Bug Reports
+                                        <div style="margin-top: 15px; width: 100%; display: flex; gap: 10px;">
+                                            <button type="button" id="btn-admin-clear-bugs" class="btn-action glow-red" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
+                                                <i class="fa-solid fa-trash-can"></i> Clear Bug Reports
                                             </button>
+                                            <button type="button" id="btn-admin-clear-all-spelling" class="btn-action glow-red" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
+                                                <i class="fa-solid fa-spell-check"></i> Clear All Spelling
+                                            </button>
+                                        </div>
+                                        
+                                        <div style="margin-top: 10px; width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px;">
+                                            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.4); font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+                                                <i class="fa-solid fa-crosshairs"></i> Targeted Spelling Cleanup
+                                            </div>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <input type="text" id="input-clear-spelling-search" placeholder="e.g. pezy, 700, mil..." style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); color: var(--text-primary); font-size: 12px; font-family: var(--font-heading);">
+                                                <button type="button" id="btn-admin-clear-spelling" class="btn-action glow-red" style="padding: 7px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin: 0; white-space: nowrap;">
+                                                    <i class="fa-solid fa-eraser"></i> Clear Matching
+                                                </button>
+                                            </div>
+                                            <div id="clear-spelling-preview" style="margin-top: 6px; font-size: 11px; color: rgba(255,255,255,0.35); min-height: 16px;"></div>
                                         </div>
                                     </div>
                                     

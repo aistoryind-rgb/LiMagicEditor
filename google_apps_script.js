@@ -557,7 +557,7 @@ function isAssistantAdmin(sheet, clientUuid) {
 // Helper: check auth - returns { authorized, isSuperAdmin }
 function checkAdminAuth(data) {
   const passcode = data.passcode || "";
-  const clientUuid = data.authUuid || "";
+  const clientUuid = data.authUuid || data.clientUuid || "";
   
   if (passcode === ADMIN_PASSCODE) {
     return { authorized: true, isSuperAdmin: true };
@@ -1022,6 +1022,13 @@ function handleGetCustomData(headers) {
       templatesSheet = ss.insertSheet("Custom_Templates");
       templatesSheet.appendRow(["Text", "Category", "Shorthand"]);
     }
+
+    // Translations sheet
+    let translationsSheet = ss.getSheetByName("Custom_Translations");
+    if (!translationsSheet) {
+      translationsSheet = ss.insertSheet("Custom_Translations");
+      translationsSheet.appendRow(["RawInput", "FixedOutput"]);
+    }
     
     // Read spelling
     const spelling = {};
@@ -1049,11 +1056,23 @@ function handleGetCustomData(headers) {
         });
       }
     }
+
+    // Read translations
+    const translations = {};
+    const translationsRows = translationsSheet.getDataRange().getValues();
+    for (let i = 1; i < translationsRows.length; i++) {
+      const raw = translationsRows[i][0];
+      const fixed = translationsRows[i][1];
+      if (raw) {
+        translations[raw.toString().toLowerCase().trim()] = fixed ? fixed.toString().trim() : "";
+      }
+    }
     
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
       spelling: spelling,
-      templates: templates
+      templates: templates,
+      translations: translations
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
@@ -1073,12 +1092,13 @@ function handleSaveCustomData(data, headers) {
       spellingSheet = ss.insertSheet("Custom_Spelling");
     }
     spellingSheet.clear();
-    spellingSheet.appendRow(["Wrong", "Right"]);
     
     const spelling = data.spelling || {};
+    const spellingRows = [["Wrong", "Right"]];
     for (const wrong in spelling) {
-      spellingSheet.appendRow([wrong.toString().toLowerCase().trim(), spelling[wrong].toString().trim()]);
+      spellingRows.push([wrong.toString().toLowerCase().trim(), spelling[wrong].toString().trim()]);
     }
+    spellingSheet.getRange(1, 1, spellingRows.length, 2).setValues(spellingRows);
     
     // Save Templates
     let templatesSheet = ss.getSheetByName("Custom_Templates");
@@ -1086,22 +1106,37 @@ function handleSaveCustomData(data, headers) {
       templatesSheet = ss.insertSheet("Custom_Templates");
     }
     templatesSheet.clear();
-    templatesSheet.appendRow(["Text", "Category", "Shorthand"]);
     
     const templates = data.templates || [];
+    const templatesRows = [["Text", "Category", "Shorthand"]];
     for (const t of templates) {
       if (t.text) {
-        templatesSheet.appendRow([
+        templatesRows.push([
           t.text.toString().trim(),
           t.category ? t.category.toString().trim() : "Services",
           t.shorthand ? t.shorthand.toString().trim() : ""
         ]);
       }
     }
+    templatesSheet.getRange(1, 1, templatesRows.length, 3).setValues(templatesRows);
+
+    // Save Translations
+    let translationsSheet = ss.getSheetByName("Custom_Translations");
+    if (!translationsSheet) {
+      translationsSheet = ss.insertSheet("Custom_Translations");
+    }
+    translationsSheet.clear();
+    
+    const translations = data.translations || {};
+    const translationsRows = [["RawInput", "FixedOutput"]];
+    for (const raw in translations) {
+      translationsRows.push([raw.toString().toLowerCase().trim(), translations[raw].toString().trim()]);
+    }
+    translationsSheet.getRange(1, 1, translationsRows.length, 2).setValues(translationsRows);
     
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
-      message: "Custom spelling and templates saved successfully."
+      message: "Custom spelling, templates, and translations saved successfully."
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({

@@ -1980,7 +1980,9 @@ function correctSpelling(text, ctx) {
             regex = /\blui\b(?!\s+vi\b)/gi;
         } else {
             const escapedWrong = wrong.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            regex = new RegExp(`\\b${escapedWrong}\\b`, "gi");
+            const startBoundary = /^\w/.test(wrong) ? '\\b' : '';
+            const endBoundary = /\w$/.test(wrong) ? '\\b' : '';
+            regex = new RegExp(`${startBoundary}${escapedWrong}${endBoundary}`, "gi");
         }
         const match = corrected.match(regex);
         if (match) {
@@ -3210,6 +3212,22 @@ function isTemplateAd(text) {
 }
 
 function runValidationPipeline(ctx, override) {
+    // 0. Advanced direct translation mapping matching (Advanced Learning Method)
+    const trimmedRaw = ctx.raw.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (customTranslations[trimmedRaw]) {
+        ctx.logs.push({ text: `Matched trained translation: <strong>${customTranslations[trimmedRaw]}</strong>`, type: 'policy' });
+        ctx.finalText = customTranslations[trimmedRaw];
+        ctx.category = override === "auto" ? detectCategory(ctx.finalText) : override;
+        ctx.status = "passed";
+        
+        // Recover phone number from raw ad if present
+        const phoneMatch = ctx.raw.match(/\b\d{4,10}\b/);
+        if (phoneMatch) {
+            ctx.phoneNumber = phoneMatch[0];
+        }
+        return;
+    }
+
     // 1. Initial sanitization of text
     let text = ctx.raw.replace(/\s+/g, ' ').trim();
     text = correctSpelling(text, ctx);
@@ -7800,8 +7818,8 @@ function initFloatingClipboard() {
 const CONFIG = {
     GOOGLE_SCRIPT_URL: (() => {
         const stored = localStorage.getItem('li_google_script_url');
-        const defaultUrl = 'https://script.google.com/macros/s/AKfycbxqien45WNhMbj50EIpV8V62P9qX6v29r80rrz48IzWyocDTVI6fJAsryFf0rpIMPNTxQ/exec';
-        if (!stored || !stored.includes('AKfycbxqien45WNhMbj50EIpV8V62P9qX6v29r80rrz48IzWyocDTVI6fJAsryFf0rpIMPNTxQ')) {
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec';
+        if (!stored || !stored.includes('AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw')) {
             localStorage.setItem('li_google_script_url', defaultUrl);
             return defaultUrl;
         }
@@ -8733,6 +8751,8 @@ function initBugReport() {
    ========================================================================== */
 let customTemplates = [];
 let customSpelling = {};
+let customTranslations = {};
+let lastLocalWriteTime = parseInt(localStorage.getItem("li_last_local_write_time") || "0", 10);
 
 function initCustomData() {
     try {
@@ -8753,6 +8773,15 @@ function initCustomData() {
         console.error("Error loading custom spelling:", e);
     }
 
+    try {
+        const storedTranslations = localStorage.getItem("li_custom_translations");
+        if (storedTranslations) {
+            customTranslations = JSON.parse(storedTranslations);
+        }
+    } catch (e) {
+        console.error("Error loading custom translations:", e);
+    }
+
     // Sync from the shared backend (Google Sheets)
     syncCustomDataFromBackend();
     
@@ -8762,6 +8791,12 @@ function initCustomData() {
 
 function syncCustomDataFromBackend() {
     if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    // Skip syncing if we recently performed a local edit, to prevent overwriting with stale data (45-second cooldown)
+    if (Date.now() - lastLocalWriteTime < 45000) {
+        console.log("Local custom data was recently modified. Skipping sync from backend to prevent overwriting.");
+        return;
+    }
     
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
         method: "POST",
@@ -8788,10 +8823,24 @@ function syncCustomDataFromBackend() {
                     changed = true;
                 }
             }
+            if (data.translations) {
+                const fetchedTranslationsStr = JSON.stringify(data.translations);
+                if (localStorage.getItem("li_custom_translations") !== fetchedTranslationsStr) {
+                    customTranslations = data.translations;
+                    localStorage.setItem("li_custom_translations", fetchedTranslationsStr);
+                    changed = true;
+                }
+            }
             
-            if (changed && sessionStorage.getItem("li_admin_authenticated") === "true") {
-                renderCustomSpelling();
-                renderCustomTemplates();
+            if (changed) {
+                if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+                    renderCustomSpelling();
+                    renderCustomTemplates();
+                }
+                if (typeof processAd === "function") {
+                    processAd();
+                }
+                showCustomNotification("Shared database has been updated live with new corrections!", "success");
             }
         }
     })
@@ -8801,6 +8850,10 @@ function syncCustomDataFromBackend() {
 }
 
 function saveCustomDataToBackend() {
+    // Record local write time to trigger safety cooldown period (45 seconds)
+    lastLocalWriteTime = Date.now();
+    localStorage.setItem("li_last_local_write_time", lastLocalWriteTime.toString());
+    
     if (!CONFIG.GOOGLE_SCRIPT_URL) return;
     
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
@@ -8809,12 +8862,15 @@ function saveCustomDataToBackend() {
         body: JSON.stringify({
             action: "save_custom_data",
             spelling: customSpelling,
-            templates: customTemplates
+            templates: customTemplates,
+            translations: customTranslations
         })
     })
     .then(r => r.json())
     .then(data => {
-        if (data.status !== "success") {
+        if (data.status === "success") {
+            showCustomNotification("Trained custom corrections are now live and synced with the cloud database!", "success");
+        } else {
             console.error("Failed to save custom data to backend:", data.message);
         }
     })
@@ -9268,6 +9324,7 @@ function initAdminPanel() {
                 saveCustomDataToBackend();
                 renderCustomSpelling();
                 formSpelling.reset();
+                if (typeof processAd === "function") processAd();
             }
         });
     }
@@ -9304,6 +9361,7 @@ function initAdminPanel() {
                 if (btnSpellingToggle) {
                     btnSpellingToggle.innerHTML = '<i class="fa-solid fa-file-import"></i> Bulk Mode';
                 }
+                if (typeof processAd === "function") processAd();
                 showCustomNotification(`Successfully imported ${addedCount} spelling corrections!`, "success");
             } else {
                 showCustomAlertDialog("No valid corrections found. Make sure the format is 'wrong,right' with one entry per line.", null, "warning");
@@ -9578,6 +9636,7 @@ function initAdminPanel() {
                     renderCustomSpelling();
                     inputClearSearch.value = "";
                     if (clearPreview) clearPreview.textContent = "";
+                    if (typeof processAd === "function") processAd();
                     showCustomNotification(`Removed ${matching.length} spelling correction${matching.length > 1 ? 's' : ''} matching "${query}".`, "success");
                 },
                 null,
@@ -9636,6 +9695,7 @@ function initAdminPanel() {
                             localStorage.removeItem("li_custom_spelling");
                             saveCustomDataToBackend();
                             renderCustomSpelling();
+                            if (typeof processAd === "function") processAd();
 
                             btnClearAllSpelling.disabled = true;
                             btnClearAllSpelling.style.transition = "background 0.3s ease";
@@ -10192,6 +10252,7 @@ function renderCustomSpelling() {
             localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
             saveCustomDataToBackend();
             renderCustomSpelling();
+            if (typeof processAd === "function") processAd();
         });
         tdAction.appendChild(btnDel);
         tr.appendChild(tdAction);
@@ -11600,6 +11661,7 @@ function loadAndRenderBugTriage() {
         body: JSON.stringify({
             action: "get_bug_reports",
             passcode: passcode,
+            authUuid: authUuid,
             clientUuid: authUuid
         })
     })
@@ -12028,8 +12090,8 @@ function renderTriageCards(reports, container) {
                     </div>
                     
                     <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
-                        <button type="button" class="btn-manual-train-apply" style="background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.25); color: #30d158; padding: 7px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
-                            <i class="fa-solid fa-graduation-cap"></i> Train
+                        <button type="button" class="btn-manual-train-apply" style="background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); color: #60a5fa; padding: 8px 16px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 0 10px rgba(96, 165, 250, 0.15);">
+                            <i class="fa-solid fa-check"></i> Done
                         </button>
                     </div>
                 </div>
@@ -12102,13 +12164,27 @@ function renderTriageCards(reports, container) {
                         learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
                     }
                     
+                    if (finalAdText) {
+                        // Register direct exact raw-to-fixed translation mapping for advanced learning
+                        const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
+                        customTranslations[trimmedRaw] = finalAdText;
+                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                    }
+                    
                     // Save all staged corrections to the persistent database on confirm
-                    if (report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0) {
-                        Object.assign(customSpelling, report.stagedSpelling);
-                        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                    const hasSpelling = report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0;
+                    if (hasSpelling || finalAdText) {
+                        if (hasSpelling) {
+                            Object.assign(customSpelling, report.stagedSpelling);
+                            localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                        }
                         saveCustomDataToBackend();
                         if (typeof renderCustomSpelling === "function") {
                             renderCustomSpelling();
+                        }
+                        // Re-process the main ad editor immediately to reflect changes in real time
+                        if (typeof processAd === "function") {
+                            processAd();
                         }
                     }
                     
@@ -12177,19 +12253,19 @@ function renderTriageCards(reports, container) {
                     const selectedCat = catSelect.value;
                     
                     if (!similarVal) {
-                        showCustomNotification("Please provide a similar example ad.", "warning");
+                        showCustomNotification("Please provide a target output ad.", "warning");
                         return;
                     }
                     
                     currentCategory = selectedCat;
-                    const trained = learnFromSimilarExample(report.rawInput, similarVal, selectedCat, report.stagedSpelling);
-                    if (trained) {
-                        showCustomNotification("Manual training completed successfully! (previewing, click Confirm to save)", "success");
-                    } else {
-                        showCustomNotification(`Running formatting pipeline for category ${selectedCat}...`, "info");
-                    }
+                    // Run standard phrase alignment spelling extractor to stage rules dynamically
+                    learnFromSimilarExample(report.rawInput, similarVal, selectedCat, report.stagedSpelling);
+                    
+                    // Directly override the live Fixed Output box to display exactly what they typed with no errors
                     report.manualOverrideText = similarVal;
                     updateCardBody();
+                    
+                    showCustomNotification("Target output successfully applied to Fixed Output preview! Review and click Confirm.", "success");
                 });
             }
             

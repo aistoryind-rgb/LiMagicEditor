@@ -3539,9 +3539,10 @@ textarea:focus, input:focus, select:focus {
     color: #ff453a !important;
 }
 .btn-manual-train-apply:hover {
-    background: rgba(48, 209, 88, 0.3) !important;
-    border-color: rgba(48, 209, 88, 0.5) !important;
-    box-shadow: 0 0 12px rgba(48, 209, 88, 0.25) !important;
+    background: rgba(96, 165, 250, 0.3) !important;
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.45) !important;
+    color: #60a5fa !important;
 }
 
 /* Contenteditable Fixed Output text focus glow */

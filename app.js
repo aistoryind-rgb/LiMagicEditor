@@ -6544,6 +6544,11 @@ function updateUI(ctx) {
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
         if (btnSubmitBugInline) {
             btnSubmitBugInline.classList.remove("hide");
+            if (updateUI._lastText !== ctx.raw) {
+                btnSubmitBugInline.classList.remove("btn-sent");
+                btnSubmitBugInline.classList.add("glow-red");
+                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+            }
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -6573,6 +6578,11 @@ function updateUI(ctx) {
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
         if (btnSubmitBugInline) {
             btnSubmitBugInline.classList.remove("hide");
+            if (updateUI._lastText !== ctx.raw) {
+                btnSubmitBugInline.classList.remove("btn-sent");
+                btnSubmitBugInline.classList.add("glow-red");
+                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+            }
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -8093,6 +8103,11 @@ function initBugReport() {
                         if (data.status === "success") {
                             if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
                             if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Correction logged directly to Google Sheets & Email.";
+                            
+                            // Change inline button style & text to blue "Bug Sent"
+                            btnSubmitBugInline.classList.remove("glow-red");
+                            btnSubmitBugInline.classList.add("btn-sent");
+                            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
                         } else {
                             if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
                         }
@@ -8104,6 +8119,11 @@ function initBugReport() {
                         if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
                         if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
                         if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                        
+                        // Change inline button style & text to blue "Bug Sent" (fallback success)
+                        btnSubmitBugInline.classList.remove("glow-red");
+                        btnSubmitBugInline.classList.add("btn-sent");
+                        btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
                     });
                 };
                 compileAndSend();

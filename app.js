@@ -1990,8 +1990,13 @@ function correctSpelling(text, ctx) {
 
     const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling);
     for (const [wrong, right] of Object.entries(activeMisspellings)) {
-        const escapedWrong = wrong.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const regex = new RegExp(`\\b${escapedWrong}\\b`, "gi");
+        let regex;
+        if (wrong === "lui") {
+            regex = /\blui\b(?!\s+vi\b)/gi;
+        } else {
+            const escapedWrong = wrong.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            regex = new RegExp(`\\b${escapedWrong}\\b`, "gi");
+        }
         const match = corrected.match(regex);
         if (match) {
             ctx.logs.push({ text: `Spelling correction: <strong>${wrong}</strong> corrected to <strong>${right}</strong>`, type: 'correction' });
@@ -2182,6 +2187,12 @@ function matchVehicle(inputText) {
     cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     
     // Shortcuts
+    if (/\b(?:panamera\s+turismo)\b/i.test(cleanInput)) {
+        return { name: "Pfister Panamera Turismo", category: "sellable_cars" };
+    }
+    if (/\bpanamera\b/i.test(cleanInput)) {
+        return { name: "Pfister Panamera", category: "sellable_cars" };
+    }
     if (/\b(?:skyline|r34)\b/i.test(cleanInput)) {
         return { name: "Annis Skyline GT-R (R34)", category: "sellable_cars" };
     }
@@ -2362,7 +2373,7 @@ function matchClothingItem(inputText) {
         "drill", "sawmill", "gpu", "graphics card", "video card", "battery", "batteries",
         "wires", "wire", "sponge", "sponges", "hookah", "poker", "dice",
         "seed", "seeds", "emerald", "ruby", "diamond", "obsidian", "magma stone", "copper",
-        "driver", "lawyer", "dancer", "singer", "dj", "fuel", "canister", "tonic"
+        "driver", "lawyer", "dancer", "singer", "dj", "fuel", "canister", "tonic", "panamera"
     ];
     if (nonClothingKeywords.some(kw => lowerInput.includes(kw))) {
         return null;
@@ -3775,7 +3786,12 @@ function detectCategory(text) {
         "rod", "rods", "case", "cases", "crate", "crates",
         "sim", "sim card", "sim cards", "card", "cards", "biospark", "biosparks"
     ];
-    if (otherKeywords.some(keyword => lower.includes(keyword))) {
+    const hasOtherKeyword = otherKeywords.some(keyword => {
+        if (keyword === "juice" && lower.includes("juice shop")) return false;
+        if (keyword === "pet" && lower.includes("pet shop")) return false;
+        return lower.includes(keyword);
+    });
+    if (hasOtherKeyword) {
         // If the keyword is a tuning part keyword, but it ALSO contains a matched vehicle,
         // then it is an Auto ad, not an Other ad!
         const tuningKeywords = ["tuning", "suspension", "transmission", "brakes", "tires"];
@@ -4342,6 +4358,7 @@ function cleanPriceKeywords(text, ctx) {
             result = result.replace(regex, replacement);
         }
     }
+    result = result.replace(/\bfor\s+(?:my\s+)?(?:brother|sister|friend|friends|dad|mom|father|mother|family|son|daughter)\b/gi, "");
     result = result.replace(/\b(?:price|budget|rent|bet|cost|cash)\b/gi, "")
                    .replace(/\b(call me|ph:?|phone:?|call|ping me|mail)\s*[0-9-]*\b/gi, "")
                    .replace(/,\s*,/g, ",")
@@ -4654,48 +4671,73 @@ function formatRealEstateAd(adBody, action, ctx) {
     
     const cleanLower = cleanAdBody.toLowerCase();
     
-    // Check house number
-    let numMatch = cleanLower.match(/(?:house|apartment|mansion|penthouse|\u2116)\s*(?:no\.?|number|num\.?|#|\u2116)?\s*(\d+)\b/i);
     let houseLabel = "house";
     if (cleanLower.includes("apartment")) houseLabel = "apartment";
     else if (cleanLower.includes("mansion")) houseLabel = "mansion";
     else if (cleanLower.includes("penthouse") || cleanLower.includes("casino apartment")) houseLabel = "Casino penthouse";
-    
-    if (!numMatch) {
-        // Find all standalone numbers in cleanLower
-        const allNums = [...cleanLower.matchAll(/\b(\d+)\b/g)].map(m => ({ val: parseInt(m[1]), raw: m[0], index: m.index }));
-        // Filter out numbers that represent garage spaces or warehouses
-        const nonFeatureNums = allNums.filter(numItem => {
-            // Check if the number is part of garage spaces
-            const gsMatch = cleanLower.match(new RegExp(`(\\d+)\\s*(?:gs|g\\.s\\.|garage|garages)|(?:gs|g\\.s\\.|garage|garages)\\s*(\\d+)`, "i"));
-            if (gsMatch && (gsMatch[1] === numItem.raw || gsMatch[2] === numItem.raw)) {
-                return false;
-            }
-            // Check if the number is part of warehouse space
-            const whMatch = cleanLower.match(new RegExp(`(\\d+)\\s*(?:wh|w\\.h\\.|warehouse|warehouses)|(?:wh|w\\.h\\.|warehouse|warehouses)\\s*(\\d+)`, "i"));
-            if (whMatch && (whMatch[1] === numItem.raw || whMatch[2] === numItem.raw)) {
-                return false;
-            }
-            return true;
-        });
-        
-        if (nonFeatureNums.length > 0) {
-            // Take the last standalone number (usually the house number at the end)
-            const targetNum = nonFeatureNums[nonFeatureNums.length - 1];
-            numMatch = [null, targetNum.raw];
-        }
-    }
-    
+
+    // Quantity check (1-3 properties)
+    const qtyMatch = cleanLower.match(/\b([1-3])\s*(house|apartment|mansion|penthouse|casino penthouse|casino apartment)s?\b/i);
     let mainSubject = "";
-    if (numMatch) {
-        mainSubject = `${houseLabel} \u2116${numMatch[1]}`;
-        ctx.logs.push({ text: `Formatted property designation to <strong>${mainSubject}</strong>`, type: 'correction' });
+    
+    if (qtyMatch) {
+        const qty = qtyMatch[1];
+        const type = qtyMatch[2].toLowerCase();
+        const typePluralMap = {
+            "house": "houses",
+            "apartment": "apartments",
+            "mansion": "mansions",
+            "penthouse": "penthouses",
+            "casino penthouse": "Casino penthouses",
+            "casino apartment": "Casino penthouses"
+        };
+        const pluralType = typePluralMap[type] || (type + "s");
+        mainSubject = `${qty} ${pluralType}`;
+        ctx.logs.push({ text: `Formatted property quantity: <strong>${mainSubject}</strong>`, type: 'correction' });
     } else {
-        if (houseLabel === "Casino penthouse") {
-            mainSubject = houseLabel;
+        // Check house number
+        let numMatch = cleanLower.match(/(?:house|apartment|mansion|penthouse|\u2116)\s*(?:no\.?|number|num\.?|#|\u2116)?\s*(\d+)\b/i);
+        
+        if (!numMatch) {
+            // Find all standalone numbers in cleanLower
+            const allNums = [...cleanLower.matchAll(/\b(\d+)\b/g)].map(m => ({ val: parseInt(m[1]), raw: m[0], index: m.index }));
+            // Filter out numbers that represent garage spaces or warehouses or quantities
+            const nonFeatureNums = allNums.filter(numItem => {
+                // Check if the number is part of garage spaces
+                const gsMatch = cleanLower.match(new RegExp(`(\\d+)\\s*(?:gs|g\\.s\\.|garage|garages)|(?:gs|g\\.s\\.|garage|garages)\\s*(\\d+)`, "i"));
+                if (gsMatch && (gsMatch[1] === numItem.raw || gsMatch[2] === numItem.raw)) {
+                    return false;
+                }
+                // Check if the number is part of warehouse space
+                const whMatch = cleanLower.match(new RegExp(`(\\d+)\\s*(?:wh|w\\.h\\.|warehouse|warehouses)|(?:wh|w\\.h\\.|warehouse|warehouses)\\s*(\\d+)`, "i"));
+                if (whMatch && (whMatch[1] === numItem.raw || whMatch[2] === numItem.raw)) {
+                    return false;
+                }
+                // Check if it represents property quantity
+                const qtyRegex = new RegExp(`\\b${numItem.raw}\\s*(?:house|apartment|mansion|penthouse)s?\\b`, "i");
+                if (qtyRegex.test(cleanLower)) {
+                    return false;
+                }
+                return true;
+            });
+            
+            if (nonFeatureNums.length > 0) {
+                // Take the last standalone number (usually the house number at the end)
+                const targetNum = nonFeatureNums[nonFeatureNums.length - 1];
+                numMatch = [null, targetNum.raw];
+            }
+        }
+        
+        if (numMatch) {
+            mainSubject = `${houseLabel} \u2116${numMatch[1]}`;
+            ctx.logs.push({ text: `Formatted property designation to <strong>${mainSubject}</strong>`, type: 'correction' });
         } else {
-            const prefix = (houseLabel.startsWith("a") || houseLabel.startsWith("e")) ? "an" : "a";
-            mainSubject = `${prefix} ${houseLabel}`;
+            if (houseLabel === "Casino penthouse") {
+                mainSubject = houseLabel;
+            } else {
+                const prefix = (houseLabel.startsWith("a") || houseLabel.startsWith("e")) ? "an" : "a";
+                mainSubject = `${prefix} ${houseLabel}`;
+            }
         }
     }
     
@@ -5419,7 +5461,7 @@ function formatOtherAd(adBody, action, ctx) {
         .filter(s => {
             if (!s) return false;
             const lowerS = s.toLowerCase();
-            if (lowerS === "each" || lowerS === "respectively" || lowerS === "each respectively" || lowerS === "price" || lowerS === "budget" || lowerS === "cost") {
+            if (lowerS === "each" || lowerS === "respectively" || lowerS === "each respectively" || lowerS === "price" || lowerS === "budget" || lowerS === "cost" || lowerS.includes("__has_each__")) {
                 return false;
             }
             return true;

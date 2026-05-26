@@ -8252,15 +8252,22 @@ function initBugReport() {
 
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {
-        btnSubmitBugInline.addEventListener("click", () => {
-            if (btnSubmitBugInline.classList.contains("btn-sent")) {
-                showCustomNotification("Bug report already submitted. A fix is expected within 10 minutes.", "warning");
-                return;
+        let holdInterval = null;
+        const holdDuration = 1000; // 1 second
+        let elapsed = 0;
+        let isHolding = false;
+        const originalHtml = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+
+        const updateButtonProgress = (pct) => {
+            const remainingSecs = ((holdDuration - elapsed) / 1000).toFixed(1);
+            const progressBg = `linear-gradient(90deg, rgba(230, 57, 70, 0.45) ${pct}%, rgba(22, 22, 28, 0.9) ${pct}%)`;
+            btnSubmitBugInline.style.background = progressBg;
+            if (pct < 100) {
+                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin"></i> Hold (${remainingSecs}s)...`;
             }
-            if (btnSubmitBugInline.classList.contains("submitting")) {
-                return;
-            }
-            
+        };
+
+        const executeBugSubmission = () => {
             // Instantly transition to inline Submitting state
             btnSubmitBugInline.classList.add("submitting");
             btnSubmitBugInline.classList.remove("glow-red");
@@ -8284,7 +8291,7 @@ function initBugReport() {
                             btnSubmitBugInline.classList.remove("submitting");
                             btnSubmitBugInline.classList.remove("btn-submitting");
                             btnSubmitBugInline.classList.add("glow-red");
-                            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+                            btnSubmitBugInline.innerHTML = originalHtml;
                             showCustomNotification("Google Apps Script URL not configured.", "error");
                         }, 1000);
                         return;
@@ -8323,7 +8330,7 @@ function initBugReport() {
                                 showCustomNotification(data.message || "Bug report already submitted. A fix is expected within 10 minutes.", "warning");
                             } else {
                                 btnSubmitBugInline.classList.add("glow-red");
-                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+                                btnSubmitBugInline.innerHTML = originalHtml;
                                 showCustomNotification("Error submitting bug report: " + (data.message || "Failed to submit."), "error");
                             }
                         })
@@ -8342,6 +8349,76 @@ function initBugReport() {
                 };
                 compileAndSend();
             }, 300);
+        };
+
+        const startHold = (e) => {
+            if (btnSubmitBugInline.classList.contains("btn-sent")) {
+                showCustomNotification("Bug report already submitted. A fix is expected within 10 minutes.", "warning");
+                return;
+            }
+            if (btnSubmitBugInline.classList.contains("submitting") || btnSubmitBugInline.classList.contains("btn-submitting") || isHolding) {
+                return;
+            }
+
+            isHolding = true;
+            elapsed = 0;
+            e.preventDefault();
+
+            btnSubmitBugInline.style.transition = "none";
+            btnSubmitBugInline.style.transform = "scale(0.97)";
+            updateButtonProgress(0);
+
+            holdInterval = setInterval(() => {
+                elapsed += 100;
+                const pct = Math.min((elapsed / holdDuration) * 100, 100);
+                updateButtonProgress(pct);
+
+                if (elapsed >= holdDuration) {
+                    clearInterval(holdInterval);
+                    holdInterval = null;
+                    isHolding = false;
+                    
+                    btnSubmitBugInline.style.transition = "background 0.3s ease, transform 0.2s ease";
+                    btnSubmitBugInline.style.transform = "";
+                    btnSubmitBugInline.style.background = "";
+                    executeBugSubmission();
+                }
+            }, 100);
+        };
+
+        const cancelHold = () => {
+            if (!isHolding) return;
+            isHolding = false;
+            if (holdInterval) {
+                clearInterval(holdInterval);
+                holdInterval = null;
+            }
+            btnSubmitBugInline.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnSubmitBugInline.style.transform = "";
+            btnSubmitBugInline.style.background = "";
+            
+            if (btnSubmitBugInline.classList.contains("btn-sent")) {
+                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+            } else if (btnSubmitBugInline.classList.contains("btn-submitting")) {
+                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+            } else {
+                btnSubmitBugInline.innerHTML = originalHtml;
+            }
+        };
+
+        btnSubmitBugInline.addEventListener("mousedown", startHold);
+        btnSubmitBugInline.addEventListener("mouseup", cancelHold);
+        btnSubmitBugInline.addEventListener("mouseleave", cancelHold);
+        
+        btnSubmitBugInline.addEventListener("touchstart", startHold, { passive: false });
+        btnSubmitBugInline.addEventListener("touchend", cancelHold);
+        btnSubmitBugInline.addEventListener("touchcancel", cancelHold);
+
+        btnSubmitBugInline.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (btnSubmitBugInline.classList.contains("btn-sent")) {
+                showCustomNotification("Bug report already submitted. A fix is expected within 10 minutes.", "warning");
+            }
         });
     }
 }

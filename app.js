@@ -6073,7 +6073,16 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         let name = isPlural ? "Biosparks" : "Biospark";
         return `${qtyText}${name}`;
     }
-    
+
+    // Token check
+    if (cleanLower.includes("token") || cleaned.includes("token")) {
+        let qty = parseQuantity(rawItem);
+        let qtyText = qty ? `${qty} ` : "";
+        let isPlural = cleanLower.includes("tokens") || (qty && qty > 1) || hasEach;
+        let name = isPlural ? "tokens" : "token";
+        return `${qtyText}${name}`;
+    }
+
     // 1.9. Power booster shot check
     if (cleanLower.includes("booster") || cleanLower.includes("boost shot") || cleanLower.includes("booster shot")) {
         let qty = parseQuantity(rawItem);
@@ -11909,9 +11918,26 @@ function renderTriageCards(reports, container) {
         
         let lastPreviewText = "";
         
+        // Initialize state variables if not present
+        if (typeof report.manualPanelOpen === "undefined") {
+            report.manualPanelOpen = false;
+        }
+        if (typeof report.manualOverrideText === "undefined") {
+            report.manualOverrideText = null;
+        }
+        
         // Function to render card inner content
         const updateCardBody = () => {
-            const liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory, report.stagedSpelling);
+            let liveFixed;
+            if (report.manualOverrideText) {
+                liveFixed = {
+                    text: report.manualOverrideText,
+                    status: "passed",
+                    rejectionReason: "None"
+                };
+            } else {
+                liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory, report.stagedSpelling);
+            }
             const isPassed = liveFixed.status === "passed";
             lastPreviewText = liveFixed.text;
             
@@ -11955,8 +11981,8 @@ function renderTriageCards(reports, container) {
                 <!-- Side-by-side Raw vs Fixed Output -->
                 ${diffHtml}
                 
-                <!-- Manual Training Panel (Hidden by default) -->
-                <div class="manual-train-panel" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 10px; margin-top: 4px; transition: all 0.3s ease;">
+                <!-- Manual Training Panel -->
+                <div class="manual-train-panel" style="display: ${report.manualPanelOpen ? "flex" : "none"}; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 10px; margin-top: 4px; transition: all 0.3s ease;">
                     <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-pen-to-square"></i> Manual Training Override</div>
                     
                     <div style="display: flex; gap: 10px; flex-direction: column;">
@@ -12020,7 +12046,7 @@ function renderTriageCards(reports, container) {
                     
                     <!-- Row 3: Advanced Overrides -->
                     <button type="button" class="btn-triage-manual-toggle" style="
-                        width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: #60a5fa; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;
+                        width: 100%; background: ${report.manualPanelOpen ? "rgba(96, 165, 250, 0.15)" : "rgba(255,255,255,0.02)"}; border: 1px solid ${report.manualPanelOpen ? "rgba(96, 165, 250, 0.3)" : "rgba(255,255,255,0.06)"}; color: #60a5fa; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;
                     ">
                         <i class="fa-solid fa-sliders"></i> Manual Adjust Overrides
                     </button>
@@ -12058,19 +12084,7 @@ function renderTriageCards(reports, container) {
                         }
                     }
                     
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(finalAdText)
-                            .then(() => {
-                                showCustomNotification("Copied corrected ad to clipboard and resolved!", "success");
-                                resolveBugReport(report, card);
-                            })
-                            .catch(err => {
-                                console.error("Clipboard copy failed:", err);
-                                resolveBugReport(report, card);
-                            });
-                    } else {
-                        resolveBugReport(report, card);
-                    }
+                    resolveBugReport(report, card);
                 });
             }
             
@@ -12080,14 +12094,12 @@ function renderTriageCards(reports, container) {
                     const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
                     if (trainedCorr) {
                         showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}" (previewing, click Confirm to save)`, "success");
+                        report.manualOverrideText = null;
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching policy example found. Please train manually.", "warning");
-                        if (manualPanel && manualToggleBtn) {
-                            manualPanel.style.display = "flex";
-                            manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
-                            manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
-                        }
+                        report.manualPanelOpen = true;
+                        updateCardBody();
                     }
                 });
             }
@@ -12098,6 +12110,7 @@ function renderTriageCards(reports, container) {
                     const success = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
                     if (success) {
                         showCustomNotification("Trained from Vehicles & Clothing database list successfully! (previewing, click Confirm to save)", "success");
+                        report.manualOverrideText = null;
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching vehicle or clothing items found in database.", "warning");
@@ -12111,6 +12124,7 @@ function renderTriageCards(reports, container) {
                     const success = trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
                     if (success) {
                         showCustomNotification("Trained from Items database list successfully! (previewing, click Confirm to save)", "success");
+                        report.manualOverrideText = null;
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching items found in database.", "warning");
@@ -12121,15 +12135,8 @@ function renderTriageCards(reports, container) {
             // ── Manual Train Toggle Button ──
             if (manualToggleBtn && manualPanel) {
                 manualToggleBtn.addEventListener("click", () => {
-                    if (manualPanel.style.display === "none") {
-                        manualPanel.style.display = "flex";
-                        manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
-                        manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
-                    } else {
-                        manualPanel.style.display = "none";
-                        manualToggleBtn.style.background = "rgba(255,255,255,0.03)";
-                        manualToggleBtn.style.borderColor = "rgba(255,255,255,0.08)";
-                    }
+                    report.manualPanelOpen = !report.manualPanelOpen;
+                    updateCardBody();
                 });
             }
             
@@ -12153,6 +12160,7 @@ function renderTriageCards(reports, container) {
                     } else {
                         showCustomNotification(`Running formatting pipeline for category ${selectedCat}...`, "info");
                     }
+                    report.manualOverrideText = similarVal;
                     updateCardBody();
                 });
             }

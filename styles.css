@@ -2577,6 +2577,24 @@ textarea:focus, input:focus, select:focus {
     background: #0071e3 !important;
 }
 
+.btn-action.btn-submitting {
+    background: linear-gradient(135deg, #ff9f0a 0%, #ff5e3a 100%) !important;
+    box-shadow: 0 4px 15px rgba(255, 159, 10, 0.3) !important;
+    cursor: wait !important;
+    animation: btnPulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes btnPulse {
+    0% {
+        opacity: 0.85;
+        box-shadow: 0 4px 15px rgba(255, 159, 10, 0.3) !important;
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 4px 25px rgba(255, 159, 10, 0.6) !important;
+    }
+}
+
 .bug-feedback-overlay {
     position: absolute;
     top: -15px;

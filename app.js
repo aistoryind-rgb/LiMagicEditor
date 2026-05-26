@@ -8139,12 +8139,11 @@ function initBugReport() {
                 return;
             }
             
+            // Instantly transition to inline Submitting state
             btnSubmitBugInline.classList.add("submitting");
-            if (feedbackOverlay) feedbackOverlay.classList.remove("hide");
-            if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
-            if (feedbackSuccess) feedbackSuccess.classList.add("hide");
-            if (btnFeedbackClose) btnFeedbackClose.classList.add("hide");
-            if (feedbackText) feedbackText.textContent = "Capturing ad details...";
+            btnSubmitBugInline.classList.remove("glow-red");
+            btnSubmitBugInline.classList.add("btn-submitting");
+            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
             
             setTimeout(() => {
                 const compileAndSend = () => {
@@ -8161,10 +8160,10 @@ function initBugReport() {
                     if (!CONFIG.GOOGLE_SCRIPT_URL) {
                         setTimeout(() => {
                             btnSubmitBugInline.classList.remove("submitting");
-                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-                            if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                            if (feedbackText) feedbackText.textContent = `Google Apps Script URL not configured. Category: ${activeCategory}.`;
-                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                            btnSubmitBugInline.classList.remove("btn-submitting");
+                            btnSubmitBugInline.classList.add("glow-red");
+                            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+                            alert("Google Apps Script URL not configured.");
                         }, 1000);
                         return;
                     }
@@ -8186,29 +8185,25 @@ function initBugReport() {
                         .then(response => response.json())
                         .then(data => {
                             btnSubmitBugInline.classList.remove("submitting");
-                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                            btnSubmitBugInline.classList.remove("btn-submitting");
+                            
                             if (data.status === "success") {
-                                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                                if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Correction logged directly to Google Sheets & Email.";
-                                
-                                // Change inline button style & text to blue "Bug Sent"
+                                // Transition to blue "Bug Sent" state
                                 btnSubmitBugInline.classList.remove("glow-red");
                                 btnSubmitBugInline.classList.add("btn-sent");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
                             } else {
-                                if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
+                                btnSubmitBugInline.classList.add("glow-red");
+                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+                                alert("Error submitting bug report: " + (data.message || "Failed to submit."));
                             }
-                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
                         })
                         .catch(err => {
                             console.error("Bug report upload error:", err);
                             btnSubmitBugInline.classList.remove("submitting");
-                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-                            if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
-                            if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                            btnSubmitBugInline.classList.remove("btn-submitting");
                             
-                            // Change inline button style & text to blue "Bug Sent" (fallback success)
+                            // Revert/Fallback success
                             btnSubmitBugInline.classList.remove("glow-red");
                             btnSubmitBugInline.classList.add("btn-sent");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;

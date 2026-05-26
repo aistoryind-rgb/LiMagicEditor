@@ -8054,6 +8054,80 @@ function initBugReport() {
     }
 
     // Inline Submit Bug Button
+    function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
+        return new Promise((resolve) => {
+            const container = document.createElement("div");
+            container.style.position = "absolute";
+            container.style.left = "-9999px";
+            container.style.top = "0";
+            container.style.width = "520px";
+            container.style.padding = "24px";
+            container.style.backgroundColor = "#0a0b10";
+            container.style.color = "#f5f5f7";
+            container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
+            container.style.boxSizing = "border-box";
+            container.style.borderRadius = "12px";
+            container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
+            container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
+
+            container.innerHTML = `
+                <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
+                    <span style="color: #ff453a;">●</span> LifeInvader False-Rejection Report
+                </h2>
+                
+                <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
+                    A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
+                </p>
+                
+                <!-- Box 1: What the Editor Typed (Raw Input) -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                        What the Editor Typed
+                    </div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${rawAdText}</div>
+                </div>
+                
+                <!-- Box 2: What the System Gave (Processed Output) -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                        What the System Returned / Expected Correction
+                    </div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${rawAdText}"<br>Rejection Reason: "${rejectionReasonText}"</div>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
+                <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
+                    This is an automated notification from your LifeInvader Ads Assist Web App.
+                </p>
+            `;
+
+            document.body.appendChild(container);
+
+            setTimeout(() => {
+                if (window.html2canvas) {
+                    window.html2canvas(container, {
+                        backgroundColor: "#0a0b10",
+                        scale: 2,
+                        logging: false,
+                        useCORS: true
+                    }).then((canvas) => {
+                        const dataUrl = canvas.toDataURL("image/png");
+                        document.body.removeChild(container);
+                        resolve(dataUrl);
+                    }).catch((err) => {
+                        console.error("html2canvas generation error:", err);
+                        document.body.removeChild(container);
+                        resolve("");
+                    });
+                } else {
+                    console.warn("html2canvas is not loaded");
+                    document.body.removeChild(container);
+                    resolve("");
+                }
+            }, 100);
+        });
+    }
+
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {
         btnSubmitBugInline.addEventListener("click", () => {
@@ -8071,6 +8145,7 @@ function initBugReport() {
                     const activeCategory = processedAdText ? (processedAdText.getAttribute("data-active-category") || "Other") : "Other";
                     const rejectionReasonEl = document.getElementById("rejection-reason-text");
                     const rejectionReasonText = rejectionReasonEl ? rejectionReasonEl.textContent.trim() : "";
+                    const timestamp = new Date().toLocaleString();
                     
                     const expectedOutput = `[Inline False-Rejection Report]\nRaw Ad Content: "${rawAdText}"\nRejection Reason: "${rejectionReasonText}"`;
 
@@ -8084,46 +8159,48 @@ function initBugReport() {
                         return;
                     }
                     
-                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "text/plain"
-                        },
-                        body: JSON.stringify({
-                            action: "bug_report",
-                            category: activeCategory,
-                            rawInput: rawAdText,
-                            expectedOutput: expectedOutput,
-                            screenshotBase64: ""
+                    generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp).then((screenshotBase64) => {
+                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "text/plain"
+                            },
+                            body: JSON.stringify({
+                                action: "bug_report",
+                                category: activeCategory,
+                                rawInput: rawAdText,
+                                expectedOutput: expectedOutput,
+                                screenshotBase64: screenshotBase64
+                            })
                         })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-                        if (data.status === "success") {
+                        .then(response => response.json())
+                        .then(data => {
+                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                            if (data.status === "success") {
+                                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                                if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Correction logged directly to Google Sheets & Email.";
+                                
+                                // Change inline button style & text to blue "Bug Sent"
+                                btnSubmitBugInline.classList.remove("glow-red");
+                                btnSubmitBugInline.classList.add("btn-sent");
+                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                            } else {
+                                if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
+                            }
+                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                        })
+                        .catch(err => {
+                            console.error("Bug report upload error:", err);
+                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                            if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
                             if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                            if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Correction logged directly to Google Sheets & Email.";
+                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
                             
-                            // Change inline button style & text to blue "Bug Sent"
+                            // Change inline button style & text to blue "Bug Sent" (fallback success)
                             btnSubmitBugInline.classList.remove("glow-red");
                             btnSubmitBugInline.classList.add("btn-sent");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
-                        } else {
-                            if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
-                        }
-                        if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
-                    })
-                    .catch(err => {
-                        console.error("Bug report upload error:", err);
-                        if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-                        if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
-                        if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                        if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
-                        
-                        // Change inline button style & text to blue "Bug Sent" (fallback success)
-                        btnSubmitBugInline.classList.remove("glow-red");
-                        btnSubmitBugInline.classList.add("btn-sent");
-                        btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                        });
                     });
                 };
                 compileAndSend();

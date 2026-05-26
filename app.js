@@ -10816,6 +10816,28 @@ function searchPolicyBookAndSwitch(query) {
 }
 
 /**
+ * Searches the Database Explorer tab for the specified query and filters results.
+ */
+function searchDatabaseExplorer(query, filter) {
+    const dbTabBtn = document.querySelector('.tab-btn[data-tab="tab-db"]');
+    if (dbTabBtn) {
+        dbTabBtn.click();
+    }
+    const searchInput = document.getElementById("db-search-input");
+    if (searchInput) {
+        searchInput.value = query;
+        // Select active filter button
+        const filterBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+        if (filterBtn) {
+            filterBtn.click();
+        } else {
+            const event = new Event('input', { bubbles: true });
+            searchInput.dispatchEvent(event);
+        }
+    }
+}
+
+/**
  * Verifies if a word/phrase exists in the internal policy book text.
  */
 function validateWordAgainstPolicy(word) {
@@ -11253,7 +11275,13 @@ function renderTriageCards(reports, container) {
                         <input type="text" class="manual-right-input" placeholder="e.g. Louis Vuitton" value="${correction ? correction.right : ''}" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; flex-wrap: wrap;">
+                    <button type="button" class="btn-manual-view-vehicles-clothing" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.2); color: #a78bfa; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-car"></i> Vehicles and Clothing list
+                    </button>
+                    <button type="button" class="btn-manual-view-items" style="background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); color: #22d3ee; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-box"></i> Item list
+                    </button>
                     <button type="button" class="btn-manual-verify-policy" style="background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.2); color: #ff9500; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(255, 149, 0, 0.2);">
                         <i class="fa-solid fa-search"></i> Check Policy
                     </button>
@@ -11418,6 +11446,44 @@ function renderTriageCards(reports, container) {
             });
         }
         
+        // ── Manual View Vehicles & Clothing List Button ──────────────────────
+        const manualVehiclesClothingBtn = card.querySelector(".btn-manual-view-vehicles-clothing");
+        if (manualVehiclesClothingBtn) {
+            manualVehiclesClothingBtn.addEventListener("click", () => {
+                const wrongInput = card.querySelector(".manual-wrong-input");
+                const rightInput = card.querySelector(".manual-right-input");
+                const searchQ = (rightInput.value || wrongInput.value || "").trim();
+                if (searchQ) {
+                    let filter = "vehicles";
+                    const isClothing = (report.category && report.category.toLowerCase() === "clothing") ||
+                                       /clothing|dress|shirt|pant|shoe|wear|suit|hat|mask|bag|glasses|watch/i.test(searchQ);
+                    if (isClothing) {
+                        filter = "clothing";
+                    }
+                    searchDatabaseExplorer(searchQ, filter);
+                    showCustomNotification(`Searching Database Explorer (${filter === "clothing" ? "Clothing" : "Vehicles"}) for "${searchQ}"...`, "info");
+                } else {
+                    showCustomNotification("Please enter a term to search.", "warning");
+                }
+            });
+        }
+        
+        // ── Manual View Item List Button ───────────────────────────────
+        const manualItemsBtn = card.querySelector(".btn-manual-view-items");
+        if (manualItemsBtn) {
+            manualItemsBtn.addEventListener("click", () => {
+                const wrongInput = card.querySelector(".manual-wrong-input");
+                const rightInput = card.querySelector(".manual-right-input");
+                const searchQ = (rightInput.value || wrongInput.value || "").trim();
+                if (searchQ) {
+                    searchDatabaseExplorer(searchQ, "items");
+                    showCustomNotification(`Searching Database Explorer (Items) for "${searchQ}"...`, "info");
+                } else {
+                    showCustomNotification("Please enter a term to search.", "warning");
+                }
+            });
+        }
+
         // ── Manual Verify in Policy Button ──────────────────────────────
         const manualVerifyBtn = card.querySelector(".btn-manual-verify-policy");
         if (manualVerifyBtn) {

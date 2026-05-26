@@ -365,6 +365,33 @@ function handleAccessRequest(data, headers) {
     sheet.appendRow([timestamp, firstname, lastname, id, clientUuid, "pending"]);
   }
   
+  // 1. Process screenshot if present
+  let driveFileUrl = "No screenshot uploaded";
+  let attachment = null;
+  
+  if (data.screenshotBase64 && data.screenshotBase64.includes("base64,")) {
+    try {
+      const parts = data.screenshotBase64.split("base64,");
+      const mimeType = parts[0].match(/data:(.*?);/)[1];
+      const base64Data = parts[1];
+      const decodedBytes = Utilities.base64Decode(base64Data);
+      
+      const extension = mimeType.split("/")[1] || "png";
+      const fileName = `access_request_${id}_${Date.now()}.${extension}`;
+      const blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
+      
+      // Save to Google Drive
+      const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      
+      driveFileUrl = file.getUrl();
+      attachment = blob;
+    } catch (err) {
+      driveFileUrl = `Error uploading screenshot to Drive: ${err.toString()}`;
+    }
+  }
+
   // Prepare approval/rejection links
   let webAppUrl = "";
   try {
@@ -380,6 +407,16 @@ function handleAccessRequest(data, headers) {
     const rejectUrl = `${cleanUrl}?action=reject_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
     
     const emailSubject = `[LifeInvader Access Request] ${firstname} ${lastname} (ID: ${id})`;
+    
+    let driveLinkHtml = "";
+    if (driveFileUrl && driveFileUrl.startsWith("http")) {
+      driveLinkHtml = `
+        <div style="margin-top: 15px; font-size: 13px; color: #8e8e93; text-align: center;">
+          <strong>Visual Request Card saved to Drive:</strong> <a href="${driveFileUrl}" target="_blank" style="color: #30d158; text-decoration: none;">View in Google Drive</a>
+        </div>
+      `;
+    }
+
     const emailHtmlBody = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0b0c; color: #f5f5f7; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; box-sizing: border-box;">
         <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-top: 0;">
@@ -423,6 +460,8 @@ function handleAccessRequest(data, headers) {
           </a>
         </div>
         
+        ${driveLinkHtml}
+        
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 25px 0;">
         <p style="font-size: 12px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center;">
           This is an automated notification from your LifeInvader Ads Assist Web App.
@@ -430,12 +469,17 @@ function handleAccessRequest(data, headers) {
       </div>
     `;
     
+    const emailParams = {
+      to: ADMIN_EMAIL,
+      subject: emailSubject,
+      htmlBody: emailHtmlBody
+    };
+    if (attachment) {
+      emailParams.attachments = [attachment];
+    }
+    
     try {
-      MailApp.sendEmail({
-        to: ADMIN_EMAIL,
-        subject: emailSubject,
-        htmlBody: emailHtmlBody
-      });
+      MailApp.sendEmail(emailParams);
       Logger.log("Access request notification email sent to admin successfully.");
     } catch(mailErr) {
       Logger.log("Error sending access request email: " + mailErr.toString());
@@ -444,7 +488,8 @@ function handleAccessRequest(data, headers) {
   
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
-    message: "Access request submitted. Please wait for admin approval."
+    message: "Access request submitted. Please wait for admin approval.",
+    driveUrl: driveFileUrl
   })).setMimeType(ContentService.MimeType.JSON);
 }
 

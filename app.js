@@ -7656,6 +7656,97 @@ function initAccessGate() {
         }, 10000);
     }
     
+    function generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp) {
+        return new Promise((resolve) => {
+            const container = document.createElement("div");
+            container.style.position = "absolute";
+            container.style.left = "-9999px";
+            container.style.top = "0";
+            container.style.width = "480px";
+            container.style.padding = "24px";
+            container.style.backgroundColor = "#0a0a0c";
+            container.style.color = "#f5f5f7";
+            container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
+            container.style.boxSizing = "border-box";
+            container.style.borderRadius = "16px";
+            container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
+            container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
+
+            container.innerHTML = `
+                <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 16px 0; font-family: 'Outfit', sans-serif;">
+                    LifeInvader Access Request
+                </h2>
+                <p style="font-size: 14px; color: #8e8e93; line-height: 1.5; margin: 0 0 20px 0;">
+                    A new request to access the <strong style="color: #ffffff;">LifeInvader Ads Assist</strong> portal has been submitted.
+                </p>
+                
+                <div style="background-color: #121214; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+                    <table cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 14px; color: #e1e1e6;">
+                        <tr>
+                            <td style="font-weight: 600; width: 120px; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Name:</td>
+                            <td style="color: #ffffff; padding: 4px 0;">${firstname} ${lastname}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">In-Game ID:</td>
+                            <td style="font-family: monospace; font-size: 15px; color: #30d158; font-weight: 700; padding: 4px 0;">${id}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Hardware ID:</td>
+                            <td style="font-family: monospace; font-size: 12px; color: #a1a1a6; word-break: break-all; padding: 4px 0;">${clientUuid}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Timestamp:</td>
+                            <td style="color: #a1a1a6; padding: 4px 0;">${timestamp}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p style="font-size: 14px; color: #8e8e93; font-weight: 600; margin: 0 0 16px 0; font-family: 'Outfit', sans-serif;">
+                    Process this request immediately using the actions below:
+                </p>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 24px;">
+                    <div style="flex: 1; background-color: #30d158; color: #ffffff; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; text-align: center; border: 1px solid #24b046; font-family: 'Outfit', sans-serif;">
+                        Approve Access
+                    </div>
+                    <div style="flex: 1; background-color: #ff453a; color: #ffffff; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; text-align: center; border: 1px solid #e0352b; font-family: 'Outfit', sans-serif;">
+                        Reject Access
+                    </div>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0 0 16px 0;">
+                <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center;">
+                    This is an automated notification from your LifeInvader Ads Assist Web App.
+                </p>
+            `;
+
+            document.body.appendChild(container);
+
+            setTimeout(() => {
+                if (window.html2canvas) {
+                    window.html2canvas(container, {
+                        backgroundColor: "#0a0a0c",
+                        scale: 2,
+                        logging: false,
+                        useCORS: true
+                    }).then((canvas) => {
+                        const dataUrl = canvas.toDataURL("image/png");
+                        document.body.removeChild(container);
+                        resolve(dataUrl);
+                    }).catch((err) => {
+                        console.error("html2canvas generation error:", err);
+                        document.body.removeChild(container);
+                        resolve("");
+                    });
+                } else {
+                    console.warn("html2canvas is not loaded");
+                    document.body.removeChild(container);
+                    resolve("");
+                }
+            }, 100);
+        });
+    }
+
     let isSubmitting = false;
     
     if (btnRequestSubmit) {
@@ -7686,43 +7777,49 @@ function initAccessGate() {
                 btnRequestSubmit.disabled = true;
                 btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
                 
-                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify({
-                        action: "access_request",
-                        firstname: firstname,
-                        lastname: lastname,
-                        server: server,
-                        id: id,
-                        clientUuid: getOrCreateClientUuid()
+                const timestamp = new Date().toLocaleString();
+                const clientUuid = getOrCreateClientUuid();
+                
+                generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp).then((screenshotBase64) => {
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain" },
+                        body: JSON.stringify({
+                            action: "access_request",
+                            firstname: firstname,
+                            lastname: lastname,
+                            server: server,
+                            id: id,
+                            clientUuid: clientUuid,
+                            screenshotBase64: screenshotBase64
+                        })
                     })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    isSubmitting = false;
-                    btnRequestSubmit.disabled = false;
-                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    if (data.status === "success") {
+                    .then(r => r.json())
+                    .then(data => {
+                        isSubmitting = false;
+                        btnRequestSubmit.disabled = false;
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                        if (data.status === "success") {
+                            transitionToApproveScreen();
+                            startPolling();
+                        } else if (data.status === "already_approved") {
+                            // User already has access - unlock directly
+                            localStorage.setItem("li_approved_token", "APPROVED");
+                            alert("You already have access! Refreshing...");
+                            window.location.reload();
+                        } else {
+                            alert("Error submitting request: " + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error submitting access request:", err);
+                        isSubmitting = false;
+                        btnRequestSubmit.disabled = false;
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                        alert("Could not connect to the server. Please try again later.");
                         transitionToApproveScreen();
                         startPolling();
-                    } else if (data.status === "already_approved") {
-                        // User already has access - unlock directly
-                        localStorage.setItem("li_approved_token", "APPROVED");
-                        alert("You already have access! Refreshing...");
-                        window.location.reload();
-                    } else {
-                        alert("Error submitting request: " + data.message);
-                    }
-                })
-                .catch(err => {
-                    console.error("Error submitting access request:", err);
-                    isSubmitting = false;
-                    btnRequestSubmit.disabled = false;
-                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    alert("Could not connect to the server. Please try again later.");
-                    transitionToApproveScreen();
-                    startPolling();
+                    });
                 });
             } else {
                 alert("No Web App URL configured. Please configure it in Developer Settings.");

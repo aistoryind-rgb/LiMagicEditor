@@ -1929,7 +1929,7 @@ function correctSpelling(text, ctx) {
         "panthuse": "penthouse"
     };
 
-    const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling);
+    const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling, ctx.extraSpelling || {});
     for (const [wrong, right] of Object.entries(activeMisspellings)) {
         let regex;
         if (wrong === "lui") {
@@ -6966,13 +6966,13 @@ function initFloatingClipboard() {
                 const noteWarning = document.getElementById("pip-overlay-note-warning");
 
                 if (badge) badge.innerHTML = `<span class="pulse-dot" style="background-color: #c084fc; box-shadow: 0 0 8px #c084fc;"></span>Pro Mode Active`;
-                if (text) text.textContent = `Pro Mode is designed for experienced editors who value speed and efficiency.`;
+                if (text) text.textContent = `Designed for experienced editors who can identify issues instantly and work with minimal guidance. 🚀`;
                 if (noteIcon) {
                     noteIcon.className = "fa-solid fa-sliders";
                     noteIcon.style.color = "#c084fc";
                 }
                 if (noteTitle) noteTitle.textContent = "Pro Mode Guidelines";
-                if (noteLead) noteLead.textContent = "Pro Mode is designed for experienced editors who value speed and efficiency.";
+                if (noteLead) noteLead.textContent = "Designed for experienced editors who can identify issues instantly and work with minimal guidance. 🚀";
                 if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> While advanced processing is enabled, you're still responsible for reviewing the final advertisement before publishing. 🚀`;
 
                 // Add pro styles and stats to main window active overlay card
@@ -11233,7 +11233,7 @@ function cleanExpectedOutput(rawInput, expectedOutput, category) {
  * Searches policy pages for a matching pattern or similar cased spelling rules,
  * registers it, saves/syncs it to local storage and the backend, and returns the match.
  */
-function selfTrainFromPolicy(rawInput, category) {
+function selfTrainFromPolicy(rawInput, category, dict = customSpelling) {
     if (!rawInput) return null;
     
     // 1. Try digit sequences first (e.g. 7777777)
@@ -11247,12 +11247,7 @@ function selfTrainFromPolicy(rawInput, category) {
                 for (const hMatch of hyphenatedMatches) {
                     const cleanHMatch = hMatch.replace(/-/g, "");
                     if (cleanHMatch === rawDigits) {
-                        customSpelling[rawDigits] = hMatch;
-                        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-                        saveCustomDataToBackend();
-                        if (typeof renderCustomSpelling === "function") {
-                            renderCustomSpelling();
-                        }
+                        dict[rawDigits] = hMatch;
                         return { wrong: rawDigits, right: hMatch };
                     }
                 }
@@ -11299,33 +11294,18 @@ function selfTrainFromPolicy(rawInput, category) {
                 }
             }
             
-            customSpelling[cand] = matchedCasedWord;
-            localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-            saveCustomDataToBackend();
-            if (typeof renderCustomSpelling === "function") {
-                renderCustomSpelling();
-            }
+            dict[cand] = matchedCasedWord;
             return { wrong: cand, right: matchedCasedWord };
         }
     }
     
     // 3. Special cases for multi-word brands
     if (rawInput.toLowerCase().includes("louis vuitton")) {
-        customSpelling["louis vuitton"] = "Lui Vi";
-        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-        saveCustomDataToBackend();
-        if (typeof renderCustomSpelling === "function") {
-            renderCustomSpelling();
-        }
+        dict["louis vuitton"] = "Lui Vi";
         return { wrong: "louis vuitton", right: "Lui Vi" };
     }
     if (rawInput.toLowerCase().includes("lv")) {
-        customSpelling["lv"] = "Lui Vi";
-        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-        saveCustomDataToBackend();
-        if (typeof renderCustomSpelling === "function") {
-            renderCustomSpelling();
-        }
+        dict["lv"] = "Lui Vi";
         return { wrong: "lv", right: "Lui Vi" };
     }
     
@@ -11397,7 +11377,7 @@ function loadAndRenderBugTriage() {
 /**
  * Helper to get the live ad validation output details.
  */
-function getLiveFixedOutputDetails(rawInput, category) {
+function getLiveFixedOutputDetails(rawInput, category, extraSpelling = {}) {
     const context = {
         raw: rawInput,
         phoneNumber: "",
@@ -11408,7 +11388,8 @@ function getLiveFixedOutputDetails(rawInput, category) {
         logs: [],
         category: category || "Other",
         finalText: "",
-        priceInfo: null
+        priceInfo: null,
+        extraSpelling: extraSpelling
     };
     try {
         runValidationPipeline(context, category || "auto");
@@ -11425,7 +11406,7 @@ function getLiveFixedOutputDetails(rawInput, category) {
 /**
  * Learns spelling and formatting mapping from a similar example ad.
  */
-function learnFromSimilarExample(rawText, similarText, category) {
+function learnFromSimilarExample(rawText, similarText, category, dict = customSpelling) {
     if (!rawText || !similarText) return false;
     const rawTokens = rawText.split(/\s+/).filter(Boolean);
     const similarTokens = similarText.split(/\s+/).filter(Boolean);
@@ -11451,7 +11432,7 @@ function learnFromSimilarExample(rawText, similarText, category) {
             const originalRawWord = rawTokens[i].toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
             const cleanSimWord = bestSimTok.replace(/^[^\w"']+|[^\w"']+$/g, "");
             if (originalRawWord && cleanSimWord && originalRawWord !== cleanSimWord.toLowerCase()) {
-                customSpelling[originalRawWord] = cleanSimWord;
+                dict[originalRawWord] = cleanSimWord;
                 trainedCount++;
             }
         }
@@ -11460,25 +11441,17 @@ function learnFromSimilarExample(rawText, similarText, category) {
     const rawDigits = rawText.match(/\b\d{4,10}\b/);
     const simDigits = similarText.match(/\b\d+(?:-\d+)+\b/);
     if (rawDigits && simDigits) {
-        customSpelling[rawDigits[0]] = simDigits[0];
+        dict[rawDigits[0]] = simDigits[0];
         trainedCount++;
     }
     
-    if (trainedCount > 0) {
-        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-        saveCustomDataToBackend();
-        if (typeof renderCustomSpelling === "function") {
-            renderCustomSpelling();
-        }
-        return true;
-    }
-    return false;
+    return trainedCount > 0;
 }
 
 /**
  * Searches the vehicles, clothing, or items database lists for fuzzy matches.
  */
-function trainFromDatabase(rawText, dbType) {
+function trainFromDatabase(rawText, dbType, dict = customSpelling) {
     const rawClean = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
     const rawTokens = rawClean.split(/\s+/).filter(Boolean);
     const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
@@ -11527,7 +11500,7 @@ function trainFromDatabase(rawText, dbType) {
         let exactMatch = dbWords.find(w => w.toLowerCase() === cand);
         if (exactMatch) {
             if (cand !== exactMatch) {
-                customSpelling[cand] = exactMatch;
+                dict[cand] = exactMatch;
                 trainedCount++;
             }
             continue;
@@ -11541,7 +11514,7 @@ function trainFromDatabase(rawText, dbType) {
         });
         if (spaceRemovedMatch) {
             if (cand !== spaceRemovedMatch) {
-                customSpelling[cand] = spaceRemovedMatch;
+                dict[cand] = spaceRemovedMatch;
                 trainedCount++;
             }
             continue;
@@ -11563,21 +11536,13 @@ function trainFromDatabase(rawText, dbType) {
                 }
             }
             if (bestWord) {
-                customSpelling[cand] = bestWord;
+                dict[cand] = bestWord;
                 trainedCount++;
             }
         }
     }
     
-    if (trainedCount > 0) {
-        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-        saveCustomDataToBackend();
-        if (typeof renderCustomSpelling === "function") {
-            renderCustomSpelling();
-        }
-        return true;
-    }
-    return false;
+    return trainedCount > 0;
 }
 
 
@@ -11662,6 +11627,7 @@ function renderTriageCards(reports, container) {
     container.innerHTML = "";
     
     reports.forEach((report, idx) => {
+        report.stagedSpelling = report.stagedSpelling || {};
         const card = document.createElement("div");
         card.className = "triage-card";
         card.style.cssText = `
@@ -11691,10 +11657,13 @@ function renderTriageCards(reports, container) {
         let currentCategory = report.category || "Other";
         const catColor = catColors[currentCategory] || "#94a3b8";
         
+        let lastPreviewText = "";
+        
         // Function to render card inner content
         const updateCardBody = () => {
-            const liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory);
+            const liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory, report.stagedSpelling);
             const isPassed = liveFixed.status === "passed";
+            lastPreviewText = liveFixed.text;
             
             // Side-by-side dark boxes layout
             const diffHtml = `
@@ -11823,6 +11792,22 @@ function renderTriageCards(reports, container) {
                 confirmBtn.addEventListener("click", () => {
                     const textEl = card.querySelector(".fixed-output-text");
                     const finalAdText = textEl ? textEl.textContent.trim() : "";
+                    
+                    // If they edited the text directly, extract spelling corrections from it
+                    if (finalAdText && finalAdText !== lastPreviewText) {
+                        learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
+                    }
+                    
+                    // Save all staged corrections to the persistent database on confirm
+                    if (report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0) {
+                        Object.assign(customSpelling, report.stagedSpelling);
+                        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                        saveCustomDataToBackend();
+                        if (typeof renderCustomSpelling === "function") {
+                            renderCustomSpelling();
+                        }
+                    }
+                    
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(finalAdText)
                             .then(() => {
@@ -11842,9 +11827,9 @@ function renderTriageCards(reports, container) {
             // ── Train from Policy Button ──
             if (trainPolicyBtn) {
                 trainPolicyBtn.addEventListener("click", () => {
-                    const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory);
+                    const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
                     if (trainedCorr) {
-                        showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}"`, "success");
+                        showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}" (previewing, click Confirm to save)`, "success");
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching policy example found. Please train manually.", "warning");
@@ -11860,9 +11845,9 @@ function renderTriageCards(reports, container) {
             // ── Train from Vehicles & Clothing Button ──
             if (trainVehiclesClothingBtn) {
                 trainVehiclesClothingBtn.addEventListener("click", () => {
-                    const success = trainFromDatabase(report.rawInput, "vehicles_clothing");
+                    const success = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
                     if (success) {
-                        showCustomNotification("Trained from Vehicles & Clothing database list successfully!", "success");
+                        showCustomNotification("Trained from Vehicles & Clothing database list successfully! (previewing, click Confirm to save)", "success");
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching vehicle or clothing items found in database.", "warning");
@@ -11873,9 +11858,9 @@ function renderTriageCards(reports, container) {
             // ── Train from Items Button ──
             if (trainItemsBtn) {
                 trainItemsBtn.addEventListener("click", () => {
-                    const success = trainFromDatabase(report.rawInput, "items");
+                    const success = trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
                     if (success) {
-                        showCustomNotification("Trained from Items database list successfully!", "success");
+                        showCustomNotification("Trained from Items database list successfully! (previewing, click Confirm to save)", "success");
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching items found in database.", "warning");
@@ -11912,9 +11897,9 @@ function renderTriageCards(reports, container) {
                     }
                     
                     currentCategory = selectedCat;
-                    const trained = learnFromSimilarExample(report.rawInput, similarVal, selectedCat);
+                    const trained = learnFromSimilarExample(report.rawInput, similarVal, selectedCat, report.stagedSpelling);
                     if (trained) {
-                        showCustomNotification("Manual training completed successfully!", "success");
+                        showCustomNotification("Manual training completed successfully! (previewing, click Confirm to save)", "success");
                     } else {
                         showCustomNotification(`Running formatting pipeline for category ${selectedCat}...`, "info");
                     }

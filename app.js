@@ -1159,6 +1159,14 @@ const ITEMS_DB = {
     ]
 }
 ;
+const BUSINESSES_DB = [
+    "Ammunition Store", "ATM", "Car wash", "Car sharing", "Chip tuning", "Clothing shop", 
+    "Electric station", "Farm", "Flower shop", "Fight club", "Furniture shop", "Gas station", 
+    "Grand Elite", "Hair salon", "Jewelry store", "Juice shop", "Luna park", "Parking", 
+    "Pet Shop", "State object", "Service station", "Tattoo studio", "Taxi company", 
+    "24/7 Store", "Burger shop", "Cowshed", "Freight train", "Plantation", "Oil Well"
+];
+
 const BUILD_TIMESTAMP = "2026 May 26 07:30:20";
 const BUILD_TIMESTAMP_SHORT = "May 26 07:30";
 
@@ -1559,6 +1567,25 @@ function renderSearchResults(query, filter) {
         }
     }
     
+    // 4. Business Matches
+    if (filter === "all" || filter === "businesses") {
+        BUSINESSES_DB.forEach(name => {
+            if (name.toLowerCase().includes(term) || term === "") {
+                matches.push({
+                    name: name,
+                    type: "Business",
+                    subtype: "Business",
+                    badgeClass: "business",
+                    details: "Official business type",
+                    statusText: "VALID BUSINESS",
+                    statusClass: "status-sellable",
+                    thumbIcon: "fa-briefcase",
+                    thumbClass: "cat-business"
+                });
+            }
+        });
+    }
+    
     // Cap results at 100 for performance
     const displayMatches = matches.slice(0, 100);
     
@@ -1588,8 +1615,9 @@ function renderSearchResults(query, filter) {
         `;
         
         card.addEventListener("dblclick", () => {
-            navigator.clipboard.writeText(item.name).then(() => {
-                showCustomNotification(`Copied "${item.name}" to clipboard!`, "success");
+            const copyText = item.type === "Vehicle" ? `"${item.name}"` : item.name;
+            navigator.clipboard.writeText(copyText).then(() => {
+                showCustomNotification(`Copied ${item.type === "Vehicle" ? copyText : `"${item.name}"`} to clipboard!`, "success");
             }).catch(err => {
                 console.error("Failed to copy text: ", err);
                 showCustomNotification("Failed to copy to clipboard", "error");
@@ -4957,7 +4985,7 @@ function formatOwnerSearchAd(adBody, ctx) {
     } else if (clean.includes("business") || clean.includes("biz")) {
         matchedName = "Business";
     } else if (clean) {
-        const bizTypes = ["Ammunition Store", "ATM", "Car wash", "Car sharing", "Chip tuning", "Clothing shop", "Electric station", "Farm", "Flower shop", "Fight club", "Furniture shop", "Gas station", "Grand Elite", "Hair salon", "Jewelry store", "Juice shop", "Luna park", "Parking", "Pet Shop", "State object", "Service station", "Tattoo studio", "Taxi company", "24/7 Store", "Burger shop", "Cowshed", "Freight train", "Plantation", "Oil Well"];
+        const bizTypes = BUSINESSES_DB;
         let closest = bizTypes.find(type => new RegExp(`\\b${escapeRegExp(type)}\\b`, 'i').test(clean));
         if (!closest) {
             closest = getClosestMatch(clean, bizTypes, 0.4);
@@ -5021,7 +5049,7 @@ function formatBusinessesAd(adBody, action, ctx) {
     }
     
     // Make sure we include "business" or "shares" keyword correctly
-    const bizTypes = ["Ammunition Store", "ATM", "Car wash", "Car sharing", "Chip tuning", "Clothing shop", "Electric station", "Farm", "Flower shop", "Fight club", "Furniture shop", "Gas station", "Grand Elite", "Hair salon", "Jewelry store", "Juice shop", "Luna park", "Parking", "Pet Shop", "State object", "Service station", "Tattoo studio", "Taxi company", "24/7 Store", "Burger shop", "Cowshed", "Freight train", "Plantation", "Oil Well"];
+    const bizTypes = BUSINESSES_DB;
     
     let matchedBiz = bizTypes.find(type => new RegExp(`\\b${escapeRegExp(type)}\\b`, 'i').test(body));
     if (!matchedBiz) {

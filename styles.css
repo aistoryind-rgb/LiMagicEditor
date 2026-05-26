@@ -1029,6 +1029,7 @@ textarea:focus, input:focus, select:focus {
 .db-card-thumb.cat-juices    { background: linear-gradient(135deg, #831843 0%, #db2777 100%); }
 .db-card-thumb.cat-subscriptions { background: linear-gradient(135deg, #701a75 0%, #f43f5e 100%); }
 .db-card-thumb.cat-others    { background: linear-gradient(135deg, #1f2937 0%, #6b7280 100%); }
+.db-card-thumb.cat-business  { background: linear-gradient(135deg, #064e3b 0%, #059669 100%); }
 
 /* Card body (right side) */
 .db-card-body {
@@ -1086,6 +1087,12 @@ textarea:focus, input:focus, select:focus {
     background: rgba(255, 159, 10, 0.12);
     color: #ff9f0a;
     border: 1px solid rgba(255, 159, 10, 0.2);
+}
+
+.db-item-badge.business {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.25);
 }
 
 .db-item-detail {

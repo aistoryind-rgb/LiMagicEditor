@@ -6932,6 +6932,48 @@ function initFloatingClipboard() {
                 pipLayoutMode = "pro";
                 pipLayout.classList.add("pip-pro-mode");
                 if (pipCompactToggle) pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                
+                // Update active overlay text in main window to reflect Pro Mode
+                const badge = document.getElementById("pip-overlay-badge");
+                const text = document.getElementById("pip-overlay-text");
+                const noteIcon = document.getElementById("pip-overlay-note-icon");
+                const noteTitle = document.getElementById("pip-overlay-note-title");
+                const noteLead = document.getElementById("pip-overlay-note-lead");
+                const noteWarning = document.getElementById("pip-overlay-note-warning");
+
+                if (badge) badge.innerHTML = `<span class="pulse-dot" style="background-color: #c084fc; box-shadow: 0 0 8px #c084fc;"></span>Pro Mode Active`;
+                if (text) text.textContent = `Pro Mode is designed for experienced editors who value speed and efficiency.`;
+                if (noteIcon) {
+                    noteIcon.className = "fa-solid fa-sliders";
+                    noteIcon.style.color = "#c084fc";
+                }
+                if (noteTitle) noteTitle.textContent = "Pro Mode Guidelines";
+                if (noteLead) noteLead.textContent = "Pro Mode is designed for experienced editors who value speed and efficiency.";
+                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> While advanced processing is enabled, you're still responsible for reviewing the final advertisement before publishing. 🚀`;
+
+                // Add pro styles and stats to main window active overlay card
+                const overlayCard = document.querySelector(".pip-overlay-card");
+                if (overlayCard) overlayCard.classList.add("pip-pro-active");
+
+                const statsDiv = document.getElementById("pip-overlay-pro-stats");
+                if (statsDiv) {
+                    statsDiv.classList.remove("hide");
+                    statsDiv.innerHTML = `
+                        <div class="pro-stat-item">
+                            <span class="pro-stat-label">Core Engine</span>
+                            <span class="pro-stat-value" style="color: #30d158; text-shadow: 0 0 6px rgba(48, 209, 88, 0.3);"><i class="fa-solid fa-circle-check"></i> OPTIMIZED</span>
+                        </div>
+                        <div class="pro-stat-item">
+                            <span class="pro-stat-label">Parser Latency</span>
+                            <span class="pro-stat-value" style="color: #c084fc; text-shadow: 0 0 6px rgba(192, 132, 252, 0.3);"><i class="fa-solid fa-bolt"></i> &lt; 4.8ms</span>
+                        </div>
+                        <div class="pro-stat-item">
+                            <span class="pro-stat-label">Sync Status</span>
+                            <span class="pro-stat-value" style="color: #2dd4bf; text-shadow: 0 0 6px rgba(45, 212, 191, 0.3);"><i class="fa-solid fa-arrows-rotate"></i> REAL-TIME</span>
+                        </div>
+                    `;
+                }
+
                 try {
                     pipWindow.resizeTo(420, 360);
                 } catch (err) {
@@ -6950,6 +6992,35 @@ function initFloatingClipboard() {
                     pipCompactToggle.classList.remove("reveal-magic");
                     pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
                 }
+
+                // Restore active overlay text in main window to reflect Magic Mode
+                const badge = document.getElementById("pip-overlay-badge");
+                const text = document.getElementById("pip-overlay-text");
+                const noteIcon = document.getElementById("pip-overlay-note-icon");
+                const noteTitle = document.getElementById("pip-overlay-note-title");
+                const noteLead = document.getElementById("pip-overlay-note-lead");
+                const noteWarning = document.getElementById("pip-overlay-note-warning");
+
+                if (badge) badge.innerHTML = `<span class="pulse-dot"></span>Magic Editor Active`;
+                if (text) text.textContent = `Magic Editor Mode is currently active and will remain floating above other windows for quick access.`;
+                if (noteIcon) {
+                    noteIcon.className = "fa-solid fa-graduation-cap";
+                    noteIcon.style.color = "";
+                }
+                if (noteTitle) noteTitle.textContent = "Editor's Career Guide";
+                if (noteLead) noteLead.innerHTML = `Everyone makes mistakes, which is why it's always a good idea to review your advertisement <span style="color: #30d158; font-weight: 700;">two</span> or <span style="color: #ff453a; font-weight: 700;">three times</span> before publishing.`;
+                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> This website is here to help, but any verbal warnings, strikes, or penalties received from a published advertisement are ultimately the responsibility of the publisher. 🚀`;
+
+                // Remove pro styles and clear stats from main window active overlay card
+                const overlayCard = document.querySelector(".pip-overlay-card");
+                if (overlayCard) overlayCard.classList.remove("pip-pro-active");
+
+                const statsDiv = document.getElementById("pip-overlay-pro-stats");
+                if (statsDiv) {
+                    statsDiv.classList.add("hide");
+                    statsDiv.innerHTML = "";
+                }
+
                 try {
                     pipWindow.resizeTo(420, 770);
                 } catch (err) {
@@ -7478,6 +7549,8 @@ function initFloatingClipboard() {
                     mainContainer.classList.remove("hide");
                     pipOverlay.classList.add("hide");
                 }
+                
+                switchToMagicMode();
 
                 // Restore PWA window size and position
                 const storedPos = sessionStorage.getItem('li_pwa_original_pos');
@@ -8253,7 +8326,7 @@ function initBugReport() {
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {
         let holdInterval = null;
-        const holdDuration = 1000; // 1 second
+        const holdDuration = 500; // 0.5 second
         let elapsed = 0;
         let isHolding = false;
         const originalHtml = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
@@ -8381,7 +8454,18 @@ function initBugReport() {
                     btnSubmitBugInline.style.transition = "background 0.3s ease, transform 0.2s ease";
                     btnSubmitBugInline.style.transform = "";
                     btnSubmitBugInline.style.background = "";
-                    executeBugSubmission();
+                    
+                    showCustomConfirmDialog(
+                        "Are you sure you want to submit a bug report for this advertisement? This will compile the raw ad content and active rejection reason for administrator review.",
+                        () => {
+                            executeBugSubmission();
+                        },
+                        () => {
+                            cancelHold();
+                        },
+                        "Send Report",
+                        false
+                    );
                 }
             }, 100);
         };

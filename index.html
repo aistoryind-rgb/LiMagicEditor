@@ -128,15 +128,16 @@
             <div class="li-logo">
                 <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
             </div>
-            <div class="pip-overlay-badge"><span class="pulse-dot"></span>Magic Editor Active</div>
-            <p class="pip-overlay-text">Magic Editor Mode is currently active and will remain floating above other windows for quick access.</p>
+            <div id="pip-overlay-badge" class="pip-overlay-badge"><span class="pulse-dot"></span>Magic Editor Active</div>
+            <p id="pip-overlay-text" class="pip-overlay-text">Magic Editor Mode is currently active and will remain floating above other windows for quick access.</p>
             <div class="pip-overlay-note">
                 <div class="note-header">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                    <span>Editor's Career Guide</span>
+                    <i id="pip-overlay-note-icon" class="fa-solid fa-graduation-cap"></i>
+                    <span id="pip-overlay-note-title">Editor's Career Guide</span>
                 </div>
-                <p class="guide-lead">Everyone makes mistakes, which is why it's always a good idea to review your advertisement <span style="color: #30d158; font-weight: 700;">two</span> or <span style="color: #ff453a; font-weight: 700;">three times</span> before publishing.</p>
-                <p class="guide-warning"><i class="fa-solid fa-circle-exclamation"></i> This website is here to help, but any verbal warnings, strikes, or penalties received from a published advertisement are ultimately the responsibility of the publisher. 🚀</p>
+                <p id="pip-overlay-note-lead" class="guide-lead">Everyone makes mistakes, which is why it's always a good idea to review your advertisement <span style="color: #30d158; font-weight: 700;">two</span> or <span style="color: #ff453a; font-weight: 700;">three times</span> before publishing.</p>
+                <p id="pip-overlay-note-warning" class="guide-warning"><i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> This website is here to help, but any verbal warnings, strikes, or penalties received from a published advertisement are ultimately the responsibility of the publisher. 🚀</p>
+                <div id="pip-overlay-pro-stats" class="hide" style="margin-top: 8px; padding-top: 10px; border-top: 1px dashed rgba(192, 132, 252, 0.2); display: flex; justify-content: space-around; gap: 8px; width: 100%; box-sizing: border-box;"></div>
             </div>
             <button id="btn-restore-main" class="btn-preset btn-restore-main">
                 <i class="fa-solid fa-window-restore"></i> Return to Main Window

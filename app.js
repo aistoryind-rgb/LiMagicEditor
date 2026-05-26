@@ -10885,6 +10885,53 @@ function renderTriageCards(reports, container) {
                 const wrong = trainBtn.getAttribute("data-wrong");
                 const right = trainBtn.getAttribute("data-right");
                 
+                // ── Policy Validation ──────────────────────────────────────
+                // Scan through ALL POLICY_PAGES to verify the corrected word
+                // exists in the internal policy before accepting training.
+                let foundInPolicy = false;
+                if (typeof POLICY_PAGES !== "undefined" && Array.isArray(POLICY_PAGES)) {
+                    const searchTerm = right.toLowerCase();
+                    for (let i = 0; i < POLICY_PAGES.length; i++) {
+                        // Strip HTML tags from content and search plain text
+                        const plainText = POLICY_PAGES[i].content
+                            .replace(/<[^>]*>/g, " ")
+                            .replace(/&amp;/g, "&")
+                            .replace(/&lt;/g, "<")
+                            .replace(/&gt;/g, ">")
+                            .replace(/&quot;/g, '"')
+                            .replace(/&#39;/g, "'")
+                            .replace(/&nbsp;/g, " ")
+                            .toLowerCase();
+                        
+                        if (plainText.includes(searchTerm)) {
+                            foundInPolicy = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!foundInPolicy) {
+                    // Reject — word not found in any policy page
+                    showCustomNotification(
+                        `Training rejected: "${right}" not found in the internal policy pages.`,
+                        "error"
+                    );
+                    
+                    // Red shake animation on the card to indicate rejection
+                    card.style.borderColor = "rgba(255,69,58,0.4)";
+                    card.style.boxShadow = "0 0 15px rgba(255,69,58,0.15)";
+                    card.style.animation = "none";
+                    requestAnimationFrame(() => {
+                        card.style.animation = "triageShake 0.4s ease";
+                    });
+                    setTimeout(() => {
+                        card.style.borderColor = "rgba(255,255,255,0.06)";
+                        card.style.boxShadow = "none";
+                    }, 1500);
+                    return;
+                }
+                // ── End Policy Validation ──────────────────────────────────
+                
                 // Add to customSpelling dictionary
                 customSpelling[wrong] = right;
                 localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));

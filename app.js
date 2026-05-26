@@ -6977,6 +6977,10 @@ function initFloatingClipboard() {
                     pipToggleMode.classList.remove("reveal-pro");
                     pipToggleMode.innerHTML = `MAGIC MODE`;
                 }
+                if (pipCompactToggle) {
+                    pipCompactToggle.classList.remove("reveal-magic");
+                    pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                }
                 try {
                     pipWindow.resizeTo(420, 770);
                 } catch (err) {
@@ -7017,7 +7021,14 @@ function initFloatingClipboard() {
             if (pipCompactToggle) {
                 pipCompactToggle.addEventListener("mouseenter", () => {
                     if (pipLayoutMode === "pro") {
-                        switchToMagicMode();
+                        pipCompactToggle.classList.add("reveal-magic");
+                        pipCompactToggle.innerHTML = `MAGIC MODE`;
+                    }
+                });
+                pipCompactToggle.addEventListener("mouseleave", () => {
+                    if (pipLayoutMode === "pro") {
+                        pipCompactToggle.classList.remove("reveal-magic");
+                        pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
                     }
                 });
                 pipCompactToggle.addEventListener("click", () => {

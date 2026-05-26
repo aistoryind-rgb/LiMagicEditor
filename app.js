@@ -8513,6 +8513,108 @@ function saveCustomDataToBackend() {
     });
 }
 
+function showCustomConfirmDialog(message, onConfirm, onCancel) {
+    let targetDoc = document;
+    if (pipWindowInstance && !pipWindowInstance.closed) {
+        targetDoc = pipWindowInstance.document;
+    }
+    
+    // Prevent multiple confirmation dialogs
+    const existing = targetDoc.getElementById("custom-confirm-overlay");
+    if (existing) existing.remove();
+
+    const overlay = targetDoc.createElement("div");
+    overlay.id = "custom-confirm-overlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.background = "rgba(10, 10, 12, 0.75)";
+    overlay.style.backdropFilter = "blur(10px)";
+    overlay.style.webkitBackdropFilter = "blur(10px)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.zIndex = "20000";
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.3s ease";
+
+    const dialog = targetDoc.createElement("div");
+    dialog.style.background = "rgba(18, 18, 20, 0.98)";
+    dialog.style.border = "1px solid rgba(255, 59, 48, 0.3)";
+    dialog.style.boxShadow = "0 10px 40px rgba(255, 59, 48, 0.15), 0 0 100px rgba(0, 0, 0, 0.8)";
+    dialog.style.borderRadius = "16px";
+    dialog.style.width = "90%";
+    dialog.style.maxWidth = "400px";
+    dialog.style.padding = "30px 24px";
+    dialog.style.textAlign = "center";
+    dialog.style.transform = "scale(0.9) translateY(20px)";
+    dialog.style.transition = "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)";
+    
+    dialog.innerHTML = `
+        <div style="background: rgba(255, 59, 48, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(255, 59, 48, 0.3); box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #ff3b30; font-size: 24px;"></i>
+        </div>
+        <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">Confirm Action</h4>
+        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500;">${message}</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="custom-confirm-cancel-btn" style="flex: 1; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+                Cancel
+            </button>
+            <button id="custom-confirm-ok-btn" class="btn-action glow-red" style="flex: 1; height: 40px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;">
+                Delete Reports
+            </button>
+        </div>
+    `;
+
+    overlay.appendChild(dialog);
+    targetDoc.body.appendChild(overlay);
+
+    // Fade-in animations
+    requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+        dialog.style.transform = "scale(1) translateY(0)";
+    });
+
+    const cancelBtn = dialog.querySelector("#custom-confirm-cancel-btn");
+    const okBtn = dialog.querySelector("#custom-confirm-ok-btn");
+
+    // Add styles for cancel hover
+    cancelBtn.addEventListener("mouseenter", () => {
+        cancelBtn.style.background = "rgba(255,255,255,0.08)";
+        cancelBtn.style.borderColor = "rgba(255,255,255,0.3)";
+    });
+    cancelBtn.addEventListener("mouseleave", () => {
+        cancelBtn.style.background = "rgba(255,255,255,0.03)";
+        cancelBtn.style.borderColor = "rgba(255,255,255,0.15)";
+    });
+
+    const closeDialog = (callback) => {
+        overlay.style.opacity = "0";
+        dialog.style.transform = "scale(0.9) translateY(20px)";
+        setTimeout(() => {
+            overlay.remove();
+            if (callback) callback();
+        }, 300);
+    };
+
+    cancelBtn.addEventListener("click", () => {
+        closeDialog(onCancel);
+    });
+
+    okBtn.addEventListener("click", () => {
+        closeDialog(onConfirm);
+    });
+
+    // Close on backdrop click
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+            closeDialog(onCancel);
+        }
+    });
+}
+
 function applyAdminRolePermissions() {
     const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
     
@@ -8858,7 +8960,16 @@ function initAdminPanel() {
                     clearInterval(holdInterval);
                     holdInterval = null;
                     isHolding = false;
-                    triggerClearBugs();
+                    
+                    showCustomConfirmDialog(
+                        "Are you sure you want to permanently clear all logged bug reports and delete their screenshot images from Google Drive? This action cannot be undone.",
+                        () => {
+                            triggerClearBugs();
+                        },
+                        () => {
+                            resetButtonToOriginal();
+                        }
+                    );
                 }
             }, 100);
         };

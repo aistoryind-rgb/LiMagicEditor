@@ -1668,6 +1668,13 @@ function getClosestMatch(input, list, threshold = 0.6) {
 
 function correctSpelling(text, ctx) {
     let corrected = text;
+
+    // Protect price values (e.g. 5m, 5mil, 500k, $5 Million) from spelling correction
+    const protectedPrices = [];
+    corrected = corrected.replace(/\b(?:\d+(?:[\.,]\d+)*\s*(?:k|m|mil|ml|million|billion|b|trillion)\b|\$\s*\d+(?:[\.,]\d+)*)/gi, (match) => {
+        protectedPrices.push(match);
+        return `__PROTECTED_PRICE_${protectedPrices.length - 1}__`;
+    });
     
     // Normalize percentage prefixes like %20 -> 20%
     const pctPrefixMatch = corrected.match(/%(\d+)\b/);
@@ -1931,6 +1938,10 @@ function correctSpelling(text, ctx) {
 
     const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling, ctx.extraSpelling || {});
     for (const [wrong, right] of Object.entries(activeMisspellings)) {
+        // Skip number-only keys (like "700" or "5") to prevent corrupting model numbers, price digits, etc.
+        if (/^\d+$/.test(wrong)) {
+            continue;
+        }
         let regex;
         if (wrong === "lui") {
             regex = /\blui\b(?!\s+vi\b)/gi;
@@ -1978,6 +1989,11 @@ function correctSpelling(text, ctx) {
     // Restore protected type numbers
     corrected = corrected.replace(/__PROTECTED_TYPE_(\d+)__/g, (match, idx) => {
         return protectedTypes[parseInt(idx)];
+    });
+
+    // Restore protected price values
+    corrected = corrected.replace(/__PROTECTED_PRICE_(\d+)__/g, (match, idx) => {
+        return protectedPrices[parseInt(idx)];
     });
 
     return corrected;
@@ -5521,7 +5537,7 @@ function formatOtherAd(adBody, action, ctx) {
 
                 // Filter out any numbers that are part of the clothing database name itself (e.g. 700 in "Abibas Pezy Boost 700 V3 Alvah shoes")
                 if (typeVal && matchedClothing.name) {
-                    const dbNumbers = matchedClothing.name.match(/\d+/g) || [];
+                    const dbNumbers = (matchedClothing.name.match(/\b\d+\b/g) || []).map(n => n.toString());
                     if (dbNumbers.length > 0) {
                         const rawNumbers = typeVal.split(/,\s*|and\s+/).map(s => s.trim());
                         const filteredNumbers = rawNumbers.filter(num => !dbNumbers.includes(num));
@@ -6433,20 +6449,46 @@ function parseQuantity(text) {
     const lower = text.toLowerCase();
     const regex = /\b(\d+)\b/g;
     let match;
+    
+    // Find if there is any matched clothing item in the text to avoid matching its model numbers as quantity
+    const matchedClothing = matchClothingItem(text);
+    const clothingNumbers = matchedClothing ? (matchedClothing.name.match(/\b\d+\b/g) || []).map(n => parseInt(n)) : [];
+
     while ((match = regex.exec(lower)) !== null) {
         const val = parseInt(match[1]);
+        
+        // Skip numbers that are part of the clothing model name (e.g. 700 in "Abibas Pezy Boost 700 V3 Alvah shoes")
+        if (clothingNumbers.includes(val)) {
+            continue;
+        }
+
         const start = match.index;
         const end = regex.lastIndex;
-        // check prefix
+        
+        // Check prefix
         const prefixText = lower.substring(Math.max(0, start - 15), start).trim();
+        
+        // Skip if preceded by price keywords or currency symbols
+        if (/(?:price|budget|rent|bet|cost|cash|salary|wage|\$)\s*$/i.test(prefixText)) {
+            continue;
+        }
+        
         if (/(?:\bhouse|\bapartment|\bmansion|\bpenthouse|\bshop|\bcard|\bcards|\bsim|\u2116|#|\bno\.?|\blevel|\blvl|\btype|\bt\.?|\bvolex|\bkolex|\btrousers?|\bmasks?|\bshoes?|\bt-shirts?|\bsweatshirts?|\bjackets?|\bhoodies?|\bdress|\bwatch(?:es)?|\bglasses|\bcaps?|\bhats?|\bshorts?|\bleggings?|\bsuits?|\baccessory|\baccessories|\bskirts?|\bvests?|\bpants|\bpiercings?|\bhorns?|\bearphones?|\bheadphones?|\bears?|\bcapes?|\bcrowns?|\bgloves?|\bstones?|\bbiosparks?)$/i.test(prefixText.replace(/[:#\s\u2116]+$/g, "").trim())) {
             continue;
         }
-        // check suffix
+        
+        // Check suffix
         const suffixText = lower.substring(end, Math.min(lower.length, end + 15)).trim();
+        
+        // Skip if followed by price suffixes
+        if (/^(?:m|mil|ml|million|k|thousand|b|billion|trillion)\b/i.test(suffixText)) {
+            continue;
+        }
+        
         if (/^(?:%|percent|g\.?s\.?|w\.?h\.?|days?|lvls?|levels?|years?)/i.test(suffixText)) {
             continue;
         }
+        
         return val;
     }
     return null;

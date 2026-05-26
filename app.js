@@ -7418,12 +7418,107 @@ function initFloatingClipboard() {
 
             const pipBtnSubmitBugInline = pipWindow.document.getElementById("pip-btn-submit-bug-inline");
             if (pipBtnSubmitBugInline) {
-                pipBtnSubmitBugInline.addEventListener("click", () => {
+                let pipHoldInterval = null;
+                const holdDuration = 500; // 0.5 second
+                let elapsed = 0;
+                let isHolding = false;
+                const originalHtml = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+
+                const updatePipButtonProgress = (pct) => {
+                    const remainingSecs = ((holdDuration - elapsed) / 1000).toFixed(1);
+                    const progressBg = `linear-gradient(90deg, rgba(230, 57, 70, 0.45) ${pct}%, rgba(22, 22, 28, 0.9) ${pct}%)`;
+                    pipBtnSubmitBugInline.style.background = progressBg;
+                    if (pct < 100) {
+                        pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin"></i> Hold (${remainingSecs}s)...`;
+                    }
+                };
+
+                const executePipBugSubmission = () => {
                     const mainBtn = document.getElementById("btn-submit-bug-inline");
                     if (mainBtn) {
-                        mainBtn.click();
+                        mainBtn.classList.add("submitting");
+                        mainBtn.classList.remove("glow-red");
+                        mainBtn.classList.add("btn-submitting");
+                        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
                     }
-                });
+                    if (typeof window.triggerBugSubmission === "function") {
+                        window.triggerBugSubmission();
+                    }
+                };
+
+                const cancelPipHold = () => {
+                    if (!isHolding) return;
+                    isHolding = false;
+                    if (pipHoldInterval) {
+                        clearInterval(pipHoldInterval);
+                        pipHoldInterval = null;
+                    }
+                    pipBtnSubmitBugInline.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+                    pipBtnSubmitBugInline.style.transform = "";
+                    pipBtnSubmitBugInline.style.background = "";
+                    
+                    const mainBtn = document.getElementById("btn-submit-bug-inline");
+                    if (mainBtn && mainBtn.classList.contains("btn-sent")) {
+                        pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                    } else if (mainBtn && mainBtn.classList.contains("btn-submitting")) {
+                        pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+                    } else {
+                        pipBtnSubmitBugInline.innerHTML = originalHtml;
+                    }
+                };
+
+                const startPipHold = (e) => {
+                    const mainBtn = document.getElementById("btn-submit-bug-inline");
+                    if (mainBtn && mainBtn.classList.contains("btn-sent")) {
+                        showCustomNotification("Bug report already submitted. A fix is expected within 10 minutes.", "warning");
+                        return;
+                    }
+                    if (pipBtnSubmitBugInline.classList.contains("submitting") || pipBtnSubmitBugInline.classList.contains("btn-submitting") || isHolding) {
+                        return;
+                    }
+
+                    isHolding = true;
+                    elapsed = 0;
+                    e.preventDefault();
+
+                    pipBtnSubmitBugInline.style.transition = "none";
+                    pipBtnSubmitBugInline.style.transform = "scale(0.97)";
+                    updatePipButtonProgress(0);
+
+                    pipHoldInterval = setInterval(() => {
+                        elapsed += 100;
+                        const pct = Math.min((elapsed / holdDuration) * 100, 100);
+                        updatePipButtonProgress(pct);
+
+                        if (elapsed >= holdDuration) {
+                            clearInterval(pipHoldInterval);
+                            pipHoldInterval = null;
+                            isHolding = false;
+                            
+                            pipBtnSubmitBugInline.style.transition = "background 0.3s ease, transform 0.2s ease";
+                            pipBtnSubmitBugInline.style.transform = "";
+                            pipBtnSubmitBugInline.style.background = "";
+                            
+                            showCustomConfirmDialog(
+                                "Are you sure you want to submit a bug report for this advertisement? This will compile the raw ad content and active rejection reason for administrator review.",
+                                () => {
+                                    executePipBugSubmission();
+                                },
+                                () => {
+                                    cancelPipHold();
+                                },
+                                "Send Report",
+                                false
+                            );
+                        }
+                    }, 100);
+                };
+
+                pipBtnSubmitBugInline.addEventListener("mousedown", startPipHold);
+                pipBtnSubmitBugInline.addEventListener("mouseup", cancelPipHold);
+                pipBtnSubmitBugInline.addEventListener("mouseleave", cancelPipHold);
+                pipBtnSubmitBugInline.addEventListener("touchstart", startPipHold);
+                pipBtnSubmitBugInline.addEventListener("touchend", cancelPipHold);
             }
 
             // Bind Hit History Overlay elements
@@ -8447,6 +8542,7 @@ function initBugReport() {
                 compileAndSend();
             }, 300);
         };
+        window.triggerBugSubmission = executeBugSubmission;
 
         const startHold = (e) => {
             if (btnSubmitBugInline.classList.contains("btn-sent")) {

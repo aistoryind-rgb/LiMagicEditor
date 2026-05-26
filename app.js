@@ -3887,7 +3887,9 @@ function checkProhibitedItems(text, ctx) {
     
     // Check Blacklist items
     for (const item of [...blacklistWeapons, ...blacklistDrugs, ...blacklistEMS, ...blacklistScanners, ...blacklistMisc]) {
-        if (lower.includes(item)) {
+        const escaped = item.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+        if (regex.test(lower)) {
             // Exclude weapon shop / ammunition store businesses
             if ((item === "ammunition" || item === "ammo" || item === "rifle") && 
                 (lower.includes("store") || lower.includes("shop") || lower.includes("club") || lower.includes("rifleclub"))) {
@@ -3923,7 +3925,9 @@ function checkProhibitedItems(text, ctx) {
         if (item === "burger" && (lower.includes("burger shop") || lower.includes("burger store"))) {
             continue;
         }
-        if (lower.includes(item)) {
+        const escaped = item.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+        if (regex.test(lower)) {
             ctx.status = "rejected";
             ctx.rejectionReason = `Cannot promote restricted item: "${item.toUpperCase()}".`;
             ctx.logs.push({ text: `Rejected: Advertisement mentions restricted item <strong>${item}</strong>`, type: 'warning' });
@@ -11271,9 +11275,25 @@ function learnFromSimilarExample(rawText, similarText, category) {
  * Searches the vehicles, clothing, or items database lists for fuzzy matches.
  */
 function trainFromDatabase(rawText, dbType) {
-    const words = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 2);
+    const rawClean = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+    const rawTokens = rawClean.split(/\s+/).filter(Boolean);
     const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
-    const candidates = words.filter(w => !stopwords.has(w));
+    
+    const candidates = [];
+    // Single words
+    for (const tok of rawTokens) {
+        if (tok.length >= 3 && !stopwords.has(tok)) {
+            candidates.push(tok);
+        }
+    }
+    // Adjacent two-word phrases
+    for (let i = 0; i < rawTokens.length - 1; i++) {
+        const tok1 = rawTokens[i];
+        const tok2 = rawTokens[i + 1];
+        if (!stopwords.has(tok1) && !stopwords.has(tok2)) {
+            candidates.push(tok1 + " " + tok2);
+        }
+    }
     
     let dbWords = [];
     if (dbType === "vehicles_clothing") {
@@ -11299,32 +11319,49 @@ function trainFromDatabase(rawText, dbType) {
     
     let trainedCount = 0;
     for (const cand of candidates) {
+        // 1. Exact match (case insensitive)
         let exactMatch = dbWords.find(w => w.toLowerCase() === cand);
         if (exactMatch) {
-            if (cand !== exactMatch.toLowerCase()) {
+            if (cand !== exactMatch) {
                 customSpelling[cand] = exactMatch;
                 trainedCount++;
             }
             continue;
         }
         
-        let bestWord = null;
-        let bestDist = Infinity;
-        for (const dbWord of dbWords) {
-            const dbWordLower = dbWord.toLowerCase();
-            const dbWordTokens = dbWordLower.split(/\s+/);
-            for (const token of dbWordTokens) {
-                const dist = levenshteinDistance(cand, token);
-                if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
-                    bestDist = dist;
-                    bestWord = dbWord;
-                }
+        // 2. Space-removed match (e.g. "sun trap" -> "Suntrap")
+        let spaceRemovedMatch = dbWords.find(w => {
+            const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const cleanC = cand.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return cleanW === cleanC && cleanW.length > 2;
+        });
+        if (spaceRemovedMatch) {
+            if (cand !== spaceRemovedMatch) {
+                customSpelling[cand] = spaceRemovedMatch;
+                trainedCount++;
             }
+            continue;
         }
         
-        if (bestWord) {
-            customSpelling[cand] = bestWord;
-            trainedCount++;
+        // 3. Fuzzy match (only check single words)
+        if (!cand.includes(" ")) {
+            let bestWord = null;
+            let bestDist = Infinity;
+            for (const dbWord of dbWords) {
+                const dbWordLower = dbWord.toLowerCase();
+                const dbWordTokens = dbWordLower.split(/\s+/);
+                for (const token of dbWordTokens) {
+                    const dist = levenshteinDistance(cand, token);
+                    if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
+                        bestDist = dist;
+                        bestWord = dbWord;
+                    }
+                }
+            }
+            if (bestWord) {
+                customSpelling[cand] = bestWord;
+                trainedCount++;
+            }
         }
     }
     

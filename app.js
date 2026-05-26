@@ -7768,6 +7768,7 @@ function initAccessGate() {
                         const panelContent = document.getElementById("admin-panel-content");
                         if (authContainer) authContainer.classList.add("hide");
                         if (panelContent) panelContent.classList.remove("hide");
+                        applyAdminRolePermissions();
                         renderCustomSpelling();
                         renderCustomTemplates();
                         refreshMainHistory();
@@ -8512,6 +8513,88 @@ function saveCustomDataToBackend() {
     });
 }
 
+function applyAdminRolePermissions() {
+    const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+    
+    // Ensure backup tab button is visible
+    const backupTabBtn = document.querySelector('.admin-tab-btn[data-target="tab-backup"]');
+    if (backupTabBtn) {
+        backupTabBtn.style.display = ""; // Always show it!
+    }
+
+    const tabBackup = document.getElementById("tab-backup");
+    if (!tabBackup) return;
+
+    // Check if banner already exists
+    let lockBanner = document.getElementById("backup-lock-banner");
+
+    if (isAssistant) {
+        // Create banner if not exists
+        if (!lockBanner) {
+            lockBanner = document.createElement("div");
+            lockBanner.id = "backup-lock-banner";
+            lockBanner.innerHTML = `
+                <div style="background: rgba(255, 59, 48, 0.1); border: 1px dashed rgba(255, 59, 48, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.05);">
+                    <div style="background: rgba(255, 59, 48, 0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #ff3b30; font-size: 18px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div>
+                        <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
+                        <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Assistant Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
+                    </div>
+                </div>
+            `;
+            tabBackup.insertBefore(lockBanner, tabBackup.firstChild);
+        }
+
+        // Disable all inputs & buttons in tab-backup
+        const inputs = tabBackup.querySelectorAll("input, textarea, button");
+        inputs.forEach(el => {
+            el.disabled = true;
+            el.style.opacity = "0.5";
+            el.style.cursor = "not-allowed";
+        });
+        
+        // Specifically target clear bugs button to completely restrict
+        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+        if (btnClearBugs) {
+            btnClearBugs.disabled = true;
+            btnClearBugs.style.opacity = "0.4";
+            btnClearBugs.style.cursor = "not-allowed";
+            btnClearBugs.classList.remove("glow-red");
+        }
+
+        const backupTextarea = document.getElementById("admin-backup-textarea");
+        if (backupTextarea) {
+            backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
+        }
+
+    } else {
+        // Super admin - remove banner if exists
+        if (lockBanner) {
+            lockBanner.remove();
+        }
+
+        // Enable all inputs & buttons in tab-backup
+        const inputs = tabBackup.querySelectorAll("input, textarea, button");
+        inputs.forEach(el => {
+            el.disabled = false;
+            el.style.opacity = "";
+            el.style.cursor = "";
+        });
+
+        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+        if (btnClearBugs) {
+            btnClearBugs.classList.add("glow-red");
+        }
+
+        const backupTextarea = document.getElementById("admin-backup-textarea");
+        if (backupTextarea) {
+            backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
+        }
+    }
+}
+
 function initAdminPanel() {
     const btnAuth = document.getElementById("btn-admin-auth");
     const inputPasscode = document.getElementById("admin-passcode-input");
@@ -8568,11 +8651,7 @@ function initAdminPanel() {
         if (authContainer) authContainer.classList.add("hide");
         if (panelContent) panelContent.classList.remove("hide");
         const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
-        // Hide restricted tabs for assistant admins
-        if (isAssistant) {
-            const backupTab = document.querySelector('.admin-tab-btn[data-target="tab-backup"]');
-            if (backupTab) backupTab.style.display = "none";
-        }
+        applyAdminRolePermissions();
         renderCustomSpelling();
         renderCustomTemplates();
         refreshMainHistory();
@@ -8593,6 +8672,7 @@ function initAdminPanel() {
             if (authError) authError.classList.add("hide");
             if (authContainer) authContainer.classList.add("hide");
             if (panelContent) panelContent.classList.remove("hide");
+            applyAdminRolePermissions();
             renderCustomSpelling();
             renderCustomTemplates();
             refreshMainHistory();

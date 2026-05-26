@@ -8132,7 +8132,7 @@ function initBugReport() {
     if (btnSubmitBugInline) {
         btnSubmitBugInline.addEventListener("click", () => {
             if (btnSubmitBugInline.classList.contains("btn-sent")) {
-                showCustomNotification("This bug report has already been sent to the developer and is currently under processing.", "warning");
+                showCustomNotification("Bug report already submitted. A fix is expected within 10 minutes.", "warning");
                 return;
             }
             if (btnSubmitBugInline.classList.contains("submitting")) {

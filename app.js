@@ -10665,17 +10665,17 @@ function renderTriageDiffHtml(raw, expected) {
     let rawHtml = rawWords.map(w => {
         const clean = w.toLowerCase().replace(/[^a-z0-9]/g, "");
         if (clean && !expectedLower.has(clean)) {
-            return `<span style="background: rgba(255,69,58,0.2); color: #ff6b6b; padding: 1px 4px; border-radius: 3px; text-decoration: line-through;">${w}</span>`;
+            return `<span class="clickable-diff-word" data-word="${clean}" title="Click to search in policy" style="background: rgba(255,69,58,0.2); color: #ff6b6b; padding: 1px 4px; border-radius: 3px; text-decoration: line-through; cursor: pointer; transition: background 0.2s;">${w}</span>`;
         }
-        return `<span style="opacity: 0.6;">${w}</span>`;
+        return `<span class="clickable-diff-word" data-word="${clean}" title="Click to search in policy" style="opacity: 0.6; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">${w}</span>`;
     }).join(" ");
     
     let expectedHtml = expectedWords.map(w => {
         const clean = w.toLowerCase().replace(/[^a-z0-9]/g, "");
         if (clean && !rawLower.has(clean)) {
-            return `<span style="background: rgba(48,209,88,0.2); color: #30d158; padding: 1px 4px; border-radius: 3px; font-weight: 600;">${w}</span>`;
+            return `<span class="clickable-diff-word" data-word="${clean}" title="Click to search in policy" style="background: rgba(48,209,88,0.2); color: #30d158; padding: 1px 4px; border-radius: 3px; font-weight: 600; cursor: pointer; transition: background 0.2s;">${w}</span>`;
         }
-        return `<span style="opacity: 0.6;">${w}</span>`;
+        return `<span class="clickable-diff-word" data-word="${clean}" title="Click to search in policy" style="opacity: 0.6; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">${w}</span>`;
     }).join(" ");
     
     return `
@@ -10689,6 +10689,70 @@ function renderTriageDiffHtml(raw, expected) {
                 <div style="background: rgba(48,209,88,0.04); border: 1px solid rgba(48,209,88,0.1); border-radius: 6px; padding: 8px 10px; word-break: break-word;">${expectedHtml}</div>
             </div>
         </div>`;
+}
+
+/**
+ * Helper to determine a search term to find in the Policy Reference Book.
+ */
+function getPolicySearchTerm(raw, expected, correction) {
+    if (correction && correction.right) {
+        return correction.right;
+    }
+    // Clean raw ad, remove prefixes
+    let clean = (raw || "").toLowerCase()
+        .replace(/^(buying|selling|trading|renting|hiring)\s+/i, "")
+        .replace(/[^a-z0-9\s]/g, "")
+        .trim();
+    const words = clean.split(/\s+/).filter(w => w.length > 2);
+    if (words.length > 0) {
+        return words.slice(0, 2).join(" ");
+    }
+    return raw || "";
+}
+
+/**
+ * Searches the Policy Reference Book for the specified query and switches to that tab.
+ */
+function searchPolicyBookAndSwitch(query) {
+    if (!query) return;
+    const bookTabBtn = document.querySelector('.tab-btn[data-tab="tab-book"]');
+    if (bookTabBtn) {
+        bookTabBtn.click();
+    }
+    const searchInput = document.getElementById("book-search-input");
+    if (searchInput) {
+        searchInput.value = query;
+        const event = new Event('input', { bubbles: true });
+        searchInput.dispatchEvent(event);
+    }
+}
+
+/**
+ * Verifies if a word/phrase exists in the internal policy book text.
+ */
+function validateWordAgainstPolicy(word) {
+    if (!word) return false;
+    let foundInPolicy = false;
+    if (typeof POLICY_PAGES !== "undefined" && Array.isArray(POLICY_PAGES)) {
+        const searchTerm = word.toLowerCase().trim();
+        for (let i = 0; i < POLICY_PAGES.length; i++) {
+            const plainText = POLICY_PAGES[i].content
+                .replace(/<[^>]*>/g, " ")
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&nbsp;/g, " ")
+                .toLowerCase();
+            
+            if (plainText.includes(searchTerm)) {
+                foundInPolicy = true;
+                break;
+            }
+        }
+    }
+    return foundInPolicy;
 }
 
 /**
@@ -10805,6 +10869,7 @@ function renderTriageCards(reports, container) {
     reports.forEach((report, idx) => {
         const correction = extractSpellingCorrection(report.rawInput, report.expectedOutput);
         const diffHtml = renderTriageDiffHtml(report.rawInput, report.expectedOutput);
+        const searchWord = getPolicySearchTerm(report.rawInput, report.expectedOutput, correction);
         
         const card = document.createElement("div");
         card.className = "triage-card";
@@ -10860,16 +10925,52 @@ function renderTriageCards(reports, container) {
                 <span style="font-size: 11.5px; color: var(--text-muted); opacity: 0.6;"><i class="fa-solid fa-info-circle" style="margin-right: 4px;"></i>No auto-correction detected — review manually</span>
             </div>`}
             
+            <!-- Manual Training Panel (Hidden by default) -->
+            <div class="manual-train-panel" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px; margin-top: 4px; transition: all 0.3s ease;">
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-pen-to-square"></i> Manual Correction Training</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Wrong Spelling</div>
+                        <input type="text" class="manual-wrong-input" placeholder="e.g. lui vi" value="${correction ? correction.wrong : ''}" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Correct Spelling</div>
+                        <input type="text" class="manual-right-input" placeholder="e.g. Louis Vuitton" value="${correction ? correction.right : ''}" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+                    <button type="button" class="btn-manual-verify-policy" style="background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.2); color: #ff9500; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(255, 149, 0, 0.2);">
+                        <i class="fa-solid fa-search"></i> Check Policy
+                    </button>
+                    <button type="button" class="btn-manual-train-spelling" style="background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.25); color: #30d158; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(48, 209, 88, 0.25);">
+                        <i class="fa-solid fa-bolt"></i> Train Spelling
+                    </button>
+                </div>
+            </div>
+            
             <!-- Action Buttons -->
-            <div style="display: flex; gap: 8px; margin-top: 2px;">
+            <div style="display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
                 ${correction ? `
                 <button type="button" class="btn-triage-train" data-wrong="${correction.wrong}" data-right="${correction.right}" style="
-                    flex: 1; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05)); border: 1px solid rgba(48,209,88,0.25); color: #30d158; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    flex: 1.5; min-width: 100px; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05)); border: 1px solid rgba(48,209,88,0.25); color: #30d158; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
                 ">
                     <i class="fa-solid fa-bolt"></i> Train Spelling
                 </button>` : ""}
+                
+                <button type="button" class="btn-triage-learn" data-query="${searchWord}" style="
+                    flex: 1; min-width: 100px; background: linear-gradient(135deg, rgba(255,149,0,0.15), rgba(255,149,0,0.05)); border: 1px solid rgba(255,149,0,0.25); color: #ff9500; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                ">
+                    <i class="fa-solid fa-book-open"></i> Learn from Policy
+                </button>
+                
+                <button type="button" class="btn-triage-manual-toggle" style="
+                    flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #60a5fa; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease;
+                ">
+                    <i class="fa-solid fa-sliders"></i> Adjust
+                </button>
+                
                 <button type="button" class="btn-triage-ignore" style="
-                    ${correction ? 'flex: 0 0 auto;' : 'flex: 1;'} background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 9px 14px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
                 ">
                     <i class="fa-solid fa-xmark"></i> Ignore
                 </button>
@@ -10878,46 +10979,84 @@ function renderTriageCards(reports, container) {
         
         container.appendChild(card);
         
-        // Wire up Train button
-        const trainBtn = card.querySelector(".btn-triage-train");
-        if (trainBtn) {
-            trainBtn.addEventListener("click", () => {
-                const wrong = trainBtn.getAttribute("data-wrong");
-                const right = trainBtn.getAttribute("data-right");
+        // ── Clickable Diff Words ───────────────────────────────────────
+        card.querySelectorAll(".clickable-diff-word").forEach(span => {
+            span.addEventListener("click", () => {
+                const word = span.getAttribute("data-word");
+                if (word && word.length > 1) {
+                    searchPolicyBookAndSwitch(word);
+                    showCustomNotification(`Searching Policy Reference Book for "${word}"...`, "info");
+                }
+            });
+        });
+        
+        // ── Learn from Policy Button ────────────────────────────────────
+        const learnBtn = card.querySelector(".btn-triage-learn");
+        if (learnBtn) {
+            learnBtn.addEventListener("click", () => {
+                const query = learnBtn.getAttribute("data-query");
+                if (query) {
+                    searchPolicyBookAndSwitch(query);
+                    showCustomNotification(`Searching Policy Reference Book for "${query}"...`, "info");
+                }
+            });
+        }
+        
+        // ── Manual Train Toggle Button ─────────────────────────────────
+        const manualToggleBtn = card.querySelector(".btn-triage-manual-toggle");
+        const manualPanel = card.querySelector(".manual-train-panel");
+        if (manualToggleBtn && manualPanel) {
+            manualToggleBtn.addEventListener("click", () => {
+                if (manualPanel.style.display === "none") {
+                    manualPanel.style.display = "flex";
+                    manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
+                    manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
+                } else {
+                    manualPanel.style.display = "none";
+                    manualToggleBtn.style.background = "rgba(255,255,255,0.03)";
+                    manualToggleBtn.style.borderColor = "rgba(255,255,255,0.08)";
+                }
+            });
+        }
+        
+        // ── Manual Verify in Policy Button ──────────────────────────────
+        const manualVerifyBtn = card.querySelector(".btn-manual-verify-policy");
+        if (manualVerifyBtn) {
+            manualVerifyBtn.addEventListener("click", () => {
+                const wrongInput = card.querySelector(".manual-wrong-input");
+                const rightInput = card.querySelector(".manual-right-input");
+                const searchQ = (rightInput.value || wrongInput.value || "").trim();
+                if (searchQ) {
+                    searchPolicyBookAndSwitch(searchQ);
+                    showCustomNotification(`Searching Policy Reference Book for "${searchQ}"...`, "info");
+                } else {
+                    showCustomNotification("Please enter a term to search.", "warning");
+                }
+            });
+        }
+        
+        // ── Manual Train Spelling Button ───────────────────────────────
+        const manualTrainSpellingBtn = card.querySelector(".btn-manual-train-spelling");
+        if (manualTrainSpellingBtn) {
+            manualTrainSpellingBtn.addEventListener("click", () => {
+                const wrongInput = card.querySelector(".manual-wrong-input");
+                const rightInput = card.querySelector(".manual-right-input");
+                const wrongVal = (wrongInput.value || "").toLowerCase().trim();
+                const rightVal = (rightInput.value || "").trim();
                 
-                // ── Policy Validation ──────────────────────────────────────
-                // Scan through ALL POLICY_PAGES to verify the corrected word
-                // exists in the internal policy before accepting training.
-                let foundInPolicy = false;
-                if (typeof POLICY_PAGES !== "undefined" && Array.isArray(POLICY_PAGES)) {
-                    const searchTerm = right.toLowerCase();
-                    for (let i = 0; i < POLICY_PAGES.length; i++) {
-                        // Strip HTML tags from content and search plain text
-                        const plainText = POLICY_PAGES[i].content
-                            .replace(/<[^>]*>/g, " ")
-                            .replace(/&amp;/g, "&")
-                            .replace(/&lt;/g, "<")
-                            .replace(/&gt;/g, ">")
-                            .replace(/&quot;/g, '"')
-                            .replace(/&#39;/g, "'")
-                            .replace(/&nbsp;/g, " ")
-                            .toLowerCase();
-                        
-                        if (plainText.includes(searchTerm)) {
-                            foundInPolicy = true;
-                            break;
-                        }
-                    }
+                if (!wrongVal || !rightVal) {
+                    showCustomNotification("Both wrong spelling and correct spelling must be filled.", "warning");
+                    card.style.animation = "none";
+                    requestAnimationFrame(() => {
+                        card.style.animation = "triageShake 0.4s ease";
+                    });
+                    return;
                 }
                 
+                // Policy Validation
+                const foundInPolicy = validateWordAgainstPolicy(rightVal);
                 if (!foundInPolicy) {
-                    // Reject — word not found in any policy page
-                    showCustomNotification(
-                        `Training rejected: "${right}" not found in the internal policy pages.`,
-                        "error"
-                    );
-                    
-                    // Red shake animation on the card to indicate rejection
+                    showCustomNotification(`Training rejected: "${rightVal}" not found in the internal policy pages.`, "error");
                     card.style.borderColor = "rgba(255,69,58,0.4)";
                     card.style.boxShadow = "0 0 15px rgba(255,69,58,0.15)";
                     card.style.animation = "none";
@@ -10930,23 +11069,22 @@ function renderTriageCards(reports, container) {
                     }, 1500);
                     return;
                 }
-                // ── End Policy Validation ──────────────────────────────────
                 
                 // Add to customSpelling dictionary
-                customSpelling[wrong] = right;
+                customSpelling[wrongVal] = rightVal;
                 localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
                 saveCustomDataToBackend();
                 
-                // Re-render the spelling tab if it was already displayed
                 if (typeof renderCustomSpelling === "function") {
                     renderCustomSpelling();
                 }
                 
-                // Success glow animation + collapse
-                trainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
-                trainBtn.style.background = "rgba(48,209,88,0.25)";
-                trainBtn.style.borderColor = "rgba(48,209,88,0.4)";
-                trainBtn.disabled = true;
+                // Animation & Dismiss
+                manualTrainSpellingBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
+                manualTrainSpellingBtn.style.background = "rgba(48,209,88,0.25)";
+                manualTrainSpellingBtn.style.borderColor = "rgba(48,209,88,0.4)";
+                manualTrainSpellingBtn.disabled = true;
+                if (trainBtn) trainBtn.disabled = true;
                 
                 card.style.borderColor = "rgba(48,209,88,0.3)";
                 card.style.boxShadow = "0 0 20px rgba(48,209,88,0.1)";
@@ -10964,7 +11102,72 @@ function renderTriageCards(reports, container) {
                     });
                     setTimeout(() => {
                         card.remove();
-                        // Check if container is now empty
+                        if (container.children.length === 0) {
+                            renderTriageCards([], container);
+                        }
+                    }, 500);
+                }, 600);
+                
+                showCustomNotification(`Spelling trained manually: "${wrongVal}" → "${rightVal}"`, "success");
+            });
+        }
+        
+        // ── Wire up Train button (Auto) ──────────────────────────────────
+        const trainBtn = card.querySelector(".btn-triage-train");
+        if (trainBtn) {
+            trainBtn.addEventListener("click", () => {
+                const wrong = trainBtn.getAttribute("data-wrong");
+                const right = trainBtn.getAttribute("data-right");
+                
+                // Policy Validation
+                const foundInPolicy = validateWordAgainstPolicy(right);
+                if (!foundInPolicy) {
+                    showCustomNotification(`Training rejected: "${right}" not found in the internal policy pages.`, "error");
+                    card.style.borderColor = "rgba(255,69,58,0.4)";
+                    card.style.boxShadow = "0 0 15px rgba(255,69,58,0.15)";
+                    card.style.animation = "none";
+                    requestAnimationFrame(() => {
+                        card.style.animation = "triageShake 0.4s ease";
+                    });
+                    setTimeout(() => {
+                        card.style.borderColor = "rgba(255,255,255,0.06)";
+                        card.style.boxShadow = "none";
+                    }, 1500);
+                    return;
+                }
+                
+                // Add to customSpelling dictionary
+                customSpelling[wrong] = right;
+                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                saveCustomDataToBackend();
+                
+                if (typeof renderCustomSpelling === "function") {
+                    renderCustomSpelling();
+                }
+                
+                // Success glow animation + collapse
+                trainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
+                trainBtn.style.background = "rgba(48,209,88,0.25)";
+                trainBtn.style.borderColor = "rgba(48,209,88,0.4)";
+                trainBtn.disabled = true;
+                if (manualTrainSpellingBtn) manualTrainSpellingBtn.disabled = true;
+                
+                card.style.borderColor = "rgba(48,209,88,0.3)";
+                card.style.boxShadow = "0 0 20px rgba(48,209,88,0.1)";
+                
+                setTimeout(() => {
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.95) translateY(-10px)";
+                    card.style.maxHeight = card.scrollHeight + "px";
+                    requestAnimationFrame(() => {
+                        card.style.maxHeight = "0px";
+                        card.style.padding = "0px";
+                        card.style.margin = "0px";
+                        card.style.border = "none";
+                        card.style.gap = "0px";
+                    });
+                    setTimeout(() => {
+                        card.remove();
                         if (container.children.length === 0) {
                             renderTriageCards([], container);
                         }
@@ -10975,7 +11178,7 @@ function renderTriageCards(reports, container) {
             });
         }
         
-        // Wire up Ignore button
+        // ── Wire up Ignore button ───────────────────────────────────────
         const ignoreBtn = card.querySelector(".btn-triage-ignore");
         if (ignoreBtn) {
             ignoreBtn.addEventListener("click", () => {
@@ -10984,6 +11187,7 @@ function renderTriageCards(reports, container) {
                 ignoreBtn.disabled = true;
                 
                 if (trainBtn) trainBtn.disabled = true;
+                if (manualTrainSpellingBtn) manualTrainSpellingBtn.disabled = true;
                 
                 card.style.opacity = "0.5";
                 

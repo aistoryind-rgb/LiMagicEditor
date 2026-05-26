@@ -1193,7 +1193,7 @@ function handleClearBugReports(data, headers) {
  * Returns them newest-first.
  */
 function handleGetBugReports(payload, headers) {
-  const auth = authenticateAdmin(payload, headers);
+  const auth = checkAdminAuth(payload);
   if (!auth.authorized) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",

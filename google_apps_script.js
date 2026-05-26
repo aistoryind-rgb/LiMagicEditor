@@ -1219,9 +1219,21 @@ function handleClearBugReports(data, headers) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
+  let trashedEmailsCount = 0;
+  try {
+    const query = 'subject:"LifeInvader Correction Request" OR subject:"LifeInvader False-Rejection Report"';
+    const threads = GmailApp.search(query);
+    for (let i = 0; i < threads.length; i++) {
+      threads[i].moveToTrash();
+      trashedEmailsCount++;
+    }
+  } catch (err) {
+    Logger.log("Error trashing Gmail threads: " + err.toString());
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
-    message: `Successfully cleared all bug reports and deleted ${deletedCount} screenshot images from Google Drive.`
+    message: `Successfully cleared all bug reports, deleted ${deletedCount} screenshot images from Google Drive, and trashed ${trashedEmailsCount} notification emails in Gmail.`
   })).setMimeType(ContentService.MimeType.JSON);
 }
 

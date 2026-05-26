@@ -8132,7 +8132,7 @@ function initBugReport() {
     if (btnSubmitBugInline) {
         btnSubmitBugInline.addEventListener("click", () => {
             if (btnSubmitBugInline.classList.contains("btn-sent")) {
-                alert("This bug report has already been sent to the developer and is currently under processing.");
+                showCustomNotification("This bug report has already been sent to the developer and is currently under processing.", "warning");
                 return;
             }
             if (btnSubmitBugInline.classList.contains("submitting")) {
@@ -8163,7 +8163,7 @@ function initBugReport() {
                             btnSubmitBugInline.classList.remove("btn-submitting");
                             btnSubmitBugInline.classList.add("glow-red");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
-                            alert("Google Apps Script URL not configured.");
+                            showCustomNotification("Google Apps Script URL not configured.", "error");
                         }, 1000);
                         return;
                     }
@@ -8192,10 +8192,11 @@ function initBugReport() {
                                 btnSubmitBugInline.classList.remove("glow-red");
                                 btnSubmitBugInline.classList.add("btn-sent");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                                showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
                             } else {
                                 btnSubmitBugInline.classList.add("glow-red");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
-                                alert("Error submitting bug report: " + (data.message || "Failed to submit."));
+                                showCustomNotification("Error submitting bug report: " + (data.message || "Failed to submit."), "error");
                             }
                         })
                         .catch(err => {
@@ -8207,6 +8208,7 @@ function initBugReport() {
                             btnSubmitBugInline.classList.remove("glow-red");
                             btnSubmitBugInline.classList.add("btn-sent");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                            showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
                         });
                     });
                 };
@@ -9077,15 +9079,15 @@ function renderCustomTemplates() {
     });
 }
 
-function showHistoryToast(message) {
+function showCustomNotification(message, type = 'success') {
     let container = document.getElementById("history-toast-container");
     if (!container) {
         container = document.createElement("div");
         container.id = "history-toast-container";
         container.style.position = "fixed";
-        container.style.bottom = "20px";
-        container.style.right = "20px";
-        container.style.zIndex = "9999";
+        container.style.bottom = "30px";
+        container.style.right = "30px";
+        container.style.zIndex = "10000";
         container.style.display = "flex";
         container.style.flexDirection = "column";
         container.style.gap = "10px";
@@ -9093,39 +9095,55 @@ function showHistoryToast(message) {
     }
     
     const toast = document.createElement("div");
-    toast.style.background = "rgba(18, 18, 20, 0.95)";
-    toast.style.border = "1px solid #22c55e";
+    toast.style.background = "rgba(18, 18, 20, 0.96)";
     toast.style.color = "white";
-    toast.style.padding = "10px 20px";
-    toast.style.borderRadius = "8px";
+    toast.style.padding = "12px 24px";
+    toast.style.borderRadius = "10px";
     toast.style.fontFamily = "'Outfit', sans-serif";
     toast.style.fontSize = "13px";
     toast.style.fontWeight = "600";
-    toast.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.5)";
+    toast.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.6)";
     toast.style.display = "flex";
     toast.style.alignItems = "center";
-    toast.style.gap = "8px";
+    toast.style.gap = "10px";
     toast.style.opacity = "0";
     toast.style.transform = "translateY(20px)";
-    toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+    toast.style.transition = "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
     
-    toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> <span>${message}</span>`;
+    let borderColor = "#30d158";
+    let icon = `<i class="fa-solid fa-circle-check" style="color: #30d158; font-size: 14px;"></i>`;
+    
+    if (type === 'warning') {
+        borderColor = "#ff9f0a";
+        icon = `<i class="fa-solid fa-triangle-exclamation" style="color: #ff9f0a; font-size: 14px;"></i>`;
+    } else if (type === 'error') {
+        borderColor = "#ff453a";
+        icon = `<i class="fa-solid fa-circle-xmark" style="color: #ff453a; font-size: 14px;"></i>`;
+    } else if (type === 'info') {
+        borderColor = "#0a84ff";
+        icon = `<i class="fa-solid fa-circle-info" style="color: #0a84ff; font-size: 14px;"></i>`;
+    }
+    
+    toast.style.border = `1px solid ${borderColor}`;
+    toast.innerHTML = `${icon} <span>${message}</span>`;
     container.appendChild(toast);
     
-    // Trigger transition
     setTimeout(() => {
         toast.style.opacity = "1";
         toast.style.transform = "translateY(0)";
     }, 10);
     
-    // Auto dismiss after 2.5s
     setTimeout(() => {
         toast.style.opacity = "0";
         toast.style.transform = "translateY(-20px)";
         setTimeout(() => {
             toast.remove();
-        }, 300);
-    }, 2500);
+        }, 400);
+    }, 4000);
+}
+
+function showHistoryToast(message) {
+    showCustomNotification(message, 'success');
 }
 
 function logAdToBackend(rawInput, finalAd, status) {

@@ -7931,164 +7931,165 @@ function initBugReport() {
     const feedbackText = document.getElementById("bug-feedback-text");
     const btnFeedbackClose = document.getElementById("btn-bug-feedback-close");
     
-    if (!form) return;
-    
-    // Visual category options list selector
-    const categorySelector = document.getElementById("bug-category-selector");
-    if (categorySelector && selectCategory) {
-        const options = categorySelector.querySelectorAll(".category-option");
-        options.forEach(opt => {
-            opt.addEventListener("click", () => {
-                options.forEach(o => o.classList.remove("active"));
-                opt.classList.add("active");
-                selectCategory.value = opt.getAttribute("data-value");
+    // Only set up form-specific UI if the bug report form tab exists
+    if (form) {
+        // Visual category options list selector
+        const categorySelector = document.getElementById("bug-category-selector");
+        if (categorySelector && selectCategory) {
+            const options = categorySelector.querySelectorAll(".category-option");
+            options.forEach(opt => {
+                opt.addEventListener("click", () => {
+                    options.forEach(o => o.classList.remove("active"));
+                    opt.classList.add("active");
+                    selectCategory.value = opt.getAttribute("data-value");
+                });
             });
-        });
-    }
+        }
     
-    if (fileInput) {
-        fileInput.addEventListener("change", (e) => {
-            handleFileSelect(e.target.files);
-        });
-    }
+        if (fileInput) {
+            fileInput.addEventListener("change", (e) => {
+                handleFileSelect(e.target.files);
+            });
+        }
     
-    // Drag & Drop
-    if (dragDropZone) {
-        dragDropZone.addEventListener("click", (e) => {
-            if (previewContainer && previewContainer.classList.contains("hide") && e.target !== btnRemove) {
-                fileInput.click();
+        // Drag & Drop
+        if (dragDropZone) {
+            dragDropZone.addEventListener("click", (e) => {
+                if (previewContainer && previewContainer.classList.contains("hide") && e.target !== btnRemove) {
+                    fileInput.click();
+                }
+            });
+        
+            dragDropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dragDropZone.classList.add("dragover");
+            });
+        
+            dragDropZone.addEventListener("dragleave", () => {
+                dragDropZone.classList.remove("dragover");
+            });
+        
+            dragDropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dragDropZone.classList.remove("dragover");
+                handleFileSelect(e.dataTransfer.files);
+            });
+        }
+    
+        function handleFileSelect(files) {
+            if (files && files.length > 0) {
+                const file = files[0];
+                if (!file.type.startsWith("image/")) {
+                    alert("Only image files are allowed.");
+                    return;
+                }
+            
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedScreenshotBase64 = e.target.result;
+                    if (imgPreview) imgPreview.src = uploadedScreenshotBase64;
+                    if (previewContainer) previewContainer.classList.remove("hide");
+                };
+                reader.readAsDataURL(file);
             }
-        });
-        
-        dragDropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dragDropZone.classList.add("dragover");
-        });
-        
-        dragDropZone.addEventListener("dragleave", () => {
-            dragDropZone.classList.remove("dragover");
-        });
-        
-        dragDropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dragDropZone.classList.remove("dragover");
-            handleFileSelect(e.dataTransfer.files);
-        });
-    }
+        }
     
-    function handleFileSelect(files) {
-        if (files && files.length > 0) {
-            const file = files[0];
-            if (!file.type.startsWith("image/")) {
-                alert("Only image files are allowed.");
+        // Remove screenshot
+        if (btnRemove) {
+            btnRemove.addEventListener("click", (e) => {
+                e.stopPropagation();
+                uploadedScreenshotBase64 = "";
+                if (fileInput) fileInput.value = "";
+                if (imgPreview) imgPreview.src = "";
+                if (previewContainer) previewContainer.classList.add("hide");
+            });
+        }
+    
+        // Form submission
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+        
+            const category = selectCategory.value;
+            const rawInput = textRawInput ? textRawInput.value.trim() : "";
+            const expectedOutput = textExpected.value.trim();
+        
+            if (!expectedOutput) {
+                alert("Please describe the issue or correction.");
                 return;
             }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                uploadedScreenshotBase64 = e.target.result;
-                if (imgPreview) imgPreview.src = uploadedScreenshotBase64;
-                if (previewContainer) previewContainer.classList.remove("hide");
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-    
-    // Remove screenshot
-    if (btnRemove) {
-        btnRemove.addEventListener("click", (e) => {
-            e.stopPropagation();
-            uploadedScreenshotBase64 = "";
-            if (fileInput) fileInput.value = "";
-            if (imgPreview) imgPreview.src = "";
-            if (previewContainer) previewContainer.classList.add("hide");
-        });
-    }
-    
-    // Form submission
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
         
-        const category = selectCategory.value;
-        const rawInput = textRawInput ? textRawInput.value.trim() : "";
-        const expectedOutput = textExpected.value.trim();
+            // Show feedback overlay
+            if (feedbackOverlay) feedbackOverlay.classList.remove("hide");
+            if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
+            if (feedbackSuccess) feedbackSuccess.classList.add("hide");
+            if (btnFeedbackClose) btnFeedbackClose.classList.add("hide");
+            if (feedbackText) feedbackText.textContent = "Uploading report & screenshot...";
         
-        if (!expectedOutput) {
-            alert("Please describe the issue or correction.");
-            return;
-        }
-        
-        // Show feedback overlay
-        if (feedbackOverlay) feedbackOverlay.classList.remove("hide");
-        if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
-        if (feedbackSuccess) feedbackSuccess.classList.add("hide");
-        if (btnFeedbackClose) btnFeedbackClose.classList.add("hide");
-        if (feedbackText) feedbackText.textContent = "Uploading report & screenshot...";
-        
-        if (!CONFIG.GOOGLE_SCRIPT_URL) {
-            setTimeout(() => {
-                if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                if (feedbackText) feedbackText.textContent = `Google Apps Script URL not configured. Category: ${category}. Expected: ${expectedOutput}`;
-                if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
-            }, 1000);
-            return;
-        }
-        
-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain"
-            },
-            body: JSON.stringify({
-                action: "bug_report",
-                category: category,
-                rawInput: rawInput,
-                expectedOutput: expectedOutput,
-                screenshotBase64: uploadedScreenshotBase64
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-            if (data.status === "success") {
-                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Email sent & screenshot saved to Google Drive.";
-            } else if (data.status === "already_submitted") {
-                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                if (feedbackText) feedbackText.textContent = data.message || "Bug report already submitted. A fix is expected within 10 minutes.";
-            } else {
-                if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
+            if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                setTimeout(() => {
+                    if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                    if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                    if (feedbackText) feedbackText.textContent = `Google Apps Script URL not configured. Category: ${category}. Expected: ${expectedOutput}`;
+                    if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                }, 1000);
+                return;
             }
-            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+        
+            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain"
+                },
+                body: JSON.stringify({
+                    action: "bug_report",
+                    category: category,
+                    rawInput: rawInput,
+                    expectedOutput: expectedOutput,
+                    screenshotBase64: uploadedScreenshotBase64
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                if (data.status === "success") {
+                    if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                    if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Email sent & screenshot saved to Google Drive.";
+                } else if (data.status === "already_submitted") {
+                    if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                    if (feedbackText) feedbackText.textContent = data.message || "Bug report already submitted. A fix is expected within 10 minutes.";
+                } else {
+                    if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
+                }
+                if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
             
-            if (data.status === "success" || data.status === "already_submitted") {
+                if (data.status === "success" || data.status === "already_submitted") {
+                    form.reset();
+                    uploadedScreenshotBase64 = "";
+                    if (previewContainer) previewContainer.classList.add("hide");
+                    if (imgPreview) imgPreview.src = "";
+                }
+            })
+            .catch(err => {
+                console.error("Bug report upload error:", err);
+                if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
+                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+            
                 form.reset();
                 uploadedScreenshotBase64 = "";
                 if (previewContainer) previewContainer.classList.add("hide");
                 if (imgPreview) imgPreview.src = "";
-            }
-        })
-        .catch(err => {
-            console.error("Bug report upload error:", err);
-            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
-            if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
-            if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
-            
-            form.reset();
-            uploadedScreenshotBase64 = "";
-            if (previewContainer) previewContainer.classList.add("hide");
-            if (imgPreview) imgPreview.src = "";
+            });
         });
-    });
     
-    // Close feedback
-    if (btnFeedbackClose) {
-        btnFeedbackClose.addEventListener("click", () => {
-            if (feedbackOverlay) feedbackOverlay.classList.add("hide");
-        });
-    }
+        // Close feedback
+        if (btnFeedbackClose) {
+            btnFeedbackClose.addEventListener("click", () => {
+                if (feedbackOverlay) feedbackOverlay.classList.add("hide");
+            });
+        }
+    } // end if (form)
 
     // Inline Submit Bug Button
     function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {

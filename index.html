@@ -362,10 +362,6 @@
                     <button class="tab-btn" data-tab="tab-leaders">
                         <i class="fa-solid fa-users-gear"></i> GRP Leader List
                     </button>
-                    <button class="tab-btn" data-tab="tab-bug">
-                        <i class="fa-solid fa-circle-question"></i> Bug Report / Correction
-                    </button>
-
                     <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
                         <i class="fa-solid fa-user-shield"></i> Admin Panel
                     </button>
@@ -501,93 +497,6 @@
                                             <!-- Dynamically populated -->
                                         </tbody>
                                     </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Tab 4: Bug Report / Correction Request -->
-                    <div class="tab-content" id="tab-bug">
-                        <p class="section-desc">Encountered an issue or wrong formatting? Report it directly to the system administrator using the form below. You can upload a screenshot to help resolve it faster.</p>
-                        
-                        <div class="bug-report-form">
-                            <form id="form-bug-report">
-                                <div class="form-row bug-top-row">
-                                    <div class="form-group col-6">
-                                        <label>Issue Category</label>
-                                        <div id="bug-category-selector" class="category-options-box">
-                                            <div class="category-option active" data-value="Real Estate">
-                                                <i class="fa-solid fa-house"></i>
-                                                <span>REAL ESTATE</span>
-                                            </div>
-                                            <div class="category-option" data-value="Auto">
-                                                <i class="fa-solid fa-car"></i>
-                                                <span>AUTO</span>
-                                            </div>
-                                            <div class="category-option" data-value="Businesses">
-                                                <i class="fa-solid fa-briefcase"></i>
-                                                <span>BUSINESSES</span>
-                                            </div>
-                                            <div class="category-option" data-value="Discounts">
-                                                <i class="fa-solid fa-percent"></i>
-                                                <span>DISCOUNTS</span>
-                                            </div>
-                                            <div class="category-option" data-value="Work">
-                                                <i class="fa-solid fa-helmet-safety"></i>
-                                                <span>WORK</span>
-                                            </div>
-                                            <div class="category-option" data-value="Dating">
-                                                <i class="fa-solid fa-heart"></i>
-                                                <span>DATING</span>
-                                            </div>
-                                            <div class="category-option" data-value="Services">
-                                                <i class="fa-solid fa-wrench"></i>
-                                                <span>SERVICES</span>
-                                            </div>
-                                            <div class="category-option" data-value="Other">
-                                                <i class="fa-solid fa-infinity"></i>
-                                                <span>OTHER</span>
-                                            </div>
-                                        </div>
-                                        <input type="hidden" id="bug-category" value="Real Estate" required>
-                                    </div>
-                                    <div class="form-group col-6">
-                                        <label>Screenshot Upload (Optional)</label>
-                                        <input type="file" id="bug-screenshot-file" accept="image/*" style="display: none;">
-                                        <div class="drag-drop-zone" id="bug-drag-drop-zone">
-                                            <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
-                                            <p class="drag-text">Drag and drop your screenshot here, or click to upload</p>
-                                            <div id="bug-preview-container" class="preview-container hide">
-                                                <img id="bug-screenshot-preview" src="" alt="Screenshot preview">
-                                                <span id="btn-remove-screenshot" class="btn-remove-image" title="Remove image">&times;</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row" style="margin-top: 15px;">
-                                    <div class="form-group col-12">
-                                        <label for="bug-expected">Expected Output / Description of Correction</label>
-                                        <textarea id="bug-expected" placeholder="e.g. The action should be Trading and the output should not include Price: Negotiable." rows="4" required></textarea>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row" style="margin-top: 20px; align-items: center;">
-                                    <div class="form-group col-12" style="text-align: right;">
-                                        <button type="submit" class="btn-action glow-red" id="btn-bug-submit" style="max-width: 250px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <i class="fa-solid fa-paper-plane"></i> Submit Bug Report
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                            
-                            <!-- Bug Submission Success / Loading State Overlay -->
-                            <div id="bug-feedback-overlay" class="bug-feedback-overlay hide">
-                                <div class="feedback-content">
-                                    <div class="spinner" id="bug-feedback-spinner"></div>
-                                    <div class="success-icon hide" id="bug-feedback-success"><i class="fa-solid fa-circle-check"></i></div>
-                                    <p id="bug-feedback-text">Sending bug report to email and Google Drive...</p>
-                                    <button type="button" id="btn-bug-feedback-close" class="btn-preset hide" style="margin-top: 15px;">Close</button>
                                 </div>
                             </div>
                         </div>

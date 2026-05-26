@@ -2473,7 +2473,7 @@ function initAdProcessing() {
                     rawInput.focus();
                 } catch (err) {
                     console.error("Clipboard paste failed:", err);
-                    alert("Clipboard access denied. Please click the button again or paste manually.");
+                    showCustomNotification("Clipboard access denied. Please click the button again or paste manually.", "error");
                 }
             }
         });
@@ -6610,7 +6610,7 @@ function initFloatingClipboard() {
 
     btnFloat.addEventListener("click", async () => {
         if (!('documentPictureInPicture' in window)) {
-            alert("Magic Editor Mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.");
+            showCustomAlertDialog("Magic Editor Mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.", null, "warning");
             return;
         }
 
@@ -7220,7 +7220,7 @@ function initFloatingClipboard() {
                             mainRaw.dispatchEvent(new Event("input"));
                             updatePipDisplay();
                         } catch (mainErr) {
-                            alert("Clipboard access denied. Please click the button again or paste manually.");
+                            showCustomNotification("Clipboard access denied. Please click the button again or paste manually.", "error");
                         }
                     }
                 });
@@ -7490,7 +7490,7 @@ function initFloatingClipboard() {
 
         } catch (error) {
             console.error("Failed to open Picture-in-Picture window:", error);
-            alert("Failed to open floating window: " + error.message);
+            showCustomAlertDialog("Failed to open floating window: " + error.message, null, "error");
         }
     });
 }
@@ -7584,7 +7584,7 @@ function initAccessGate() {
             const url = inputScriptUrl.value.trim();
             localStorage.setItem('li_google_script_url', url);
             CONFIG.GOOGLE_SCRIPT_URL = url;
-            alert("Settings saved! Web App URL updated.");
+            showCustomNotification("Settings saved! Web App URL updated.", "success");
             settingsDrawer.classList.add("hide");
             checkCurrentAccessStatus(true);
         });
@@ -7620,10 +7620,11 @@ function initAccessGate() {
             localStorage.setItem("li_admin_passcode", key);
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", key);
-            alert("Welcome Admin! Access granted.");
-            window.location.reload();
+            showCustomAlertDialog("Welcome Admin! Access granted.", () => {
+                window.location.reload();
+            }, "success");
         } else {
-            alert("Invalid admin key. Access denied.");
+            showCustomAlertDialog("Invalid admin key. Access denied.", null, "error");
         }
     }
 
@@ -7696,7 +7697,7 @@ function initAccessGate() {
                         loadAndRenderAccessRequests(null, getOrCreateClientUuid(), false);
                     }
                     if (showFeedback) {
-                        alert("Access granted successfully! Welcome to LifeInvader Ad Editor.");
+                        showCustomNotification("Access granted successfully! Welcome to LifeInvader Ad Editor.", "success");
                     }
                 } else {
                     // Bypass deauthorization if the user is authenticated as Admin
@@ -7725,9 +7726,9 @@ function initAccessGate() {
                         }
                     }
                     if (showFeedback && data.requestStatus === "pending") {
-                        alert("Access request is still pending admin approval. Please check back later.");
+                        showCustomAlertDialog("Access request is still pending admin approval. Please check back later.", null, "warning");
                     } else if (showFeedback && data.requestStatus === "rejected") {
-                        alert("Your access request was rejected. Please contact an administrator.");
+                        showCustomAlertDialog("Your access request was rejected. Please contact an administrator.", null, "error");
                     }
                 }
             }
@@ -7880,12 +7881,12 @@ function initAccessGate() {
             const server = "EN3";
             
             if (!firstname || !lastname || !id) {
-                alert("Please fill out all fields.");
+                showCustomNotification("Please fill out all fields.", "warning");
                 return;
             }
             
             if (!/^[a-zA-Z0-9]{1,20}$/.test(id)) {
-                alert("In-Game ID must be alphanumeric (max 20 characters).");
+                showCustomNotification("In-Game ID must be alphanumeric (max 20 characters).", "warning");
                 return;
             }
             
@@ -7926,10 +7927,11 @@ function initAccessGate() {
                         } else if (data.status === "already_approved") {
                             // User already has access - unlock directly
                             localStorage.setItem("li_approved_token", "APPROVED");
-                            alert("You already have access! Refreshing...");
-                            window.location.reload();
+                            showCustomAlertDialog("You already have access! Refreshing...", () => {
+                                window.location.reload();
+                            }, "success");
                         } else {
-                            alert("Error submitting request: " + data.message);
+                            showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
                         }
                     })
                     .catch(err => {
@@ -7937,13 +7939,13 @@ function initAccessGate() {
                         isSubmitting = false;
                         btnRequestSubmit.disabled = false;
                         btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                        alert("Could not connect to the server. Please try again later.");
+                        showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
                         transitionToApproveScreen();
                         startPolling();
                     });
                 });
             } else {
-                alert("No Web App URL configured. Please configure it in Developer Settings.");
+                showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
             }
         });
     }
@@ -8057,7 +8059,7 @@ function initBugReport() {
             if (files && files.length > 0) {
                 const file = files[0];
                 if (!file.type.startsWith("image/")) {
-                    alert("Only image files are allowed.");
+                    showCustomNotification("Only image files are allowed.", "warning");
                     return;
                 }
             
@@ -8091,7 +8093,7 @@ function initBugReport() {
             const expectedOutput = textExpected.value.trim();
         
             if (!expectedOutput) {
-                alert("Please describe the issue or correction.");
+                showCustomNotification("Please describe the issue or correction.", "warning");
                 return;
             }
         
@@ -8551,6 +8553,126 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     });
 }
 
+function showCustomAlertDialog(message, onDismiss, type = "info") {
+    let targetDoc = document;
+    if (pipWindowInstance && !pipWindowInstance.closed) {
+        targetDoc = pipWindowInstance.document;
+    }
+    
+    // Prevent multiple confirmation/alert dialogs
+    const existing = targetDoc.getElementById("custom-alert-overlay");
+    if (existing) existing.remove();
+
+    const overlay = targetDoc.createElement("div");
+    overlay.id = "custom-alert-overlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.background = "rgba(10, 10, 12, 0.75)";
+    overlay.style.backdropFilter = "blur(10px)";
+    overlay.style.webkitBackdropFilter = "blur(10px)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.zIndex = "20000";
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.3s ease";
+
+    const dialog = targetDoc.createElement("div");
+    dialog.style.background = "rgba(18, 18, 20, 0.98)";
+    
+    let themeColor = "rgba(10, 132, 255, 0.3)";
+    let shadowColor = "rgba(10, 132, 255, 0.15)";
+    let iconHtml = "";
+    let alertTitle = "Notification";
+    let okBtnClass = "btn-action";
+    let okBtnStyle = "flex: 1; height: 40px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;";
+
+    if (type === "success") {
+        themeColor = "rgba(48, 209, 88, 0.3)";
+        shadowColor = "rgba(48, 209, 88, 0.15)";
+        alertTitle = "Success";
+        iconHtml = `<div style="background: rgba(48, 209, 88, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(48, 209, 88, 0.3); box-shadow: 0 0 15px rgba(48, 209, 88, 0.2);">
+                       <i class="fa-solid fa-circle-check" style="color: #30d158; font-size: 24px;"></i>
+                   </div>`;
+        okBtnStyle = "flex: 1; height: 40px; border-radius: 8px; border: none; background: #30d158 !important; box-shadow: 0 4px 15px rgba(48, 209, 88, 0.3) !important; color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;";
+    } else if (type === "warning") {
+        themeColor = "rgba(255, 159, 10, 0.3)";
+        shadowColor = "rgba(255, 159, 10, 0.15)";
+        alertTitle = "Warning";
+        iconHtml = `<div style="background: rgba(255, 159, 10, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(255, 159, 10, 0.3); box-shadow: 0 0 15px rgba(255, 159, 10, 0.2);">
+                       <i class="fa-solid fa-triangle-exclamation" style="color: #ff9f0a; font-size: 24px;"></i>
+                   </div>`;
+    } else if (type === "error") {
+        themeColor = "rgba(255, 69, 58, 0.3)";
+        shadowColor = "rgba(255, 69, 58, 0.15)";
+        alertTitle = "Error";
+        iconHtml = `<div style="background: rgba(255, 69, 58, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(255, 69, 58, 0.3); box-shadow: 0 0 15px rgba(255, 69, 58, 0.2);">
+                       <i class="fa-solid fa-circle-xmark" style="color: #ff453a; font-size: 24px;"></i>
+                   </div>`;
+        okBtnClass = "btn-action glow-red";
+    } else {
+        // info
+        iconHtml = `<div style="background: rgba(10, 132, 255, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(10, 132, 255, 0.3); box-shadow: 0 0 15px rgba(10, 132, 255, 0.2);">
+                       <i class="fa-solid fa-circle-info" style="color: #0a84ff; font-size: 24px;"></i>
+                   </div>`;
+    }
+
+    dialog.style.border = `1px solid ${themeColor}`;
+    dialog.style.boxShadow = `0 10px 40px ${shadowColor}, 0 0 100px rgba(0, 0, 0, 0.8)`;
+    dialog.style.borderRadius = "16px";
+    dialog.style.width = "90%";
+    dialog.style.maxWidth = "400px";
+    dialog.style.padding = "30px 24px";
+    dialog.style.textAlign = "center";
+    dialog.style.transform = "scale(0.9) translateY(20px)";
+    dialog.style.transition = "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+    dialog.innerHTML = `
+        ${iconHtml}
+        <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">${alertTitle}</h4>
+        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="custom-alert-ok-btn" class="${okBtnClass}" style="${okBtnStyle}">
+                Dismiss
+            </button>
+        </div>
+    `;
+
+    overlay.appendChild(dialog);
+    targetDoc.body.appendChild(overlay);
+
+    // Fade-in animations
+    requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+        dialog.style.transform = "scale(1) translateY(0)";
+    });
+
+    const okBtn = dialog.querySelector("#custom-alert-ok-btn");
+
+    const closeDialog = (callback) => {
+        overlay.style.opacity = "0";
+        dialog.style.transform = "scale(0.9) translateY(20px)";
+        setTimeout(() => {
+            overlay.remove();
+            if (callback) callback();
+        }, 300);
+    };
+
+    okBtn.addEventListener("click", () => {
+        closeDialog(onDismiss);
+    });
+
+    // Close on backdrop click
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+            closeDialog(onDismiss);
+        }
+    });
+}
+
 function applyAdminRolePermissions() {
     const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
     
@@ -8795,9 +8917,9 @@ function initAdminPanel() {
                 if (btnSpellingToggle) {
                     btnSpellingToggle.innerHTML = '<i class="fa-solid fa-file-import"></i> Bulk Mode';
                 }
-                alert(`Successfully imported ${addedCount} spelling corrections!`);
+                showCustomNotification(`Successfully imported ${addedCount} spelling corrections!`, "success");
             } else {
-                alert("No valid corrections found. Make sure the format is 'wrong,right' with one entry per line.");
+                showCustomAlertDialog("No valid corrections found. Make sure the format is 'wrong,right' with one entry per line.", null, "warning");
             }
         });
     }
@@ -8833,7 +8955,10 @@ function initAdminPanel() {
     if (btnImport) {
         btnImport.addEventListener("click", () => {
             const val = textareaBackup.value.trim();
-            if (!val) return alert("Please paste backup JSON string into the text area first.");
+            if (!val) {
+                showCustomNotification("Please paste backup JSON string into the text area first.", "warning");
+                return;
+            }
             try {
                 const parsed = JSON.parse(val);
                 if (parsed.spelling && typeof parsed.spelling === "object") {
@@ -8847,9 +8972,9 @@ function initAdminPanel() {
                 saveCustomDataToBackend();
                 renderCustomSpelling();
                 renderCustomTemplates();
-                alert("Data imported successfully!");
+                showCustomNotification("Data imported successfully!", "success");
             } catch (err) {
-                alert("Invalid JSON format. Verification failed:\n" + err.toString());
+                showCustomAlertDialog("Invalid JSON format. Verification failed:\n" + err.toString(), null, "error");
             }
         });
     }
@@ -8970,13 +9095,13 @@ function initAdminPanel() {
                         btnClearBugs.innerHTML = originalHtml;
                     }, 3000);
                 } else {
-                    alert("Clear failed: " + data.message);
+                    showCustomAlertDialog("Clear failed: " + data.message, null, "error");
                     resetButtonToOriginal();
                 }
             })
             .catch(err => {
                 console.error("Error clearing bug reports:", err);
-                alert("Error contacting the backend: " + err.toString());
+                showCustomAlertDialog("Error contacting the backend: " + err.toString(), null, "error");
                 resetButtonToOriginal();
             });
         };
@@ -9148,14 +9273,14 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
                 if (data.status === "success") {
                     loadAndRenderAccessRequests(passcode, authUuid, false);
                 } else {
-                    alert("Approval failed: " + data.message);
+                    showCustomAlertDialog("Approval failed: " + data.message, null, "error");
                     btnApprove.disabled = false;
                     btnApprove.innerHTML = `<i class="fa-solid fa-check"></i> Approve`;
                 }
             })
             .catch(err => {
                 console.error("Approve request error:", err);
-                alert("Network error approving request.");
+                showCustomAlertDialog("Network error approving request.", null, "error");
                 btnApprove.disabled = false;
                 btnApprove.innerHTML = `<i class="fa-solid fa-check"></i> Approve`;
             });
@@ -9191,14 +9316,14 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
                 if (data.status === "success") {
                     loadAndRenderAccessRequests(passcode, authUuid, false);
                 } else {
-                    alert("Rejection failed: " + data.message);
+                    showCustomAlertDialog("Rejection failed: " + data.message, null, "error");
                     btnReject.disabled = false;
                     btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Reject`;
                 }
             })
             .catch(err => {
                 console.error("Reject request error:", err);
-                alert("Network error rejecting request.");
+                showCustomAlertDialog("Network error rejecting request.", null, "error");
                 btnReject.disabled = false;
                 btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Reject`;
             });
@@ -9371,7 +9496,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                             if (data.status === "success") {
                                 loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
                             } else {
-                                alert("Role change failed: " + data.message);
+                                showCustomAlertDialog("Role change failed: " + data.message, null, "error");
                                 btnRole.disabled = false;
                                 btnRole.innerHTML = isAssistantAdmin 
                                     ? `<i class="fa-solid fa-user-minus"></i> Remove Assistant`
@@ -9380,7 +9505,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                         })
                         .catch(err => {
                             console.error("Set role error:", err);
-                            alert("Network error changing role.");
+                            showCustomAlertDialog("Network error changing role.", null, "error");
                             btnRole.disabled = false;
                         });
                     },
@@ -9428,14 +9553,14 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                             if (data.status === "success") {
                                 loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
                             } else {
-                                alert("Revocation failed: " + data.message);
+                                showCustomAlertDialog("Revocation failed: " + data.message, null, "error");
                                 btnRevoke.disabled = false;
                                 btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
                             }
                         })
                         .catch(err => {
                             console.error("Revoke access error:", err);
-                            alert("Network error revoking access.");
+                            showCustomAlertDialog("Network error revoking access.", null, "error");
                             btnRevoke.disabled = false;
                             btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
                         });

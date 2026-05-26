@@ -1251,18 +1251,37 @@ function handleResolveBugReport(payload, headers) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
+  let targetTimeMs = 0;
+  if (timestamp) {
+    try {
+      targetTimeMs = new Date(timestamp).getTime();
+    } catch (e) {}
+  }
+  
   const sheet = getOrCreateBugReportsSheet();
   const rows = sheet.getDataRange().getValues();
   let deleted = false;
   
   for (let i = rows.length - 1; i >= 1; i--) {
     const sheetRaw = (rows[i][2] || "").toString().trim();
-    const sheetTime = (rows[i][0] || "").toString().trim();
     
-    if (sheetRaw === rawInput && (!timestamp || sheetTime === timestamp)) {
-      sheet.deleteRow(i + 1);
-      deleted = true;
-      break;
+    if (sheetRaw === rawInput) {
+      let timeMatches = true;
+      if (targetTimeMs && rows[i][0]) {
+        try {
+          const rowTimeMs = new Date(rows[i][0]).getTime();
+          // Match if within 10 seconds (handles rounding / timezone differences)
+          timeMatches = Math.abs(rowTimeMs - targetTimeMs) < 10000;
+        } catch (e) {
+          timeMatches = false;
+        }
+      }
+      
+      if (timeMatches) {
+        sheet.deleteRow(i + 1);
+        deleted = true;
+        break;
+      }
     }
   }
   

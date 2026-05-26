@@ -11143,6 +11143,13 @@ function selfTrainFromPolicy(rawInput, category) {
     return null;
 }
 
+let resolvedBugReportsCache = [];
+try {
+    resolvedBugReportsCache = JSON.parse(localStorage.getItem("li_resolved_bug_reports") || "[]");
+} catch (e) {
+    resolvedBugReportsCache = [];
+}
+
 /**
  * Loads bug reports from backend (or mock data on localhost) and renders triage cards.
  */
@@ -11160,9 +11167,17 @@ function loadAndRenderBugTriage() {
             <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading bug reports…</p>
         </div>`;
     
+    const filterAndRender = (reports) => {
+        const filtered = reports.filter(report => {
+            const reportKey = report.rawInput + "|" + (report.timestamp || "");
+            return !resolvedBugReportsCache.includes(reportKey);
+        });
+        renderTriageCards(filtered, container);
+    };
+    
     if (!CONFIG.GOOGLE_SCRIPT_URL) {
         // No backend configured — show mock bug reports for testing
-        renderTriageCards(getMockBugReports(), container);
+        filterAndRender(getMockBugReports());
         return;
     }
     
@@ -11178,15 +11193,15 @@ function loadAndRenderBugTriage() {
     .then(r => r.json())
     .then(data => {
         if (data.status === "success" && data.reports) {
-            renderTriageCards(data.reports, container);
+            filterAndRender(data.reports);
         } else {
             // Backend returned error — show mock bug reports as fallback
-            renderTriageCards(getMockBugReports(), container);
+            filterAndRender(getMockBugReports());
         }
     })
     .catch(() => {
         // Network error — show mock bug reports as fallback
-        renderTriageCards(getMockBugReports(), container);
+        filterAndRender(getMockBugReports());
     });
 }
 
@@ -11378,6 +11393,13 @@ function trainFromDatabase(rawText, dbType) {
 
 
 function resolveBugReport(report, card, isIgnore = false) {
+    // Add to local cache immediately to prevent reappearing
+    const reportKey = report.rawInput + "|" + (report.timestamp || "");
+    if (!resolvedBugReportsCache.includes(reportKey)) {
+        resolvedBugReportsCache.push(reportKey);
+        localStorage.setItem("li_resolved_bug_reports", JSON.stringify(resolvedBugReportsCache));
+    }
+
     card.style.opacity = "0.5";
     
     const resolveAction = () => {
@@ -11407,8 +11429,10 @@ function resolveBugReport(report, card, isIgnore = false) {
         showCustomNotification(isIgnore ? "Bug report ignored." : "Bug report confirmed & resolved successfully!", "success");
     };
 
+    // Execute resolveAction immediately for responsive UI
+    resolveAction();
+
     if (!CONFIG.GOOGLE_SCRIPT_URL) {
-        resolveAction();
         return;
     }
     
@@ -11427,16 +11451,8 @@ function resolveBugReport(report, card, isIgnore = false) {
         })
     })
     .then(r => r.json())
-    .then(data => {
-        if (data.status === "success") {
-            resolveAction();
-        } else {
-            showCustomNotification(data.message || "Error resolving bug report.", "error");
-            card.style.opacity = "1";
-        }
-    })
     .catch(err => {
-        resolveAction();
+        console.error("resolveBugReport background request error:", err);
     });
 }
 

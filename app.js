@@ -2507,6 +2507,7 @@ function processAd() {
         if (btnSubmitBugInline) {
             btnSubmitBugInline.classList.remove("btn-sent");
             btnSubmitBugInline.classList.add("glow-red");
+            btnSubmitBugInline.classList.add("hide");
             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
         }
         logsList.innerHTML = `<li class="log-empty">No logs available. Enter some text to see corrections.</li>`;
@@ -6462,6 +6463,10 @@ function updateUI(ctx) {
     const logsList = document.getElementById("audit-logs-list");
     const btnCopy = document.getElementById("btn-copy-ad");
     const btnCopyRej = document.getElementById("btn-copy-rejection");
+    const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+    if (btnSubmitBugInline) {
+        btnSubmitBugInline.classList.remove("hide");
+    }
     
     // Clear logs
     logsList.innerHTML = "";

@@ -357,10 +357,7 @@
                         <i class="fa-solid fa-database"></i> Database Explorer
                     </button>
                     <button class="tab-btn" data-tab="tab-policy">
-                        <i class="fa-solid fa-gavel"></i> Policy Reference Guide
-                    </button>
-                    <button class="tab-btn" data-tab="tab-leaders">
-                        <i class="fa-solid fa-users-gear"></i> GRP Leader List
+                        <i class="fa-solid fa-book-open"></i> Policy Reference Book
                     </button>
                     <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
                         <i class="fa-solid fa-user-shield"></i> Admin Panel
@@ -391,116 +388,42 @@
                         </div>
                     </div>
 
-                    <!-- Tab 2: Policy Reference Guide -->
+                    <!-- Tab 2: Policy Reference Book -->
                     <div class="tab-content" id="tab-policy">
-                        <div class="policy-grid">
-                            <div class="policy-card">
-                                <h3><i class="fa-solid fa-ban red-color"></i> Illegal Items (Blacklist Number)</h3>
-                                <ul>
-                                    <li>Firearms of any kind &amp; Ammunition</li>
-                                    <li>Bulletproof vests / Dark Lui Vi Armored Vest</li>
-                                    <li>Weed, cannabis seeds/trees, drugs, cocaine</li>
-                                    <li>EMS surgical/medical masks (excl. luminous head bag)</li>
-                                    <li>Vehicle / people scanners (radars), Anti-Radar</li>
-                                    <li>Balaclava masks, Ropes, Lock picks</li>
-                                    <li>Flash drive with virus (USB), Troll Ads</li>
-                                    <li>Engine Block, Smuggling Machine, Submodule</li>
-                                    <li>Offensive language on license plates</li>
-                                </ul>
-                            </div>
-                            <div class="policy-card">
-                                <h3><i class="fa-solid fa-circle-exclamation orange-color"></i> Rejection Only (No Blacklist)</h3>
-                                <ul>
-                                    <li>Crowbar, All fabric, Animal/Armor skin</li>
-                                    <li>Head bag (except luminous), Air Horn, Earplugs</li>
-                                    <li>Barricades, Traps, Poison darts, Army Uniforms</li>
-                                    <li>Tracking sensors, Dangerous razors, Resource scanners</li>
-                                    <li>Body armor, Body armor plates</li>
-                                    <li>Ingredients for cocaine, Paper for money</li>
-                                    <li>Satellite dish, Tincture of forest mushrooms</li>
-                                    <li>First Aid Kits, all pills, Food items (except fish)</li>
-                                </ul>
-                            </div>
-                            <div class="policy-card policy-book-card">
-                                <div class="book-header-wrapper">
-                                    <h3><i class="fa-solid fa-book-open text-primary"></i> <span id="policy-book-title">Policy Reference Book</span></h3>
-                                    <div class="book-search-box">
-                                        <i class="fa-solid fa-magnifying-glass"></i>
-                                        <input type="text" id="book-search-input" placeholder="Search policy...">
-                                    </div>
+                        <div class="policy-card policy-book-card" style="width: 100%; box-sizing: border-box;">
+                            <div class="book-header-wrapper">
+                                <h3><i class="fa-solid fa-book-open text-primary"></i> <span id="policy-book-title">Policy Reference Book</span></h3>
+                                <div class="book-search-box">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="book-search-input" placeholder="Search policy...">
                                 </div>
-                                <div class="book-container">
-                                    <div class="book-pages-wrapper">
-                                        <div class="book-page left-page">
-                                            <h4 id="left-page-title" class="page-title-header">Page Title</h4>
-                                            <div id="left-page-content" class="page-content-body">
-                                                <!-- Dynamic content -->
-                                            </div>
+                            </div>
+                            <div class="book-container">
+                                <div class="book-pages-wrapper">
+                                    <div class="book-page left-page">
+                                        <h4 id="left-page-title" class="page-title-header">Page Title</h4>
+                                        <div id="left-page-content" class="page-content-body">
+                                            <!-- Dynamic content -->
                                         </div>
-                                        <div class="book-divider-line"></div>
-                                        <div class="book-page right-page">
-                                            <h4 id="right-page-title" class="page-title-header">Page Title</h4>
-                                            <div id="right-page-content" class="page-content-body">
-                                                <!-- Dynamic content -->
-                                            </div>
+                                    </div>
+                                    <div class="book-divider-line"></div>
+                                    <div class="book-page right-page">
+                                        <h4 id="right-page-title" class="page-title-header">Page Title</h4>
+                                        <div id="right-page-content" class="page-content-body">
+                                            <!-- Dynamic content -->
                                         </div>
                                     </div>
                                 </div>
-                                <div class="book-footer">
-                                    <button id="book-prev-btn" class="book-nav-btn"><i class="fa-solid fa-chevron-left"></i> Prev</button>
-                                    <span id="book-page-indicator">Pages 1-2 of 51</span>
-                                    <button id="book-next-btn" class="book-nav-btn">Next <i class="fa-solid fa-chevron-right"></i></button>
-                                </div>
+                            </div>
+                            <div class="book-footer">
+                                <button id="book-prev-btn" class="book-nav-btn"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                                <span id="book-page-indicator">Pages 1-2 of 51</span>
+                                <button id="book-next-btn" class="book-nav-btn">Next <i class="fa-solid fa-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Tab 3: GRP Leader List -->
-                    <div class="tab-content" id="tab-leaders">
-                        <p class="section-desc">Search for GRP State Leaders and Deputy Leaders. Employees cannot advertise/search for classified leaders in Dating ads unless they are in the official list. You can edit this simulated database below.</p>
-                        
-                        <div class="leaders-manager">
-                            <div class="leader-add-form">
-                                <h3>Add Leader to Database</h3>
-                                <div class="form-row">
-                                    <div class="form-group col-4">
-                                        <input type="text" id="leader-name" placeholder="Firstname Lastname">
-                                    </div>
-                                    <div class="form-group col-4">
-                                        <select id="leader-role">
-                                            <option value="State Org Leader">State Org Leader (Classified)</option>
-                                            <option value="State Org Deputy">State Org Deputy (Classified)</option>
-                                            <option value="Crime Leader">Crime Org Leader (Allowed)</option>
-                                            <option value="Unofficial Leader">Unofficial Family Leader (Allowed)</option>
-                                            <option value="Admin Assistant">Admin Assistant (Allowed)</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group col-4">
-                                        <button type="button" class="btn-action" id="btn-add-leader"><i class="fa-solid fa-plus"></i> Add Person</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="leaders-list-container">
-                                <h3>Registered GRP Citizens Database</h3>
-                                <div class="table-responsive">
-                                    <table class="leaders-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Citizen Name</th>
-                                                <th>Organization Role</th>
-                                                <th>Status in Dating Ads</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="leaders-tbody">
-                                            <!-- Dynamically populated -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
                     
                     <!-- Tab 5: Admin Panel (Trained Corrections & Templates) -->
                     <div class="tab-content" id="tab-admin">

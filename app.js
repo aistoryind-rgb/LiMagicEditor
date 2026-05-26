@@ -1338,7 +1338,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initAccessGate();
     initBugReport();
     initTabs();
-    initLeadersTable();
     initSearchExplorer();
     initAdProcessing();
     initFloatingClipboard();
@@ -1581,85 +1580,7 @@ function renderSearchResults(query, filter) {
     });
 }
 
-/* ==========================================================================
-   GRP simulated citizens manager
-   ========================================================================== */
 
-function initLeadersTable() {
-    const tbody = document.getElementById("leaders-tbody");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    
-    grpCitizens.forEach((cit, index) => {
-        const tr = document.createElement("tr");
-        
-        let roleBadge = "";
-        if (cit.role.includes("Leader")) {
-            roleBadge = cit.role.includes("State") ? "state" : "crime";
-        } else if (cit.role.includes("Deputy")) {
-            roleBadge = "state";
-        } else if (cit.role.includes("Unofficial")) {
-            roleBadge = "unofficial";
-        } else {
-            roleBadge = "assistant";
-        }
-        
-        const isAllowed = !cit.role.includes("State") || cit.isLI;
-        const statusBadge = isAllowed 
-            ? `<span class="status-badge allowed"><i class="fa-solid fa-circle-check"></i> Allowed in Dating</span>`
-            : `<span class="status-badge denied"><i class="fa-solid fa-circle-xmark"></i> Classified (Reject)</span>`;
-            
-        tr.innerHTML = `
-            <td><strong>${escapeHTML(cit.name)}</strong></td>
-            <td><span class="role-badge ${roleBadge}">${cit.role}</span></td>
-            <td>${statusBadge}</td>
-            <td>
-                <button type="button" class="btn-delete" onclick="deleteCitizen(${index})" title="Delete citizen">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-window.deleteCitizen = function(index) {
-    grpCitizens.splice(index, 1);
-    initLeadersTable();
-    processAd();
-};
-
-const btnAddLeader = document.getElementById("btn-add-leader");
-if (btnAddLeader) {
-    btnAddLeader.addEventListener("click", () => {
-        const nameInput = document.getElementById("leader-name");
-        const roleSelect = document.getElementById("leader-role");
-        
-        const name = nameInput.value.trim();
-        const role = roleSelect.value;
-        
-        if (!name || name.split(" ").length < 2) {
-            alert("Please enter both Firstname and Lastname separated by a space.");
-            return;
-        }
-        
-        // Capitalise names
-        const capitalizedName = name.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-        
-        const isLI = role.includes("Leader") && (capitalizedName.toLowerCase().includes("uchiha") || capitalizedName.toLowerCase().includes("alpha") || capitalizedName.toLowerCase().includes("blakely"));
-        
-        grpCitizens.push({
-            name: capitalizedName,
-            role: role,
-            status: (role.includes("State") && !isLI) ? "Denied" : "Allowed",
-            isLI: isLI
-        });
-        
-        nameInput.value = "";
-        initLeadersTable();
-        processAd();
-    });
-}
 
 /* ==========================================================================
    Fuzzy Matching & String Similarity Utilities

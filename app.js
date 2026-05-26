@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 07:03:19";
-const BUILD_TIMESTAMP_SHORT = "May 26 07:03";
+const BUILD_TIMESTAMP = "2026 May 26 07:30:20";
+const BUILD_TIMESTAMP_SHORT = "May 26 07:30";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1345,6 +1345,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCustomData();
     initAdminPanel();
     initPolicyBook();
+    initPresetButtons();
     
     const lastUpdatedMain = document.getElementById("last-updated-main");
     if (lastUpdatedMain) {
@@ -5276,6 +5277,15 @@ function itemRequiresArticle(itemStr, isFirst, ctx) {
     if (lower.includes("luminous stones")) {
         return false;
     }
+    if (lower.includes("drawing")) {
+        return false;
+    }
+    if (lower.includes("copper")) {
+        return false;
+    }
+    if (lower.includes("letter")) {
+        return false;
+    }
     if (lower.includes("pickaxe") && (lower.includes("quality") || lower.includes("lvl") || lower.includes("level"))) {
         return false;
     }
@@ -5629,6 +5639,8 @@ function cleanItemForFuzzy(text) {
     clean = clean.replace(/^\d+%\s+and\s+\d+%\s*/g, "");
     clean = clean.replace(/^\d+%\s*/g, "");
     clean = clean.replace(/^\d+\s+/g, "");
+    clean = clean.replace(/\b(?:lvl|level)\s*\d+\b/gi, "");
+    clean = clean.replace(/\b\d+\s*(?:lvl|level)\b/gi, "");
     clean = clean.replace(/\b\d+\b/g, "");
     
     // Strip qualities/descriptors
@@ -5733,7 +5745,7 @@ function pluralizeClothingName(name) {
 
 function pluralizeItemName(name) {
     const lower = name.toLowerCase();
-    if (lower.endsWith("y") && !lower.endsWith("day") && !lower.endsWith("play")) {
+    if (lower.endsWith("y") && !lower.endsWith("day") && !lower.endsWith("play") && !lower.endsWith("key")) {
         return name.slice(0, -1) + "ies"; // battery -> batteries
     }
     if (lower.endsWith("s")) {
@@ -6202,7 +6214,32 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         "lawyer": ["lawyer", "lawyers"],
         "professional dancer": ["professional dancer", "professional dancers"],
         "professional singer": ["professional singer", "professional singers"],
-        "DJ": ["dj", "djs"]
+        "DJ": ["dj", "djs"],
+        "solar panel": ["solar panel", "solar panels"],
+        "solar barrel": ["solar barrel", "solar barrels"],
+        "gasoline barrel": ["gasoline barrel", "gasoline barrels", "petrol barrel", "petrol barrels"],
+        "kerene barrel": ["kerene barrel", "kerene barrels", "kerosene barrel", "kerosene barrels"],
+        "GrandPro BodyCam": ["grandpro bodycam", "grandpro bodycams", "bodycam", "bodycams", "body cam", "body cams", "grand pro bodycam", "grand pro bodycams"],
+        "Leash": ["leash", "leashes"],
+        "Dirty Statue": ["dirty statue", "dirty statues"],
+        "Purified Statue": ["purified statue", "purified statues"],
+        "Drawing": ["drawing", "drawings"],
+        "Christmas key": ["christmas key", "christmas keys"],
+        "Christmas copper": ["christmas copper"],
+        "Christmas timber": ["christmas timber"],
+        "Christmas perch": ["christmas perch", "christmas perches"],
+        "Christmas seed": ["christmas seed", "christmas seeds"],
+        "Christmas lollipop": ["christmas lollipop", "christmas lollipops"],
+        "New years gift": ["new years gift", "new years gifts", "new year gift", "new year gifts"],
+        "Little gift": ["a little gift", "a little gifts", "little gift", "little gifts"],
+        "Big gift": ["a big gift", "a big gifts", "big gift", "big gifts"],
+        "Opened gift": ["an opened gift", "an opened gifts", "opened gift", "opened gifts"],
+        "letter \"G\"": ["letter g", "g letter"],
+        "letter \"R\"": ["letter r", "r letter"],
+        "letter \"A\"": ["letter a", "a letter"],
+        "letter \"N\"": ["letter n", "n letter"],
+        "letter \"D\"": ["letter d", "d letter"],
+        "letters": ["letters"]
     };
     
     for (const canonical in mappings) {
@@ -6223,11 +6260,13 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             let qtyText = qty ? `${qty} ` : "";
             
             let quality = "";
-            if (cleanLower.includes("low") || cleaned.includes("low")) quality = "low quality ";
-            else if (cleanLower.includes("medium") || cleanLower.includes("med") || cleaned.includes("medium") || cleaned.includes("med")) quality = "medium quality ";
-            else if (cleanLower.includes("high") || cleaned.includes("high")) quality = "high quality ";
-            else if (cleanLower.includes("max") || cleaned.includes("max")) quality = "max quality ";
-            else if (cleanLower.includes("advanced") || cleaned.includes("advanced")) quality = "advanced quality ";
+            if (canonical !== "video card") {
+                if (cleanLower.includes("low") || cleaned.includes("low") || /\b(?:lvl|level)\s*1\b/i.test(cleanLower) || /\b1\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "low quality ";
+                else if (cleanLower.includes("medium") || cleanLower.includes("med") || cleaned.includes("medium") || cleaned.includes("med") || /\b(?:lvl|level)\s*2\b/i.test(cleanLower) || /\b2\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "medium quality ";
+                else if (cleanLower.includes("high") || cleanLower.includes("high") || /\b(?:lvl|level)\s*3\b/i.test(cleanLower) || /\b3\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "high quality ";
+                else if (cleanLower.includes("max") || cleanLower.includes("max") || /\b(?:lvl|level)\s*4\b/i.test(cleanLower) || /\b4\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "max quality ";
+                else if (cleanLower.includes("advanced") || cleanLower.includes("advanced") || /\b(?:lvl|level)\s*5\b/i.test(cleanLower) || /\b5\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "advanced quality ";
+            }
             
             let finalName = canonical;
             if (finalName === "license plate") {
@@ -6735,7 +6774,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 07:03</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 07:30</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">

@@ -317,6 +317,16 @@ function getOrCreateAccessRequestsSheet() {
   return sheet;
 }
 
+function getOrCreateBugReportsSheet() {
+  const ss = getOrCreateHistorySpreadsheet();
+  let sheet = ss.getSheetByName("Bug_Reports");
+  if (!sheet) {
+    sheet = ss.insertSheet("Bug_Reports");
+    sheet.appendRow(["Timestamp", "Category", "Raw Input", "Expected Output"]);
+  }
+  return sheet;
+}
+
 function handleAccessRequest(data, headers) {
   const firstname = data.firstname || "";
   const lastname = data.lastname || "";
@@ -779,6 +789,25 @@ function handleValidateKey(data, headers) {
 }
 
 function handleBugReport(data, headers) {
+  const inputRaw = (data.rawInput || "").toString().trim();
+  const normalizedRaw = inputRaw.toLowerCase();
+  
+  if (normalizedRaw) {
+    const sheet = getOrCreateBugReportsSheet();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const existingRaw = (rows[i][2] || "").toString().toLowerCase().trim();
+      if (existingRaw === normalizedRaw) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "already_submitted",
+          message: "Bug report already submitted. A fix is expected within 10 minutes."
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    sheet.appendRow([new Date().toLocaleString(), data.category || "General", inputRaw, data.expectedOutput || "None"]);
+  }
+
   function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }

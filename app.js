@@ -8020,12 +8020,15 @@ function initBugReport() {
             if (data.status === "success") {
                 if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
                 if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Email sent & screenshot saved to Google Drive.";
+            } else if (data.status === "already_submitted") {
+                if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                if (feedbackText) feedbackText.textContent = data.message || "Bug report already submitted. A fix is expected within 10 minutes.";
             } else {
                 if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
             }
             if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
             
-            if (data.status === "success") {
+            if (data.status === "success" || data.status === "already_submitted") {
                 form.reset();
                 uploadedScreenshotBase64 = "";
                 if (previewContainer) previewContainer.classList.add("hide");
@@ -8193,6 +8196,12 @@ function initBugReport() {
                                 btnSubmitBugInline.classList.add("btn-sent");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
                                 showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
+                            } else if (data.status === "already_submitted") {
+                                // Transition to blue "Bug Sent" state since it's already reported
+                                btnSubmitBugInline.classList.remove("glow-red");
+                                btnSubmitBugInline.classList.add("btn-sent");
+                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                                showCustomNotification(data.message || "Bug report already submitted. A fix is expected within 10 minutes.", "warning");
                             } else {
                                 btnSubmitBugInline.classList.add("glow-red");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;

@@ -113,6 +113,8 @@ function doPost(e) {
       return handleValidateKey(payload, headers);
     } else if (action === "bug_report") {
       return handleBugReport(payload, headers);
+    } else if (action === "clear_bug_reports") {
+      return handleClearBugReports(payload, headers);
     } else if (action === "log_ad") {
       return handleLogAd(payload, headers);
     } else if (action === "get_custom_data") {
@@ -1135,5 +1137,54 @@ function clearAllBugReportsManually() {
   }
   Logger.log("Successfully trashed " + deletedCount + " bug report images from Google Drive!");
 }
+
+function handleClearBugReports(data, headers) {
+  const auth = checkAdminAuth(data);
+  if (!auth.authorized) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access. Invalid passcode."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  try {
+    const ss = getOrCreateHistorySpreadsheet();
+    const sheet = ss.getSheetByName("Bug_Reports");
+    if (sheet) {
+      sheet.clear();
+      sheet.appendRow(["Timestamp", "Category", "Raw Input", "Expected Output"]);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error clearing sheet: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  let deletedCount = 0;
+  try {
+    const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+    const files = folder.getFiles();
+    while (files.hasNext()) {
+      const file = files.next();
+      const name = file.getName();
+      if (name.startsWith("bug_report_")) {
+        file.setTrashed(true);
+        deletedCount++;
+      }
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error deleting files from Drive: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "success",
+    message: `Successfully cleared all bug reports and deleted ${deletedCount} screenshot images from Google Drive.`
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 
 

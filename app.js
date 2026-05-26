@@ -8735,6 +8735,51 @@ function initAdminPanel() {
             }
         });
     }
+
+    const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+    if (btnClearBugs) {
+        btnClearBugs.addEventListener("click", () => {
+            const isConfirmed = confirm("Are you sure you want to permanently clear all logged bug reports and delete their screenshot images from Google Drive?\n\nThis action cannot be undone, but will not affect user logins or custom templates.");
+            if (!isConfirmed) return;
+            
+            const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
+            if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                return showCustomNotification("Google Apps Script URL is not configured.", "error");
+            }
+            
+            btnClearBugs.disabled = true;
+            const originalHtml = btnClearBugs.innerHTML;
+            btnClearBugs.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Clearing...`;
+            
+            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                headers: {
+                    "Content-Type": "text/plain"
+                },
+                body: JSON.stringify({
+                    action: "clear_bug_reports",
+                    passcode: passcode
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showCustomNotification(data.message || "Successfully cleared all bug reports and screenshots.", "success");
+                } else {
+                    alert("Clear failed: " + data.message);
+                }
+            })
+            .catch(err => {
+                console.error("Error clearing bug reports:", err);
+                alert("Error contacting the backend: " + err.toString());
+            })
+            .finally(() => {
+                btnClearBugs.disabled = false;
+                btnClearBugs.innerHTML = originalHtml;
+            });
+        });
+    }
 }
 
 function loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin) {

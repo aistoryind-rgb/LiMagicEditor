@@ -9147,7 +9147,7 @@ function applyAdminRolePermissions() {
                     </div>
                     <div>
                         <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
-                        <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Assistant Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
+                        <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
                     </div>
                 </div>
             `;
@@ -10046,7 +10046,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             badge.style.border = "1px solid rgba(240, 165, 0, 0.3)";
             badge.style.textTransform = "uppercase";
             badge.style.letterSpacing = "0.5px";
-            badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="margin-right: 3px;"></i>Assistant Admin`;
+            badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="margin-right: 3px;"></i>Admin`;
             nameRow.appendChild(badge);
         }
         
@@ -10101,19 +10101,18 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                 btnRole.style.background = "rgba(240, 165, 0, 0.15)";
                 btnRole.style.color = "#f0a500";
                 btnRole.style.border = "1px solid rgba(240, 165, 0, 0.3)";
-                btnRole.innerHTML = `<i class="fa-solid fa-user-minus"></i> Remove Assistant`;
+                btnRole.innerHTML = `<i class="fa-solid fa-user-minus"></i> Remove Admin`;
             } else {
                 btnRole.style.background = "rgba(46, 196, 182, 0.15)";
                 btnRole.style.color = "#2ec4b6";
                 btnRole.style.border = "1px solid rgba(46, 196, 182, 0.3)";
-                btnRole.innerHTML = `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
+                btnRole.innerHTML = `<i class="fa-solid fa-user-shield"></i> Make Admin`;
             }
             
             btnRole.addEventListener("click", () => {
-                const newRole = isAssistantAdmin ? "user" : "assistant_admin";
                 const confirmMsg = isAssistantAdmin 
-                    ? `Remove assistant admin role from ${req.firstname} ${req.lastname}?`
-                    : `Promote ${req.firstname} ${req.lastname} to Assistant Admin?<br><br>They will be able to:<br>- Access the Admin Panel<br>- Approve/Reject access requests<br>- View Spelling & Templates<br><br>They will NOT be able to:<br>- Revoke user access<br>- Promote/demote users<br>- Manage backups`;
+                    ? `Remove Admin role from ${req.firstname} ${req.lastname}?`
+                    : `Promote ${req.firstname} ${req.lastname} to Admin?<br><br>They will be able to:<br>- Access the Admin Panel<br>- Approve/Reject access requests<br>- View Spelling & Templates<br><br>They will NOT be able to:<br>- Revoke user access<br>- Promote/demote users<br>- Manage backups`;
                 
                 const okButtonText = isAssistantAdmin ? "Remove Role" : "Promote";
                 const isDestructiveAction = isAssistantAdmin;
@@ -10142,8 +10141,8 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                                 showCustomAlertDialog("Role change failed: " + data.message, null, "error");
                                 btnRole.disabled = false;
                                 btnRole.innerHTML = isAssistantAdmin 
-                                    ? `<i class="fa-solid fa-user-minus"></i> Remove Assistant`
-                                    : `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
+                                    ? `<i class="fa-solid fa-user-minus"></i> Remove Admin`
+                                    : `<i class="fa-solid fa-user-shield"></i> Make Admin`;
                             }
                         })
                         .catch(err => {
@@ -10222,7 +10221,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             roleLabel.style.color = "var(--text-muted)";
             roleLabel.style.fontStyle = "italic";
             roleLabel.innerHTML = isAssistantAdmin 
-                ? `<i class="fa-solid fa-shield-halved" style="color: #f0a500;"></i> Assistant Admin`
+                ? `<i class="fa-solid fa-shield-halved" style="color: #f0a500;"></i> Admin`
                 : `<i class="fa-solid fa-user" style="color: var(--text-muted);"></i> Regular User`;
             actionsRow.appendChild(roleLabel);
         }

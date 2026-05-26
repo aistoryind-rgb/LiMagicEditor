@@ -3536,4 +3536,18 @@ textarea:focus, input:focus, select:focus {
     box-shadow: 0 0 12px rgba(48, 209, 88, 0.25) !important;
 }
 
+/* Contenteditable Fixed Output text focus glow */
+.fixed-output-text {
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.fixed-output-text:focus {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(48, 209, 88, 0.35) !important;
+    box-shadow: 0 0 8px rgba(48, 209, 88, 0.15) !important;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin: -5px -7px;
+}
+
 

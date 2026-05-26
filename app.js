@@ -11519,10 +11519,10 @@ function renderTriageCards(reports, container) {
                     <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
                         <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Fixed Output</div>
                         <div class="fixed-output-box" style="flex: 1; padding: 12px; border-radius: 8px; font-family: var(--font-mono, monospace); font-size: 13.5px; line-height: 1.5; word-break: break-word; transition: all 0.3s ease;
-                            background: rgba(48,209,88,0.04); border: 1px solid rgba(48,209,88,0.25); color: #30d158; box-shadow: 0 0 10px rgba(48,209,88,0.05);
+                            background: rgba(48,209,88,0.04); border: 1px solid rgba(48,209,88,0.25); color: #30d158; box-shadow: 0 0 10px rgba(48,209,88,0.05); display: flex; flex-direction: column; gap: 6px;
                         ">
-                            ${liveFixed.text}
-                            ${!isPassed ? `<div style="margin-top: 6px; font-size: 11px; opacity: 0.8; font-weight: 600; color: #ff6b6b;"><i class="fa-solid fa-circle-exclamation"></i> Rejection Reason: ${liveFixed.rejectionReason}</div>` : ""}
+                            <div class="fixed-output-text" contenteditable="true" title="Click to edit final ad text" style="outline: none; border: none; background: transparent; padding: 0; margin: 0; color: inherit; width: 100%; cursor: text; min-height: 20px;">${liveFixed.text}</div>
+                            ${!isPassed ? `<div style="font-size: 11px; opacity: 0.8; font-weight: 600; color: #ff6b6b; border-top: 1px dashed rgba(255,107,107,0.2); padding-top: 6px; margin-top: 2px;"><i class="fa-solid fa-circle-exclamation"></i> Rejection Reason: ${liveFixed.rejectionReason}</div>` : ""}
                         </div>
                     </div>
                 </div>
@@ -11632,11 +11632,12 @@ function renderTriageCards(reports, container) {
             // ── Confirm / Resolve Button ──
             if (confirmBtn) {
                 confirmBtn.addEventListener("click", () => {
-                    const liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory);
+                    const textEl = card.querySelector(".fixed-output-text");
+                    const finalAdText = textEl ? textEl.textContent.trim() : "";
                     if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(liveFixed.text)
+                        navigator.clipboard.writeText(finalAdText)
                             .then(() => {
-                                showCustomNotification("Copied fixed ad to clipboard and resolved!", "success");
+                                showCustomNotification("Copied corrected ad to clipboard and resolved!", "success");
                                 resolveBugReport(report, card);
                             })
                             .catch(err => {

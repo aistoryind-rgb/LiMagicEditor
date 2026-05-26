@@ -2560,7 +2560,11 @@ function processAd() {
         const btnCopyRej = document.getElementById("btn-copy-rejection");
         if (btnCopyRej) btnCopyRej.classList.add("hide");
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
-        if (btnSubmitBugInline) btnSubmitBugInline.classList.add("hide");
+        if (btnSubmitBugInline) {
+            btnSubmitBugInline.classList.remove("btn-sent");
+            btnSubmitBugInline.classList.add("glow-red");
+            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+        }
         logsList.innerHTML = `<li class="log-empty">No logs available. Enter some text to see corrections.</li>`;
         btnCopy.disabled = true;
         return;
@@ -6516,7 +6520,11 @@ function updateUI(ctx) {
         
         if (btnCopyRej) btnCopyRej.classList.add("hide");
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
-        if (btnSubmitBugInline) btnSubmitBugInline.classList.add("hide");
+        if (btnSubmitBugInline && updateUI._lastText !== ctx.raw) {
+            btnSubmitBugInline.classList.remove("btn-sent");
+            btnSubmitBugInline.classList.add("glow-red");
+            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+        }
         
         // Stats increment check (only once per ad text)
         if (updateUI._lastText !== ctx.raw) {
@@ -6542,13 +6550,10 @@ function updateUI(ctx) {
             btnCopyRej.classList.remove("hide");
         }
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
-        if (btnSubmitBugInline) {
-            btnSubmitBugInline.classList.remove("hide");
-            if (updateUI._lastText !== ctx.raw) {
-                btnSubmitBugInline.classList.remove("btn-sent");
-                btnSubmitBugInline.classList.add("glow-red");
-                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
-            }
+        if (btnSubmitBugInline && updateUI._lastText !== ctx.raw) {
+            btnSubmitBugInline.classList.remove("btn-sent");
+            btnSubmitBugInline.classList.add("glow-red");
+            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -6576,13 +6581,10 @@ function updateUI(ctx) {
             btnCopyRej.classList.remove("hide");
         }
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
-        if (btnSubmitBugInline) {
-            btnSubmitBugInline.classList.remove("hide");
-            if (updateUI._lastText !== ctx.raw) {
-                btnSubmitBugInline.classList.remove("btn-sent");
-                btnSubmitBugInline.classList.add("glow-red");
-                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
-            }
+        if (btnSubmitBugInline && updateUI._lastText !== ctx.raw) {
+            btnSubmitBugInline.classList.remove("btn-sent");
+            btnSubmitBugInline.classList.add("glow-red");
+            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
         }
         
         if (updateUI._lastText !== ctx.raw) {

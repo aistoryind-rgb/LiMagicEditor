@@ -1159,8 +1159,8 @@ const ITEMS_DB = {
     ]
 }
 ;
-const BUILD_TIMESTAMP = "2026 May 26 05:43:13";
-const BUILD_TIMESTAMP_SHORT = "May 26 05:43";
+const BUILD_TIMESTAMP = "2026 May 26 07:03:19";
+const BUILD_TIMESTAMP_SHORT = "May 26 07:03";
 
 // Simulated GRP Citizens Database
 let grpCitizens = [
@@ -1948,7 +1948,6 @@ function correctSpelling(text, ctx) {
         "drug lab": "Burger shop",
         "draglab": "Burger shop",
         "druglab": "Burger shop",
-        "5": "lvl5",
         "woman": "women",
         "ievel": "Level",
         "ivl": "Level",
@@ -2125,6 +2124,11 @@ function mapClothingBrands(text) {
     result = result.replace(/\brolex\b/g, "kolex");
     result = result.replace(/\bsocial hoodie\b/g, "social club hoodie");
     result = result.replace(/\btype mask\b/g, "tight mask");
+    // Map scarf shortnames to their canonical clothing DB names
+    result = result.replace(/\bdesert scarf\b(?!\s*mask)/g, "desert scarf mask");
+    result = result.replace(/\btied scarf\b(?!\s*mask)/g, "tied scarf mask");
+    result = result.replace(/\bface scarf\b(?!\s*mask)/g, "face scarf mask");
+    result = result.replace(/\bneck scarf\b(?!\s*mask)/g, "neck scarf mask");
     return result;
 }
 
@@ -2300,7 +2304,7 @@ function matchVehicle(inputText) {
         return { name: bestVeh, category: categoryMap.get(bestVeh) };
     }
     
-    const closest = getClosestMatch(cleanInput, allVehicles, 0.5);
+    const closest = getClosestMatch(cleanInput, allVehicles, 0.7);
     if (closest) {
         return { name: closest, category: categoryMap.get(closest) };
     }
@@ -3384,7 +3388,8 @@ function runValidationPipeline(ctx, override) {
     const isEventAd = /^(?:pool\s+)?party\b/i.test(lowerRaw) || 
                       /^(?:wedding|car\s+meet)\b/i.test(lowerRaw) || 
                       /\b(?:party|wedding|car\s+meet)\s+at\b/i.test(lowerRaw);
-    const suppressPriceLabel = ["Dating", "Services", "Discounts"].includes(ctx.category) || isBeachMarket || isEventAd || ctx.isOwnerSearch || action === "Trading" || action === "Looking for";
+    const isRentSuppressed = ctx.category === "Real Estate" && (action === "Renting" || action === "Renting out");
+    const suppressPriceLabel = ["Dating", "Services", "Discounts"].includes(ctx.category) || isBeachMarket || isEventAd || ctx.isOwnerSearch || action === "Trading" || action === "Looking for" || isRentSuppressed;
     
     if (ctx.priceInfo && ctx.priceInfo.value !== "Negotiable") {
         let label = ctx.priceInfo.type; // Price, Budget, Rent, Bet
@@ -3790,7 +3795,7 @@ function detectCategory(text) {
         ];
         const isOtherKw = otherKeywordsList.some(keyword => pName.includes(keyword));
         const isExcluded = isVeh || isCloth || isService || isOtherKw ||
-            /\b(?:house|apartment|mansion|penthouse|garage|spaces|warehouse|helipad|gps|temp|template|discount|off|%|biz|business|store|shop|station|wash|sharing|tuning|club|salon|studio|company|cowshed|train|plantation|well|atm)\b/i.test(pName);
+            /\b(?:house|apartment|mansion|penthouse|garage|spaces|warehouse|helipad|gps|temp|template|discount|off|%|biz|business|store|shop|station|wash|sharing|tuning|club|salon|studio|company|cowshed|train|plantation|well|atm|solar|panel|work|job|hiring)\b/i.test(pName);
         
         if (!isExcluded) {
             return "Dating";
@@ -5221,6 +5226,11 @@ function maskPhrases(text) {
     result = result.replace(/\b(prime(?:\s+platinum)?\s*(?:with\s+)?\d+\s*(?:days?)?\s*and\s*\d+\s*days?)\b/gi, (match) => {
         return "__PRIME_AND_DAYS_START__" + match.replace(/\s+/g, "_") + "__PRIME_AND_DAYS_END__";
     });
+    // Protect typed clothing/resource item lists from being split by comma/and
+    // e.g. "tight mask 13 ,14 and 19" or "luminous stone 1 and 2"
+    result = result.replace(/\b((?:tight\s+)?masks?|trousers?|luminous\s+stones?|luminous\s+wheels?)\s+(\d+(?:\s*[,]\s*\d+)*\s*(?:,?\s*and\s+\d+)?)\b/gi, (match) => {
+        return "__TYPED_LIST_START__" + match.replace(/\s+/g, "_").replace(/,/g, "__COMMA__") + "__TYPED_LIST_END__";
+    });
     return result;
 }
 
@@ -5231,6 +5241,9 @@ function unmaskPhrases(text) {
     });
     result = result.replace(/__PRIME_AND_DAYS_START__(.+?)__PRIME_AND_DAYS_END__/g, (match, inner) => {
         return inner.replace(/_/g, " ");
+    });
+    result = result.replace(/__TYPED_LIST_START__(.+?)__TYPED_LIST_END__/g, (match, inner) => {
+        return inner.replace(/_/g, " ").replace(/__COMMA__/g, ",");
     });
     result = result.replace(/__FLAME_AND_WATER__/g, "flame and water");
     result = result.replace(/__ATTACK_AND_PROTECTION__/g, "attack and protection");
@@ -5255,6 +5268,12 @@ function itemRequiresArticle(itemStr, isFirst, ctx) {
         return false;
     }
     if (lower.includes("biospark")) {
+        return false;
+    }
+    if (lower.includes("luminous stone") && lower.includes("of type")) {
+        return false;
+    }
+    if (lower.includes("luminous stones")) {
         return false;
     }
     if (lower.includes("pickaxe") && (lower.includes("quality") || lower.includes("lvl") || lower.includes("level"))) {
@@ -5427,7 +5446,7 @@ function formatOtherAd(adBody, action, ctx) {
                 
                 let qty = parseQuantity(adBody);
                 let qtyText = qty ? `${qty} ` : "";
-                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "high quality ";
+                let qualityText = matchedQualities.length === 1 ? matchedQualities[0].name : "";
                 
                 const groupedTuningText = `${qtyText}${qualityText}${partsListText}${suffix}`;
                 formattedItems.push(groupedTuningText);
@@ -5903,7 +5922,7 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         } else if (cleanLower.includes("max") || cleanLower.includes("lvl 4") || cleanLower.includes("lvl4") || cleanLower.includes("level 4") || cleanLower.includes("4lvl") || cleanLower.includes("4 lvl")) {
             quality = "max quality ";
         } else {
-            quality = "high quality ";
+            quality = "";
         }
         
         let qty = parseQuantity(rawItem);
@@ -5964,10 +5983,34 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         return `${qtyText}${quality}${name}`;
     }
     
+    // Luminous stone check (resource item with type support)
+    if (cleanLower.includes("luminous stone") || cleaned.includes("luminous stone")) {
+        // Check for type numbers (e.g. "luminous stone 1 and 2") FIRST, before parseQuantity
+        const stoneTypeNums = parseMultipleTypes(rawItem.replace(/^\d+\s+/, ""));
+        if (stoneTypeNums) {
+            // When type is detected, no qty prefix — just return the typed name
+            let isPlural = stoneTypeNums.includes("and") || stoneTypeNums.includes(",");
+            let name = "luminous stones";
+            return `${name} of type ${stoneTypeNums}`;
+        }
+        let qty = parseQuantity(rawItem);
+        let qtyText = qty ? `${qty} ` : "";
+        let isPlural = cleanLower.includes("stones") || (qty && qty > 1) || hasEach;
+        let name = isPlural ? "luminous stones" : "luminous stone";
+        return `${qtyText}${name}`;
+    }
+    
     // Biospark check
     if (cleanLower.includes("biospark") || cleaned.includes("biospark")) {
         let qty = parseQuantity(rawItem);
         let qtyText = qty ? `${qty} ` : "";
+        // Check for type numbers (e.g. "biosparks 2" or "biosparks 1 and 3")
+        const biosTypeNums = parseMultipleTypes(rawItem.replace(/^\d+\s+/, ""));
+        if (biosTypeNums) {
+            let isPlural = biosTypeNums.includes("and") || biosTypeNums.includes(",");
+            let name = isPlural ? "Biosparks" : "Biosparks";
+            return `${qtyText}${name} of type ${biosTypeNums}`;
+        }
         let isPlural = cleanLower.includes("biosparks") || (qty && qty > 1) || hasEach;
         let name = isPlural ? "Biosparks" : "Biospark";
         return `${qtyText}${name}`;
@@ -6020,10 +6063,14 @@ function fuzzyCorrectItemName(rawItem, ctx) {
                 let formattedNum = numStr;
                 if (!numStr.includes("-")) {
                     const cleanNum = numStr.replace(/\D/g, "");
-                    if (cleanNum.length === 7 || cleanNum.length === 6 || cleanNum.length === 5) {
-                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2, 4)}-${cleanNum.slice(4)}`;
-                    } else if (cleanNum.length === 4) {
-                        formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2)}`;
+                    // Bypass hyphenation for repeating digit numbers (e.g. 1111111)
+                    const isRepeatingDigits = /^(\d)\1+$/.test(cleanNum);
+                    if (!isRepeatingDigits) {
+                        if (cleanNum.length === 7 || cleanNum.length === 6 || cleanNum.length === 5) {
+                            formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2, 4)}-${cleanNum.slice(4)}`;
+                        } else if (cleanNum.length === 4) {
+                            formattedNum = `${cleanNum.slice(0, 2)}-${cleanNum.slice(2)}`;
+                        }
                     }
                 }
                 return `SIM card \u2116 ${formattedNum}`;
@@ -6328,7 +6375,7 @@ function parseQuantity(text) {
         const end = regex.lastIndex;
         // check prefix
         const prefixText = lower.substring(Math.max(0, start - 15), start).trim();
-        if (/(?:\bhouse|\bapartment|\bmansion|\bpenthouse|\bshop|\bcard|\bcards|\bsim|\u2116|#|\bno\.?|\blevel|\blvl|\btype|\bt\.?|\bvolex|\bkolex|\btrousers?|\bmasks?|\bshoes?|\bt-shirts?|\bsweatshirts?|\bjackets?|\bhoodies?|\bdress|\bwatch(?:es)?|\bglasses|\bcaps?|\bhats?|\bshorts?|\bleggings?|\bsuits?|\baccessory|\baccessories|\bskirts?|\bvests?|\bpants|\bpiercings?|\bhorns?|\bearphones?|\bheadphones?|\bears?|\bcapes?|\bcrowns?|\bgloves?)$/i.test(prefixText.replace(/[:#\s\u2116]+$/g, "").trim())) {
+        if (/(?:\bhouse|\bapartment|\bmansion|\bpenthouse|\bshop|\bcard|\bcards|\bsim|\u2116|#|\bno\.?|\blevel|\blvl|\btype|\bt\.?|\bvolex|\bkolex|\btrousers?|\bmasks?|\bshoes?|\bt-shirts?|\bsweatshirts?|\bjackets?|\bhoodies?|\bdress|\bwatch(?:es)?|\bglasses|\bcaps?|\bhats?|\bshorts?|\bleggings?|\bsuits?|\baccessory|\baccessories|\bskirts?|\bvests?|\bpants|\bpiercings?|\bhorns?|\bearphones?|\bheadphones?|\bears?|\bcapes?|\bcrowns?|\bgloves?|\bstones?|\bbiosparks?)$/i.test(prefixText.replace(/[:#\s\u2116]+$/g, "").trim())) {
             continue;
         }
         // check suffix
@@ -6688,7 +6735,7 @@ function initFloatingClipboard() {
                         </div>
                         <div class="pip-header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; justify-content: center;">
                             <button id="pip-btn-history" class="pip-uniform-btn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 05:43</span>
+                            <span class="pip-updated-time" style="font-size: 8px; color: rgba(255,255,255,0.35); font-family: 'Outfit', sans-serif; font-weight: 500; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.5px; margin-top: 1px;">UPDATED: May 26 07:03</span>
                         </div>
                     </header>
                     <main class="pip-main" style="flex: 1;">
@@ -7333,6 +7380,8 @@ function initAccessGate() {
     function handleAdminLogin(key) {
         if (key === "DopamineAdmin2026!") {
             localStorage.setItem("li_approved_token", "APPROVED");
+            localStorage.setItem("li_admin_authenticated", "true");
+            localStorage.setItem("li_admin_passcode", key);
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", key);
             alert("Welcome Admin! Access granted.");
@@ -7413,6 +7462,11 @@ function initAccessGate() {
                         alert("Access granted successfully! Welcome to LifeInvader Ad Editor.");
                     }
                 } else {
+                    // Bypass deauthorization if the user is authenticated as Admin
+                    if (localStorage.getItem("li_admin_authenticated") === "true" || sessionStorage.getItem("li_admin_authenticated") === "true") {
+                        console.log("Access status check: user is admin, bypassing deauthorization.");
+                        return;
+                    }
                     localStorage.removeItem("li_approved_token");
                     document.documentElement.classList.remove("user-approved");
                     document.documentElement.classList.add("user-unauthorized");
@@ -7913,6 +7967,16 @@ function initAdminPanel() {
         });
     }
 
+    // Restore admin session from localStorage if present (to handle tab discard/sleep)
+    if (localStorage.getItem("li_admin_authenticated") === "true" && sessionStorage.getItem("li_admin_authenticated") !== "true") {
+        sessionStorage.setItem("li_admin_authenticated", "true");
+        sessionStorage.setItem("li_admin_role", "super");
+        const storedPass = localStorage.getItem("li_admin_passcode");
+        if (storedPass) {
+            sessionStorage.setItem("li_admin_passcode", storedPass);
+        }
+    }
+
     // Check existing authentication session
     if (sessionStorage.getItem("li_admin_authenticated") === "true") {
         if (authContainer) authContainer.classList.add("hide");
@@ -7935,6 +7999,8 @@ function initAdminPanel() {
     btnAuth.addEventListener("click", () => {
         const password = inputPasscode.value.trim();
         if (password === "DopamineAdmin2026!") {
+            localStorage.setItem("li_admin_authenticated", "true");
+            localStorage.setItem("li_admin_passcode", password);
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", password);
             sessionStorage.setItem("li_admin_role", "super");

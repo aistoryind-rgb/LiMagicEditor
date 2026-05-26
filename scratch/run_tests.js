@@ -1,308 +1,73 @@
-const fs = require('fs');
-const path = require('path');
+const http = require('http');
+const { execSync } = require('child_process');
 
-// Mock browser environment
-global.window = global;
-global.customSpelling = {};
-global.customTemplates = [];
-global.localStorage = {
-    getItem: () => null,
-    setItem: () => {}
-};
-global.setInterval = () => {};
-global.setTimeout = () => {};
-global.fetch = () => Promise.resolve({
-    json: () => Promise.resolve({ status: "success" })
+const server = http.createServer((req, res) => {
+    if (req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                
+                if (data.isInitializationError) {
+                    console.error("\n=== INITIALIZATION ERROR ===");
+                    console.error(`Error: ${data.error}`);
+                    console.error(`File: ${data.filename}:${data.lineno}:${data.colno}`);
+                    if (data.stack) console.error(`Stack: ${data.stack}`);
+                    console.error("============================\n");
+                    res.writeHead(200);
+                    res.end('OK');
+                    
+                    const fs = require('fs');
+                    fs.writeFileSync('scratch/results.json', JSON.stringify({
+                        passed: 0,
+                        failed: 0,
+                        total: 0,
+                        error: data.error,
+                        results: []
+                    }, null, 2));
+                    
+                    setTimeout(() => process.exit(1), 500);
+                    return;
+                }
+                
+                res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
+                res.end('OK');
+                
+                const results = data;
+                const fs = require('fs');
+                fs.writeFileSync('scratch/results.json', JSON.stringify(results, null, 2));
+                
+                console.log(`\nTest Results: ${results.passed}/${results.total} passed, ${results.failed} failed`);
+                
+                if (results.failures && results.failures.length > 0) {
+                    console.log("\n=== FAILURES ===");
+                    results.failures.forEach(f => {
+                        console.log(`\n  FAIL ${f.name}`);
+                        console.log(`    Expected: ${f.expected}`);
+                        console.log(`    Got:      ${f.got}`);
+                    });
+                }
+                
+                setTimeout(() => process.exit(results.failed > 0 ? 1 : 0), 500);
+            } catch (e) {
+                res.writeHead(400);
+                res.end('Bad JSON');
+            }
+        });
+    } else if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        });
+        res.end();
+    } else {
+        res.writeHead(404);
+        res.end();
+    }
 });
 
-// Load app.js
-const appJsPath = path.join(__dirname, '..', 'app.js');
-const appJsContent = fs.readFileSync(appJsPath, 'utf8');
-
-// We need to mock document for app.js initialization if it runs code immediately
-global.document = {
-    addEventListener: () => {},
-    getElementById: () => ({ addEventListener: () => {} }),
-    querySelectorAll: () => [],
-    querySelector: () => null
-};
-
-// Evaluate app.js
-eval(appJsContent);
-
-// Test cases from test.html
-const testCases = [
-  { name: "1. Annis Skyline GT-R (R34)", raw: "Buying Annis Skyline GT-R (R34)", expected: 'Buying "Annis Skyline GT-R (R34)". Budget: Negotiable.' },
-  { name: "2. top quality metal", raw: "Selling top quality metal", expected: 'Selling a top quality metal. Price: Negotiable.' },
-  { name: "3. 10% and 20% juices in bulk", raw: "Selling 10% and 20% juices in bulk", expected: 'Selling 10% and 20% juices in bulk. Price: Negotiable.' },
-  { name: "4. Grand ticket", raw: "Selling Grand ticket", expected: 'Selling a Grand ticket. Price: Negotiable.' },
-  { name: "5. white exotic mask", raw: "Selling white exotic mask", expected: 'Selling white exotic mask. Price: Negotiable.' },
-  { name: "6. Secret ticket, Car ticket and 30 batteries", raw: "Selling Secret ticket, Car ticket and 30 batteries", expected: 'Selling a Secret ticket, Car ticket and 30 batteries. Price: Negotiable.' },
-  { name: "7. house no441 with garden, helipad, swimming pool and 9 gs", raw: "Selling in winewood hills house no441 with garden helipad swiming pool and 9 gs", expected: 'Selling house №441 with a garden, 9 g.s., helipad and swimming pool in Vinewood Hills. Price: Negotiable.' },
-  { name: "8. six tailed fox on shoulder pet", raw: "Selling six tailed fox on shoulder pet", expected: 'Selling six tailed fox on shoulder pet. Price: Negotiable.' },
-  { name: "9. Car ticket", raw: "Selling Car ticket", expected: 'Selling a Car ticket. Price: Negotiable.' },
-  { name: "10. various items at beach market shop 5", raw: "Selling various items at beach markit shop 5", expected: 'Selling various items at the beach market shop №5.' },
-  { name: "11. Truffade Chiron", raw: "Selling Truffade Chiron", expected: 'Selling "Truffade Chiron". Price: Negotiable.' },
-  { name: "12. apartment 1800 with 9 gs", raw: "Selling apartment 1800 with 9 gs", expected: 'Selling apartment №1800 with 9 g.s. Price: Negotiable.' },
-  { name: "13. Prime Platinum 15 days", raw: "Buying Prime Platinum 15 days", expected: 'Buying Prime Platinum with 15 days. Budget: Negotiable.' },
-  { name: "14. Enus Phantom full configuration", raw: "Selling Enus Phantom with full configuration", expected: 'Selling "Enus Phantom" with full configuration. Price: Negotiable.' },
-  { name: "15. Bravado Viper 2008 with full configuration and drift kit", raw: "Selling Bravado Viper 2008 with full configuration and drift kit", expected: 'Selling "Bravado Viper 2008" with full configuration and drift kit. Price: Negotiable.' },
-  { name: "16. Bravado Viper 2008 par confin and Negable", raw: "Sling \"Bravado Viper 2008\" with par confin and drift kit. Price: Negable.", expected: 'Selling "Bravado Viper 2008" with partial configuration and drift kit. Price: Negotiable.' },
-  { name: "17. sellaing white exsotic masks. Price: Negable.", raw: "Sellaing white exsotic masks. Price: Negable.", expected: 'Selling white exotic mask. Price: Negotiable.' },
-  { name: "18. grand ticket buy", raw: "grand ticket buy", expected: 'Buying a Grand ticket. Budget: Negotiable.' },
-  { name: "19. house with typos", raw: "sell house 444 twith garden and helipaad costom inter", expected: 'Selling house №444 with a garden, helipad and custom interior. Price: Negotiable.' },
-  { name: "20. looking for wife", raw: "looking for wife", expected: 'Looking for a wife.' },
-  { name: "21. looking for girlfriend", raw: "looking for girlfriend", expected: 'Looking for a girlfriend.' },
-  { name: "22. looking wife", raw: "looking wife", expected: 'Looking for a wife.' },
-  { name: "23. looking girlfriend", raw: "looking girlfriend", expected: 'Looking for a girlfriend.' },
-  { name: "24. look for wife", raw: "look for wife", expected: 'Looking for a wife.' },
-  { name: "25. look for girlfriend", raw: "look for girlfriend", expected: 'Looking for a girlfriend.' },
-  { name: "26. looking for a wife", raw: "looking for a wife", expected: 'Looking for a wife.' },
-  { name: "27. looking for a girlfriend", raw: "looking for a girlfriend", expected: 'Looking for a girlfriend.' },
-  { name: "28. loking girlfrnd", raw: "loking girlfrnd", expected: 'Looking for a girlfriend.' },
-  { name: "29. rp ticket buyng in bulk", raw: "rp ticket buyng in bulk", expected: 'Buying Grand tickets in bulk. Budget: Negotiable.' },
-  { name: "30. CAR ticket buyng in bulk", raw: "CAR ticket buyng in bulk", expected: 'Buying Car tickets in bulk. Budget: Negotiable.' },
-  { name: "31. rp tickt sale", raw: "rp tickt sale", expected: 'Selling a Grand ticket. Price: Negotiable.' },
-  { name: "32. 100 rp ticket buy", raw: "100 rp ticket buy", expected: 'Buying 100 Grand tickets. Budget: Negotiable.' },
-  { name: "33. 100 rp ticket buy 420 each", raw: "100 rp ticket buy 420 each", expected: 'Buying 100 Grand tickets. Budget: $420 each.' },
-  { name: "34. Anis Skyline with upgrades", raw: "Anis Skyline GT-R (R34) sel full conf drft tubo wheels 9", expected: 'Selling "Annis Skyline GT-R (R34)" with full configuration, luminous wheels of type 9, turbo kit and drift kit. Price: Negotiable.' },
-  { name: "35. loking for girlfirnd", raw: "loking for girlfirnd", expected: 'Looking for a girlfriend.' },
-  { name: "36. party at bhams bar", raw: "party at bhams bar", expected: "Party at Bahama Mamas Bar." },
-  { name: "37. 25 gs house casinopent", raw: "25 gs house casinopent", expected: "Selling Casino penthouse with 25 g.s. Price: Negotiable." },
-  { name: "38. jucies typo", raw: "selling 10% jucies in bulk 2.4k each", expected: "Selling 10% juices in bulk. Price: $2.400 each." },
-  { name: "39. prime plat", raw: "Buying prime plat budget: negotiable", expected: "Buying Prime Platinum. Budget: Negotiable." },
-  { name: "40. prime platinum with 7 and 15 days", raw: "selling prime platinum with 7 and 15 days", expected: "Selling Prime Platinum with 7 and 15 days. Price: Negotiable." },
-  { name: "41. buying batteries bulk", raw: "buying battres bulk", expected: "Buying batteries in bulk. Budget: Negotiable." },
-  { name: "42. template with header prefix", raw: "Ammunition Store 39 Template 1- Looking to buy affordable and high quality ammunition in bulk? weapon shop (GPS №39) is offering huge discount. Email (lbiiigmatte)", expected: "Looking to buy affordable and high quality ammunition in bulk? weapon shop (GPS №39) is offering huge discount. Email (lbiiigmatte)." },
-  { name: "43. template with different category", raw: "Visit Holdem Ammunation Store (GPS 40) is Offering 50% discount the lowest prices in the city", expected: "Visit Holdem Ammunation Store (GPS 40) is Offering 50% discount the lowest prices in the city." },
-  { name: "44. snowboarders mask typo", raw: "seeling snowbord mask white price neg", expected: "Selling white snowboarders mask. Price: Negotiable." },
-  { name: "45. shorthand template 39 temp 1", raw: "Ammunition Store 39 Temp 1", expected: "Looking to buy affordable and high quality ammunition in bulk? weapon shop (GPS №39) is offering huge discount. Email (lbiiigmatte)." },
-  { name: "46. shorthand template 40 temp 2", raw: "Ammunition Store 40 Temp 2", expected: "Visit Holdem Ammunation Store (GPS 40) is Offering 50% discount the lowest prices in the city." },
-  { name: "47. shorthand template 39 t1", raw: "39 t1", expected: "Looking to buy affordable and high quality ammunition in bulk? weapon shop (GPS №39) is offering huge discount. Email (lbiiigmatte)." },
-  { name: "48. shorthand template 151 temp 2", raw: "151 temp 2", expected: "Siddhu Gun Store (GPS 151) - Limited-time 90% discount on top-quality firearms. Best deals in town. Dont miss out! Bulk orders? Mail sidhux123." },
-  { name: "49. obsidian each price prefix", raw: "selling obsidian each 6000", expected: "Selling obsidian. Price: $6.000 each." },
-  { name: "50. obsidian in bulk each", raw: "selling obsidian in bulk 6000 each", expected: "Selling obsidian in bulk. Price: $6.000 each." },
-  { name: "51. various items beach market shop no5", raw: "Selling various items at beach market shop no5", expected: "Selling various items at the beach market shop №5." },
-  { name: "52. red gloves for women", raw: "selling red gloves for women price 500k", expected: "Selling red gloves for women. Price: $500.000" },
-  { name: "53. buy white snowboarders mask", raw: "BUY white snowboarders mask BUD 500k", expected: "Buying white snowboarders mask. Budget: $500.000" },
-  { name: "54. buy purple gloves for women", raw: "BUY PURPLE gloves for women BUD 500k", expected: "Buying purple gloves for women. Budget: $500.000" },
-  { name: "55. selling or trading Truffade Chiron", raw: "selling or trading Truffade Chiron", expected: 'Selling or trading "Truffade Chiron". Price: Negotiable.' },
-  { name: "56. house num shorthand", raw: "renting house num 100 near the beach market", expected: "Renting out house №100 near the beach market." },
-  { name: "57. business with number", raw: "selling parking 18", expected: "Selling Parking №18. Price: Negotiable." },
-  { name: "58. business without number", raw: "selling parking", expected: "Selling Parking business. Price: Negotiable." },
-  { name: "59. plural tickets without article", raw: "Selling Grand tickets, robot human mask and desert scarf mask of type 15. Price: Negotiable.", expected: "Selling Grand tickets, robot human mask and desert scarf mask of type 15. Price: Negotiable." },
-  { name: "60. selling diamonds and salmons in bulk", raw: "Selling diamonds and salmons in bulk", expected: "Selling diamonds and salmon in bulk. Price: Negotiable." },
-  { name: "61. selling 50 salmons", raw: "Selling 50 salmons", expected: "Selling 50 salmon. Price: Negotiable." },
-  { name: "62. selling 3lvl transmission", raw: "selling 3lvl transmission", expected: "Selling high quality transmission tuning. Price: Negotiable." },
-  { name: "63. buying 25 ray", raw: "Buying 25 ray", expected: "Buying 25 ray. Budget: Negotiable." },
-  { name: "64. selling megalodon in bulk", raw: "Selling megalodon in bulk", expected: "Selling megalodon in bulk. Price: Negotiable." },
-  { name: "65. buying orca", raw: "Buying orca", expected: "Buying orca. Budget: Negotiable." },
-  { name: "66. selling 15 humpback whale", raw: "Selling 15 humpback whale", expected: "Selling 15 humpback whale. Price: Negotiable." },
-  { name: "67. buying 100 perch", raw: "Buying 100 perch", expected: "Buying 100 perch. Budget: Negotiable." },
-  { name: "68. selling engine tuning", raw: "selling engine tuning", expected: "Selling engine tuning. Price: Negotiable." },
-  { name: "69. selling high quality engine tuning", raw: "Selling high quality engine tuning", expected: "Selling high quality engine tuning. Price: Negotiable." },
-  { name: "70. selling 2 medium quality engine tunings", raw: "Selling 2 medium quality engine tunings", expected: "Selling 2 medium quality engine tunings. Price: Negotiable." },
-  { name: "71. buying 4 medium quality suspension and high quality engine tunings", raw: "Buying 4 medium quality suspension and high quality engine tunings", expected: "Buying 4 medium quality suspension tunings and high quality engine tunings. Budget: Negotiable." },
-  { name: "72. buying high quality transmission tuning", raw: "Buying high quality transmission tuning", expected: "Buying high quality transmission tuning. Budget: Negotiable." },
-  { name: "73. selling parking 18 price 450m", raw: "selling parking 18 price 450m", expected: "Selling Parking №18. Price: $450 Million." },
-  { name: "74. engen level 3 500k", raw: "engen level 3 500k", expected: "Selling high quality engine tuning. Price: $500.000" },
-  { name: "75. selling full max juguler with pro parts,drift kit,full chip tuning and insaurance", raw: "selling full max juguler with pro parts,drift kit,full chip tuning and insaurance", expected: 'Selling "Jugular" with full configuration, insurance and drift kit. Price: Negotiable.' },
-  { name: "76. selling Black gloves for men", raw: "Selling Black gloves for men", expected: "Selling black gloves for men. Price: Negotiable." },
-  { name: "77. selling gloves for men price negotiable", raw: "Selling gloves for men. Price: Negotiable.", expected: "Selling gloves for men. Price: Negotiable." },
-  { name: "78. buying cabbage seeds in bulk for 2.2k", raw: "buying cabbage seeds in bulk for 2.2k", expected: "Buying cabbage seeds in bulk. Budget: $2.200 each." },
-  { name: "79. selling bataris in balk buget nego", raw: "selling bataris in balk buget nego", expected: "Selling batteries in bulk. Price: Negotiable." },
-  { name: "80. selling red mens gloves price nego", raw: "selling red mens gloves price nego", expected: "Selling red gloves for men. Price: Negotiable." },
-  { name: "81. look frainds (dating)", raw: "look frainds", expected: "Looking for a friend." },
-  { name: "82. social hoodie for women", raw: "social hoodie for women", expected: "Selling Social Club hoodie for women. Price: Negotiable." },
-  { name: "83. buyong social hoodie for women", raw: "buyong social hoodie for women", expected: "Buying Social Club hoodie for women. Budget: Negotiable." },
-  { name: "84. buyong 20 top quality mettal 200k each", raw: "buyong 20 top quality mettal 200k each", expected: "Buying 20 top quality metal. Budget: $200.000 each." },
-  { name: "85. buy rp tick", raw: "buy rp tick", expected: "Buying a Grand ticket. Budget: Negotiable." },
-  { name: "86. sell haus with 25 grage", raw: "sell haus with 25 grage", expected: "Selling a house with 25 g.s. Price: Negotiable." },
-  { name: "87. sell haus gardan and heli", raw: "sell haus gardan and heli", expected: "Selling a house with a garden and helipad. Price: Negotiable." },
-  { name: "88. I buy heli", raw: "I buy heli", expected: "Buying a helicopter. Budget: Negotiable." },
-  { name: "89. sell heli 11m", raw: "sell heli 11m", expected: "Selling a helicopter. Price: $11 Million." },
-  { name: "90. selling lvl3 transmission, engine and suspension", raw: "selling lvl3 transmission, engine and suspension", expected: "Selling high quality transmission, engine and suspension tuning. Price: Negotiable." },
-  { name: "91. seling bandit continres", raw: "seling bandit continres", expected: "Selling bandit containers. Price: Negotiable." },
-  { name: "92. selling chrion full max with drift kit and incrance", raw: "selling chrion full max with drift kit and incrance", expected: "Selling \"Truffade Chiron\" with full configuration, insurance and drift kit. Price: Negotiable." },
-  { name: "93. 100 p1 contanr 30k each", raw: "100 p1 contanr 30k each", expected: "Selling 100 Progen containers. Price: $30.000 each." },
-  { name: "94. buying privet business 150ml", raw: "buying privet business 150ml", expected: "Buying private business. Budget: $150 Million." },
-  { name: "95. buying privet business 150mil", raw: "buying privet business 150mil", expected: "Buying private business. Budget: $150 Million." },
-  { name: "96. buying privet business", raw: "buying privet business", expected: "Buying private business. Budget: Negotiable." },
-  { name: "97. Selling cage with a Cosmodog", raw: "Selling cage with a Cosmodog", expected: "Selling cage with a Cosmodog. Price: Negotiable." },
-  { name: "98. Selling blue Lui Vi set", raw: "Selling Blue lui vi set", expected: "Selling blue Lui Vi set. Price: Negotiable." },
-  { name: "99. Selling house with gs 25", raw: "SELLING HOUSE NO 1406 in Vinewood With garden and swimming pool and helipad and gs 25", expected: "Selling house №1406 with a garden, 25 g.s., helipad and swimming pool in Vinewood Hills. Price: Negotiable." },
-  { name: "100. Looking for an alliance", raw: "looking for alliance", expected: "Looking for an alliance." },
-  { name: "101. Looking for a Clothing Shop owner", raw: "looking for clothing shop owner", expected: "Looking for a Clothing Shop owner." },
-  { name: "102. Buy prime palt 7days and 15 days", raw: "buy prime palt 7days and 15 days", expected: "Buying Prime Platinum with 7 and 15 days. Budget: Negotiable." },
-  { name: "103. Selling white snbobord mask price neg", raw: "selling white snbobord mask price neg", expected: "Selling white snowboarders mask. Price: Negotiable." },
-  { name: "104. Shorthand template 24 temp 1", raw: "Office 24 template 1", expected: "Need easy money $132.000 everyday? Office (№24) is for you, offering $10.000 bonus for every task you finish. Contact (d.arsh) via email for bonus!" },
-  { name: "105. Shorthand template 585 t2", raw: "office 585 t2", expected: "Office (№585) is currently offering a $12,000 bonus for each completed task. Interested? Contact (dxdux) via mail for more info!" },
-  { name: "106. Shorthand template 1000 temp 1", raw: "1000 temp 1", expected: "Easy Money From Me Get 9K For Each Task. We Are Not Alone But We Are The Best OFFICE (N1000) Contact (zekomyth) via email for bonus! or Call 8882288." },
-  { name: "107. Shorthand template 1288 t1", raw: "office 1288 t1", expected: "Your millionaire dream begins at Office 1288! Earn 10k per task, 125k a day, 875k every week. Build your future with us. Contact on mails (leveljod)." },
-  { name: "108. Shorthand template 1948 temp 2", raw: "office 1948 temp 2", expected: "Quick Money Opportunity! Office No. 1948. Fast, easy earnings. No hard work, just smart work. email (za3im96) for bonuses!" },
-  { name: "109. Shorthand template 2796 temp 2", raw: "2796 t2", expected: "Outlaws Office (№2796) is waiting for you. Tackle 6 tasks daily, earn money and receive $30.000 bonus for completing all tasks. Contact us at (bo33)." },
-  { name: "110. Shorthand template 32125 temp 1", raw: "office 32125 temp 1", expected: "Is your girlfriend spending all your money? You do not have to be afraid anymore! The office (№32125) offers money for your daily needs." },
-  { name: "111. Shorthand template 21046 temp 1", raw: "office 21046 t1", expected: "$11,111 BONUS $11,111 BONUS $11,111 BONUS per task Wietru Vio Office (21046) Contact: mail (Wietru)." },
-  { name: "112. Shorthand template 27650 temp 1 without prefix", raw: "27650 Temp1", expected: "Empty pockets? Join Office 27650 and earn daily with easy tasks. Get up to $10.000 bonus per task. Start now! Contact (bako0804)." },
-  { name: "113. Jewelry store with number (Buying)", raw: "Buying Jewelry store №44.", expected: "Buying Jewelry store №44. Budget: Negotiable." },
-  { name: "114. Jewelry store with number (Selling)", raw: "Jewelry store №44.", expected: "Selling Jewelry store №44. Price: Negotiable." },
-  { name: "115. Plantation business spelling & beds check 1", raw: "buy plantation buiness with 10bedss", expected: "Buying Plantation business with 10 beds. Budget: Negotiable." },
-  { name: "116. Plantation business spelling & beds check 2", raw: "Plantation busnss with 10 beds.", expected: "Selling Plantation business with 10 beds. Price: Negotiable." },
-  { name: "117. Plantation business spelling & beds check 3", raw: "plantation 10bedss", expected: "Selling Plantation business 10 beds. Price: Negotiable." },
-  { name: "118. Crop-specific plantation (pumkin bed 10)", raw: "plantation pumkin bed 10", expected: "Selling Pumpkin plantation business 10 beds. Price: Negotiable." },
-  { name: "119. Crop-specific plantation (cabbage capitalization)", raw: "Selling cabbage plantation with 20 beds.", expected: "Selling Cabbage plantation business with 20 beds. Price: Negotiable." },
-  { name: "120. Real estate aparmnt spelling typo", raw: "Selling an aparmnt. Price: Negotiable.", expected: "Selling an apartment. Price: Negotiable." },
-  { name: "121. Specific auto priority italy f458 car", raw: "selling italy f458 car", expected: 'Selling "Grotti Italia (F458)". Price: Negotiable.' },
-  { name: "122. Standalone ATM business no232 auto category", raw: "selling atm no232", expected: "Selling ATM №232. Price: Negotiable." },
-  { name: "123. Quality spelling and metal resource", raw: "sel 10 top qality metal", expected: "Selling 10 top quality metal. Price: Negotiable." },
-  { name: "124. ATM business with number", raw: "atm business no32", expected: "Selling ATM №32. Price: Negotiable." },
-  { name: "125. Selling Monowheel vehicle spelling typo", raw: "SELLING MONEWIL", expected: 'Selling "Monowheel". Price: Negotiable.' },
-  { name: "126. Plantation bed spacing case-insensitive 20BED", raw: "Cabbage plantation 20BED", expected: "Selling Cabbage plantation business 20 beds. Price: Negotiable." },
-  { name: "127. ATM number check with N prefix and spelling correction", raw: "SELL ATM BUSINES N011", expected: "Selling ATM №11. Price: Negotiable." },
-  { name: "128. Private business spelling typo privte", raw: "privte business", expected: "Selling private business. Price: Negotiable." },
-  { name: "129. Clothing shop with MP prefix and million price", raw: "selling clothing shop mp 12 33m", expected: "Selling Clothing shop №12. Price: $33 Million." },
-  { name: "130. Car sharing with middle business duplicate stripping", raw: "CAr sharing busines no2", expected: "Selling Car sharing №2. Price: Negotiable." },
-  { name: "131. Car sharing with biss spelling typo and number formatting", raw: "car sharing biss no2", expected: "Selling Car sharing №2. Price: Negotiable." },
-  { name: "132. Multiple items with rare vehicle stop word check", raw: "selling lui vi desert scarf type 2, high quality engine tuning and rare lottery ticket", expected: "Selling Lui Vi desert scarf mask of type 2, high quality engine tuning and rare lottery ticket. Price: Negotiable." },
-  { name: "133. Secret ticket fragments (Buying in bulk)", raw: "buying secret ticket fragments 3.5k each", expected: "Buying Secret ticket fragments. Budget: $3.500 each." },
-  { name: "134. Secret ticket fragment (Buying)", raw: "buying secret ticket fragment", expected: "Buying a Secret ticket fragment. Budget: Negotiable." },
-  { name: "135. Secret ticket fragment (Selling)", raw: "selling secret ticket fragment", expected: "Selling a Secret ticket fragment. Price: Negotiable." },
-  { name: "136. Multiple items without comma rare vehicle stop word check", raw: "selling lui vi desert scarf type 2 high quality engine tuning and rare lottery ticket", expected: "Selling Lui Vi desert scarf mask of type 2, high quality engine tuning and rare lottery ticket. Price: Negotiable." },
-  { name: "137. Secret ticket fragment without action", raw: "secret ticket fragment", expected: "Selling a Secret ticket fragment. Price: Negotiable." },
-  { name: "138. Valuable container (Selling)", raw: "Selling a valuable container. Price: Negotiable.", expected: "Selling a valuable container. Price: Negotiable." },
-  { name: "139. Bravado Charger Daytona (non-sellable car)", raw: "sell car bravado cahrger datone", expected: { status: "rejected", rejectionReason: "Cannot advertise this vehicle as it is non-sellable." } },
-  { name: "140. Power booster shots (plural, no article)", raw: "buying power booster shots", expected: "Buying power booster shots. Budget: Negotiable." },
-  { name: "141. Power booster shot (singular, has article)", raw: "buying a power booster shot", expected: "Buying a power booster shot. Budget: Negotiable." },
-  { name: "142. Pickaxe quality lvl 4 (no article)", raw: "selling level 4 pickaxe", expected: "Selling max quality pickaxe. Price: Negotiable." },
-  { name: "143. Pickaxe standard (has article)", raw: "selling a pickaxe", expected: "Selling a pickaxe. Price: Negotiable." },
-  { name: "144. Inventory max quality (never has article)", raw: "buying max quality inventory", expected: "Buying max quality inventory. Budget: Negotiable." },
-  { name: "145. Inventory standard (never has article)", raw: "buying inventory", expected: "Buying inventory. Budget: Negotiable." },
-  { name: "146. Drag lab (drug lab spelling typo to Burger shop)", raw: "selling drag lab", expected: "Selling Burger shop business. Price: Negotiable." },
-  { name: "147. Drug lab (direct spelling to Burger shop)", raw: "buying drug lab 15m", expected: "Buying Burger shop business. Budget: $15 Million." },
-  { name: "148. Burger shop business (not rejected)", raw: "Selling Burger shop business", expected: "Selling Burger shop business. Price: Negotiable." },
-  { name: "149. High quality metal mapping to top quality metal", raw: "SELLING HIGH QUALITY METAL", expected: "Selling a top quality metal. Price: Negotiable." },
-  { name: "150. Juice becoming animal mapping", raw: "selling juice becoming animal", expected: "Selling juice on becoming an animal. Price: Negotiable." },
-  { name: "151. Progen cases and ticket", raw: "selling 50 progen cases and 5 rp ticket", expected: "Selling 50 Progen containers and 5 Grand tickets. Price: Negotiable." },
-  { name: "152. Fishing rod level 4 (max quality)", raw: "selling lvl 4 fishing rod", expected: "Selling max quality fishing rod. Price: Negotiable." },
-  { name: "153. Grand tickets plural with each", raw: "buying grand ticket 300k each", expected: "Buying Grand tickets. Budget: $300.000 each." },
-  { name: "154. Dice bet limit ceiling", raw: "Playing dice 15m", expected: "Looking to play dice. Bet: Negotiable." },
-  { name: "155. Numbered SIM card without article", raw: "Selling sim card 1111111", expected: "Selling SIM card № 1111111. Price: Negotiable." },
-  { name: "156. Clothing for item trade", raw: "trading white snowboarders mask for six tail fox", expected: "Trading white snowboarders mask for six tailed fox on shoulder pet." },
-  { name: "157. Vehicle for vehicle trade", raw: "Trading Toros for Karin Tundra 2021", expected: 'Trading "Toros" for "Karin Tundra 2021".' },
-  { name: "158. Selling or trading vehicles with price", raw: "Selling or trading Ubermacht M5 (E34) for Benefactor-AMG C63 Coupe (W205) Price Negotiable", expected: 'Selling or trading "Ubermacht M5 (E34)" for "Benefactor-MG C63 Coupe (W205)". Price: Negotiable.' },
-  { name: "159. Animal juice formatting", raw: "selling animal juice", expected: "Selling juice on becoming an animal. Price: Negotiable." },
-  { name: "160. Juice to become an animal formatting", raw: "selling juice to become an animal", expected: "Selling juice on becoming an animal. Price: Negotiable." },
-  { name: "161. Paycheck juice formatting", raw: "selling paycheck juice", expected: "Selling juice for double the payment. Price: Negotiable." },
-  { name: "162. Pay check juice formatting", raw: "selling pay check juice", expected: "Selling juice for double the payment. Price: Negotiable." },
-  { name: "163. User price each with trailing each bug", raw: "Selling a secret ticket and 100 desert scarf mask containers. Price : $1.8 million and $10000 each", expected: "Selling Secret ticket and 100 desert scarf mask containers. Price: $1.8 Million and $10.000 each respectively." },
-  { name: "164. Trousers of type 25 without each", raw: "LUMINOUS TROUSER G TYPE 25 60m", expected: "Selling luminous trousers of type 25. Price: $60 Million." },
-  { name: "165. top metal mapping to top quality metal", raw: "selling top metal", expected: "Selling a top quality metal. Price: Negotiable." },
-  { name: "166. Tight mask of type 13 without each", raw: "selling tight mask type 13 40m", expected: "Selling tight mask of type 13. Price: $40 Million." },
-  { name: "167. Real Estate standalone house number extraction with spelling correction", raw: "selling housae vinewood hills with garden g.s 9 1404", expected: "Selling house №1404 with a garden and 9 g.s. in Vinewood Hills. Price: Negotiable." },
-  { name: "168. 24/7 store shorthand GPS 23 temp 1", raw: "store 24/7 23 temp 1", expected: "Hurry! Store 24/7 №1 (GPS 23) is offering 50% off on everything. Grab your favorite items now. Shop smart, save big!" },
-  { name: "169. 24/7 store shorthand GPS 24 temp 2", raw: "24/7 24 t2", expected: "Store №2 (GPS №24) Spankys 24/7 runs all day with cheapest rates. Bulk orders get instant delivery. Contact 99-84-146 or (ganguly07)." },
-  { name: "170. 24/7 store standard template match GPS 25 temp 2", raw: "Revolutionize your shopping at 24/7 store (GPS №25) deals up to 50% off! Get pickaxes, maps, flowers, tents and more essentials for your daily tasks!", expected: "Revolutionize your shopping at 24/7 store (GPS №25) deals up to 50% off! Get pickaxes, maps, flowers, tents and more essentials for your daily tasks!" },
-  { name: "171. Gas Station shorthand GPS 4 temp 1", raw: "gas 4 t1", expected: "Cheapest Means Best! Come Gas Station NO 3 (GPS No4) inside city FUEL $8!" },
-  { name: "172. Gas Station shorthand GPS 117 temp 2", raw: "loves 117 t2", expected: "Loves Fuel №117 – Just $12/L! Save more with bulk deals. Msg (rockyfearless) now to lock in your supply!" },
-  { name: "173. Gas Station standard template match GPS 136 temp 1", raw: "Renegades Gas Station, in the middle of the map, GPS №136 offers the LOWEST Price Per Liter, just $7. For bulk orders, Contact HELLBRAZER or VAILLYRP.", expected: "Renegades Gas Station, in the middle of the map, GPS №136 offers the LOWEST Price Per Liter, just $7. For bulk orders, Contact HELLBRAZER or VAILLYRP." },
-  { name: "174. Parking shorthand GPS 51 temp 1", raw: "park 51 t1", expected: "With our parking number 1 (GPS №51) we are offering 1000 per place! come take your car and dont miss this opportunity." },
-  { name: "175. Parking shorthand GPS 84 temp 2", raw: "parking 84 t2", expected: "Are you bored of paying $15.000 for renting? Parking 15 (GPS №84) is located in the middle of the beach. Just $1.000 to have your car parked all day." },
-  { name: "176. Parking standard template match GPS 135 temp 2", raw: "Rockford Parking №18. (GPS №135). Just $1.000 per day near Hotel and LI. Offer for completing jobs task! Just contact me. (kosa.123).", expected: "Rockford Parking №18. (GPS №135). Just $1.000 per day near Hotel and LI. Offer for completing jobs task! Just contact me. (kosa.123)." },
-  { name: "177. Family shorthand House 55 template 1", raw: "55 t1", expected: "Seeking Power, Unity and Legacy? Uchiha Clan provides Great Vibes, Strong Bonds and Endless Fun. Join us at House №55 or Contact (maxuchihax)." },
-  { name: "178. Family shorthand House 55 template 2 with prefix", raw: "fam 55 t2", expected: "Looking for Strength, Loyalty and Family? Uchiha Clan offers Unity, Fun and True Respect. Join us at House №55 or Contact (maxuchihax)." },
-  { name: "179. Family shorthand House 536 template 1", raw: "536 t1", expected: "The Deluca Cartel is looking for skilled individuals, A family built on trust, unity and respect. Join Deluca Cartel at house №536 today!" },
-  { name: "180. Parking shorthand GPS 55 template 1 with explicit prefix", raw: "parking 55 t1", expected: "Take your car from the garage, drive and park in luxury. Parking №5 (GPS №55) VIP style and security for $1.000." },
-  { name: "181. Clothing Shop shorthand GPS 31 template 1", raw: "31 t1", expected: "Upgrade your style this week at Clothing Shop n1 (GPS 31) ! Special offers, lowest prices, and exclusive outfits. Don t miss out!" },
-  { name: "182. Clothing Shop shorthand GPS 142 template 2 with prefix", raw: "fashion 142 t2", expected: "If boys are not looking at you! Visit Troy Collection Shop №142 at 70% discount for all the clothing." },
-  { name: "183. Clothing Shop shorthand GPS 271 template 2", raw: "271 t2", expected: "Dont forget once again the crazy deals of Los Santos Clothing Store (GPS №271). Now offering 50% Off in all products!" },
-  { name: "184. Volex watch wildcard match with bare number", raw: "selling Volex 2", expected: "Selling Volex watch of type 2. Price: Negotiable." },
-  { name: "185. Kolex watch wildcard match with type keyword", raw: "buying Kolex type 5", expected: "Buying Kolex watch of type 5. Budget: Negotiable." },
-  { name: "186. Volex watch wildcard match with color and price", raw: "selling black Volex watch 4 for 100k", expected: "Selling black Volex watch of type 4. Price: $100.000" },
-  { name: "187. Selling purple gloves for woman", raw: "Selling purple gloves for woman price negotiable", expected: "Selling purple gloves for women. Price: Negotiable." },
-  { name: "188. 10 and 20% juice", raw: "selling 10 and 20% juice price negotiable", expected: "Selling 10% and 20% juices in bulk. Price: Negotiable." },
-  { name: "189. selling 10 and 20 % juices", raw: "selling 10 and 20 % juices", expected: "Selling 10% and 20% juices in bulk. Price: Negotiable." },
-  { name: "190. selling 5 Batteys 40k each", raw: "selling 5 Batteys 40k each", expected: "Selling 5 batteries. Price: $40.000 each." },
-  { name: "191. Custom spelling correction training", raw: "selling 5 mybattery 40k each", expected: "Selling 5 batteries. Price: $40.000 each." },
-  { name: "192. Custom template matching training", raw: "My trained template for test price negotiable", expected: "My trained template for test." },
-  { name: "193. Custom template shorthand training", raw: "testshort 1", expected: "My trained template for shorthand test." },
-  { name: "194. Selling wife", raw: "selling wife", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
-  { name: "195. Buying wife", raw: "buying wife", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
-  { name: "196. Buying gf", raw: "buying gf", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
-  { name: "197. Looking for wife budget 100k", raw: "looking for wife budget 100k", expected: { status: "blacklisted", rejectionReason: "Trolling advertisements." } },
-  { name: "198. Looking for wife (should pass)", raw: "looking for wife", expected: "Looking for a wife." },
-  { name: "199. Real Estate beach market price negotiable", raw: "selling apartment near beach market price negotiable", expected: "Selling an apartment near the beach market. Price: Negotiable." },
-  { name: "200. Selling Biospark", raw: "Selling biospark", expected: "Selling Biospark. Price: Negotiable." },
-  { name: "201. Buying 10 Biospark", raw: "Buying 10 Biospark", expected: "Buying 10 Biosparks. Budget: Negotiable." },
-  { name: "202. Biospark and lvl 2 inventory", raw: "Selling biospark and lvl 2 inventory price negot", expected: "Selling Biospark and medium quality inventory. Price: Negotiable." },
-  { name: "203. Selling Ammunition Store 148", raw: "Selling ammunition store 148", expected: "Selling Ammunition Store №148. Price: Negotiable." },
-  { name: "204. Selling T-20 with full config and drift kit", raw: "selling car T-20 car full and drift kit", expected: 'Selling "T-20" with full configuration and drift kit. Price: Negotiable.' },
-  { name: "205. Buying chargers. Budget: Negotiable.", raw: "Buying chargers. Budget: Negotiable.", expected: "Buying chargers. Budget: Negotiable." },
-  { name: "206. buy electric charging", raw: "buy electric charging", expected: "Buying chargers. Budget: Negotiable." },
-  { name: "207. selling transmition and suspension lvl3 price 240k", raw: "selling transmition and suspension lvl3 price 240k", expected: "Selling high quality transmission and suspension tuning. Price: $240.000" },
-  { name: "208. Looking for professional driver", raw: "Looking for professional driver", expected: "Looking for a personal driver." },
-  { name: "209. selling desert scarf type 21", raw: "selling desert scarf type 21", expected: "Selling desert scarf mask of type 21. Price: Negotiable." },
-  { name: "210. looking for Max Dopamine", raw: "looking for Max Dopamine", expected: { status: "rejected", rejectionReason: "Person not found in database. (Person must be in the GRAND RP mail)" } },
-  { name: "211. hiring workers fore solar plantation negotiable", raw: "hiring workers fore solar plantation", expected: "Hiring workers for solar panel plantations. Salary: Negotiable." },
-  { name: "212. hiring workers fore solar plantation 14.000", raw: "hiring workers fore solar plantation 14.000", expected: "Hiring workers for solar panel plantations. Salary: $14.000" },
-  { name: "213. hiring workers fore solar plantation with explicit Salary: $14.000", raw: "hiring workers fore solar plantation. Salary: $14.000", expected: "Hiring workers for solar panel plantations. Salary: $14.000" },
-  { name: "214. Looking for solar panel plantation work", raw: "Looking for solar panel plantation work", expected: "Looking for solar panel plantation work." },
-  { name: "215. low price things beach market shop 7", raw: "visit shop no 7 in beach market in low price things", expected: "Selling various items at the beach market shop №7." },
-  { name: "216. selling tight mask 13 ,14 and 19", raw: "selling tight mask 13 ,14 and 19", expected: "Selling tight masks of type 13, 14 and 19. Price: Negotiable." },
-  { name: "217. type mask 13 14 19", raw: "type mask 13 14 19", expected: "Selling tight masks of type 13, 14 and 19. Price: Negotiable." },
-  { name: "218. cases of resources", raw: "selling cases of resources", expected: "Selling resources containers. Price: Negotiable." },
-  { name: "219. selling luminous stone 1 and 2", raw: "selling luminous stone 1 and 2", expected: "Selling luminous stones of type 1 and 2. Price: Negotiable." },
-  { name: "220. selling bio sparks 2", raw: "selling bio sparks 2", expected: "Selling Biosparks of type 2. Price: Negotiable." }
-];
-
-// Perform tests
-let failed = 0;
-let results = [];
-
-customSpelling["mybattery"] = "battery";
-customTemplates = [
-    { text: "My trained template for test", category: "Services", shorthand: "" },
-    { text: "My trained template for shorthand test", category: "Services", shorthand: "testshort 1" }
-];
-
-for (const tc of testCases) {
-    console.log(`Running test: ${tc.name}`);
-    const context = {
-        raw: tc.raw,
-        phoneNumber: "",
-        status: "passed",
-        rejectionReason: "",
-        blacklistReason: "",
-        logs: [],
-        category: "Other",
-        finalText: "",
-        priceInfo: null
-    };
-
-    try {
-        runValidationPipeline(context, "auto");
-    } catch (e) {
-        context.status = "error";
-        context.rejectionReason = e.toString() + "\n" + e.stack;
-    }
-
-    let passed = false;
-    if (typeof tc.expected === "object" && tc.expected !== null) {
-        passed = (context.status === tc.expected.status && context.rejectionReason === tc.expected.rejectionReason);
-    } else {
-        passed = (context.finalText === tc.expected);
-    }
-    if (!passed) {
-        failed++;
-        console.log(`FAIL: ${tc.name}\n  Raw: "${tc.raw}"\n  Expected: "${typeof tc.expected === 'object' ? JSON.stringify(tc.expected) : tc.expected}"\n  Got:      "${context.status === 'passed' ? context.finalText : 'status: ' + context.status + ', ' + context.rejectionReason}"`);
-    } else {
-        // console.log(`PASS: ${tc.name}`);
-    }
-}
-
-console.log(`\nTest results: ${testCases.length - failed}/${testCases.length} passed.`);
-if (failed > 0) {
-    process.exit(1);
-} else {
-    console.log("All tests passed successfully!");
-    process.exit(0);
-}
+server.listen(9999, () => {
+    console.log('Test result server listening on port 9999...');
+});

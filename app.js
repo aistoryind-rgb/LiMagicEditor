@@ -1811,8 +1811,20 @@ function correctSpelling(text, ctx) {
 
     // Common item spelling errors
     const commonMisspellings = {
+        "quilty": "quality",
+        "lf": "looking for an",
+        "platinom": "platinum",
+        "casno": "casino",
+        "apartemnt": "apartment",
+        "appart": "apartment",
+        "platinyem": "platinum",
+        "panthouse": "penthouse",
+        "allience": "alliance",
+        "panthuse": "penthouse",
+        "lui": "LV",
         "anis": "annis",
         "tubo": "turbo",
+        "turb": "turbo",
         "drft": "drift",
         "direct": "drift",
         "tickt": "ticket",
@@ -2205,7 +2217,7 @@ function matchVehicle(inputText) {
     
     let bestVeh = null;
     let maxScore = 0;
-    const inputTokens = cleanInput.split(/[\s-]+/);
+    const inputTokens = cleanInput.split(/[\s-]+/).map(t => t.replace(/[,.;:!?()]/g, "")).filter(Boolean);
     
     for (const veh of allVehicles) {
         const vehLower = veh.toLowerCase();
@@ -4416,6 +4428,7 @@ function formatAutoAd(adBody, action, ctx) {
         
         let upgradesText = "";
         if (order.length > 0) {
+            order[0] = "with " + order[0];
             if (order.length === 1) {
                 upgradesText = ` ${order[0]}`;
             } else if (order.length === 2) {
@@ -4469,6 +4482,7 @@ function formatAutoAd(adBody, action, ctx) {
         
         let upgradesText = "";
         if (order.length > 0) {
+            order[0] = "with " + order[0];
             if (order.length === 1) {
                 upgradesText = ` ${order[0]}`;
             } else if (order.length === 2) {
@@ -4502,14 +4516,14 @@ function parseAutoUpgrades(text) {
     
     // 1. Configuration
     if (lower.includes("full configuration") || lower.includes("max config") || lower.includes("max tuning") || lower.includes("fully upgraded") || lower.includes("full tune") || lower.includes("full config") || lower.includes("maxed") || lower.includes("full max") || lower.includes("full chip tuning") || lower.includes("pro parts") || lower.includes("car full") || /\bfull\b/i.test(lower)) {
-        upgrades.config = "with full configuration";
+        upgrades.config = "full configuration";
     } else if (lower.includes("partial configuration") || lower.includes("nearly max") || lower.includes("lvl3") || lower.includes("lvl 3") || lower.includes("partial config") || lower.includes("partial tuning") || lower.includes("partially upgraded")) {
-        upgrades.config = "with partial configuration";
+        upgrades.config = "partial configuration";
     }
     
     // 2. Visual Upgrades
-    if (lower.includes("body upgrade") || lower.includes("body kit") || lower.includes("visual upgrade") || lower.includes("visuals")) {
-        upgrades.visual = "with visual upgrades";
+    if (lower.includes("body upgrade") || lower.includes("body kit") || lower.includes("visual upgrade") || lower.includes("visuals") || lower.includes("visual")) {
+        upgrades.visual = "visual upgrades";
     }
     
     // 3. Luminous Wheels
@@ -4528,12 +4542,12 @@ function parseAutoUpgrades(text) {
     }
     
     // 5. Turbo
-    if (lower.includes("turbo")) {
+    if (lower.includes("turbo") || lower.includes("turb")) {
         upgrades.turbo = "turbo kit";
     }
     
     // 6. Drift
-    if (lower.includes("drift")) {
+    if (lower.includes("drift") || lower.includes("drft")) {
         upgrades.drift = "drift kit";
     }
     
@@ -6515,6 +6529,7 @@ function updateUI(ctx) {
         banner.querySelector(".status-icon").innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
         
         rejectionBox.classList.add("hide");
+        document.getElementById("rejection-reason-text").textContent = "None";
         blacklistBox.classList.add("hide");
         btnCopy.disabled = false;
         
@@ -6958,7 +6973,10 @@ function initFloatingClipboard() {
             const switchToMagicMode = () => {
                 pipLayoutMode = "magic";
                 pipLayout.classList.remove("pip-pro-mode");
-                if (pipToggleMode) pipToggleMode.innerHTML = `MAGIC MODE`;
+                if (pipToggleMode) {
+                    pipToggleMode.classList.remove("reveal-pro");
+                    pipToggleMode.innerHTML = `MAGIC MODE`;
+                }
                 try {
                     pipWindow.resizeTo(420, 770);
                 } catch (err) {
@@ -6967,20 +6985,31 @@ function initFloatingClipboard() {
             };
 
             // Magic Mode header hover behavior
+            let hoverTimer = null;
             if (pipToggleMode) {
                 pipToggleMode.addEventListener("mouseenter", () => {
                     if (pipLayoutMode === "magic") {
-                        pipToggleMode.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                        hoverTimer = setTimeout(() => {
+                            pipToggleMode.classList.add("reveal-pro");
+                            pipToggleMode.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                        }, 1000);
                     }
                 });
                 pipToggleMode.addEventListener("mouseleave", () => {
+                    if (hoverTimer) {
+                        clearTimeout(hoverTimer);
+                        hoverTimer = null;
+                    }
                     if (pipLayoutMode === "magic") {
+                        pipToggleMode.classList.remove("reveal-pro");
                         pipToggleMode.innerHTML = `MAGIC MODE`;
                     }
                 });
                 pipToggleMode.addEventListener("click", (e) => {
                     e.stopPropagation();
-                    switchToProMode();
+                    if (pipToggleMode.classList.contains("reveal-pro")) {
+                        switchToProMode();
+                    }
                 });
             }
 
@@ -6988,16 +7017,13 @@ function initFloatingClipboard() {
             if (pipCompactToggle) {
                 pipCompactToggle.addEventListener("mouseenter", () => {
                     if (pipLayoutMode === "pro") {
-                        pipCompactToggle.innerHTML = `MAGIC MODE`;
-                    }
-                });
-                pipCompactToggle.addEventListener("mouseleave", () => {
-                    if (pipLayoutMode === "pro") {
-                        pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                        switchToMagicMode();
                     }
                 });
                 pipCompactToggle.addEventListener("click", () => {
-                    switchToMagicMode();
+                    if (pipLayoutMode === "pro") {
+                        switchToMagicMode();
+                    }
                 });
             }
 

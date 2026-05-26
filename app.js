@@ -9094,11 +9094,13 @@ function showCustomNotification(message, type = 'success') {
         container = document.createElement("div");
         container.id = "history-toast-container";
         container.style.position = "fixed";
-        container.style.bottom = "30px";
-        container.style.right = "30px";
+        container.style.top = "30px";
+        container.style.left = "50%";
+        container.style.transform = "translateX(-50%)";
         container.style.zIndex = "10000";
         container.style.display = "flex";
         container.style.flexDirection = "column";
+        container.style.alignItems = "center";
         container.style.gap = "10px";
         document.body.appendChild(container);
     }
@@ -9116,7 +9118,7 @@ function showCustomNotification(message, type = 'success') {
     toast.style.alignItems = "center";
     toast.style.gap = "10px";
     toast.style.opacity = "0";
-    toast.style.transform = "translateY(20px)";
+    toast.style.transform = "translateY(-20px) scale(0.95)";
     toast.style.transition = "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
     
     let borderColor = "#30d158";
@@ -9139,12 +9141,12 @@ function showCustomNotification(message, type = 'success') {
     
     setTimeout(() => {
         toast.style.opacity = "1";
-        toast.style.transform = "translateY(0)";
+        toast.style.transform = "translateY(0) scale(1)";
     }, 10);
     
     setTimeout(() => {
         toast.style.opacity = "0";
-        toast.style.transform = "translateY(-20px)";
+        toast.style.transform = "translateY(-20px) scale(0.95)";
         setTimeout(() => {
             toast.remove();
         }, 400);

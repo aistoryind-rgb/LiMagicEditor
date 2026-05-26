@@ -7582,7 +7582,7 @@ const CONFIG = {
     GOOGLE_SCRIPT_URL: (() => {
         const stored = localStorage.getItem('li_google_script_url');
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbxqien45WNhMbj50EIpV8V62P9qX6v29r80rrz48IzWyocDTVI6fJAsryFf0rpIMPNTxQ/exec';
-        if (!stored || stored.includes('AKfycbwPefRKB2W4EjA1nc_dg7k3A5TJ4S-lBr0sN0WyPaMkJ7DHitm4vI4JZt8tdai_EhoUVw') || stored.includes('AKfycbztFqPh3-N4b54c-W0p_FcFxDaSTFqVR5F8963EoyYsOEXXNWhHrz7q6Q3UnvJhL__NMQ')) {
+        if (!stored || !stored.includes('AKfycbxqien45WNhMbj50EIpV8V62P9qX6v29r80rrz48IzWyocDTVI6fJAsryFf0rpIMPNTxQ')) {
             localStorage.setItem('li_google_script_url', defaultUrl);
             return defaultUrl;
         }

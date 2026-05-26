@@ -8089,6 +8089,7 @@ function initAccessGate() {
     
     function startPolling() {
         if (statusPollInterval) clearInterval(statusPollInterval);
+        checkCurrentAccessStatus();
         statusPollInterval = setInterval(() => {
             checkCurrentAccessStatus();
         }, 10000);
@@ -8206,10 +8207,6 @@ function initAccessGate() {
                 return;
             }
             
-            localStorage.setItem("li_request_firstname", firstname);
-            localStorage.setItem("li_request_lastname", lastname);
-            localStorage.setItem("li_request_id", id);
-            
             if (CONFIG.GOOGLE_SCRIPT_URL) {
                 isSubmitting = true;
                 btnRequestSubmit.disabled = true;
@@ -8238,6 +8235,9 @@ function initAccessGate() {
                         btnRequestSubmit.disabled = false;
                         btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
                         if (data.status === "success") {
+                            localStorage.setItem("li_request_firstname", firstname);
+                            localStorage.setItem("li_request_lastname", lastname);
+                            localStorage.setItem("li_request_id", id);
                             transitionToApproveScreen();
                             startPolling();
                         } else if (data.status === "already_approved") {
@@ -8248,6 +8248,9 @@ function initAccessGate() {
                             }, "success");
                         } else {
                             showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
+                            localStorage.removeItem("li_request_firstname");
+                            localStorage.removeItem("li_request_lastname");
+                            localStorage.removeItem("li_request_id");
                         }
                     })
                     .catch(err => {
@@ -8256,8 +8259,9 @@ function initAccessGate() {
                         btnRequestSubmit.disabled = false;
                         btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
                         showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
-                        transitionToApproveScreen();
-                        startPolling();
+                        localStorage.removeItem("li_request_firstname");
+                        localStorage.removeItem("li_request_lastname");
+                        localStorage.removeItem("li_request_id");
                     });
                 });
             } else {
@@ -9291,6 +9295,20 @@ function initAdminPanel() {
             btnAuth.click();
         }
     });
+
+    // Auto-refresh access requests and users list in real-time (every 10 seconds)
+    setInterval(() => {
+        if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+            const adminTab = document.getElementById("tab-admin");
+            if (adminTab && adminTab.classList.contains("active")) {
+                const storedPasscode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode") || null;
+                const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+                const authUuid = isAssistant ? getOrCreateClientUuid() : null;
+                const isSuperAdmin = !isAssistant;
+                loadAndRenderAccessRequests(storedPasscode, authUuid, isSuperAdmin);
+            }
+        }
+    }, 10000);
 
     // Toggle Spelling Mode (Single / Bulk)
     const btnSpellingToggle = document.getElementById("btn-spelling-mode-toggle");

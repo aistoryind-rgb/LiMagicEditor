@@ -10751,35 +10751,39 @@ function loadAndRenderBugTriage() {
             <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading bug reports…</p>
         </div>`;
     
-    // Try backend first, fallback to mock
-    if (CONFIG.GOOGLE_SCRIPT_URL) {
-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify({
-                action: "get_bug_reports",
-                passcode: passcode,
-                clientUuid: authUuid
-            })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === "success" && data.reports) {
-                renderTriageCards(data.reports, container);
-            } else {
-                // Fallback to mock on error
-                renderTriageCards(getMockBugReports(), container);
-            }
-        })
-        .catch(() => {
-            renderTriageCards(getMockBugReports(), container);
-        });
-    } else {
-        // Offline / localhost mode - use mock data
-        setTimeout(() => {
-            renderTriageCards(getMockBugReports(), container);
-        }, 400);
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        // No backend configured — show empty state
+        renderTriageCards([], container);
+        return;
     }
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "get_bug_reports",
+            passcode: passcode,
+            clientUuid: authUuid
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success" && data.reports) {
+            renderTriageCards(data.reports, container);
+        } else {
+            // Backend returned error — show empty
+            renderTriageCards([], container);
+        }
+    })
+    .catch(() => {
+        // Network error — show connection error state
+        container.innerHTML = `
+            <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                <i class="fa-solid fa-wifi" style="font-size: 28px; margin-bottom: 12px; display: block; color: #ff453a; opacity: 0.7;"></i>
+                <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Connection Error</span>
+                <p style="margin-top: 6px; font-size: 12.5px; opacity: 0.6;">Could not reach the server. Check your connection and try refreshing.</p>
+            </div>`;
+    });
 }
 
 /**

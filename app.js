@@ -8434,7 +8434,7 @@ function saveCustomDataToBackend() {
     });
 }
 
-function showCustomConfirmDialog(message, onConfirm, onCancel) {
+function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm", isDestructive = true) {
     let targetDoc = document;
     if (pipWindowInstance && !pipWindowInstance.closed) {
         targetDoc = pipWindowInstance.document;
@@ -8463,8 +8463,12 @@ function showCustomConfirmDialog(message, onConfirm, onCancel) {
 
     const dialog = targetDoc.createElement("div");
     dialog.style.background = "rgba(18, 18, 20, 0.98)";
-    dialog.style.border = "1px solid rgba(255, 59, 48, 0.3)";
-    dialog.style.boxShadow = "0 10px 40px rgba(255, 59, 48, 0.15), 0 0 100px rgba(0, 0, 0, 0.8)";
+    
+    const themeColor = isDestructive ? "rgba(255, 59, 48, 0.3)" : "rgba(48, 209, 88, 0.3)";
+    const shadowColor = isDestructive ? "rgba(255, 59, 48, 0.15)" : "rgba(48, 209, 88, 0.15)";
+    
+    dialog.style.border = `1px solid ${themeColor}`;
+    dialog.style.boxShadow = `0 10px 40px ${shadowColor}, 0 0 100px rgba(0, 0, 0, 0.8)`;
     dialog.style.borderRadius = "16px";
     dialog.style.width = "90%";
     dialog.style.maxWidth = "400px";
@@ -8473,18 +8477,29 @@ function showCustomConfirmDialog(message, onConfirm, onCancel) {
     dialog.style.transform = "scale(0.9) translateY(20px)";
     dialog.style.transition = "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)";
     
+    const iconHtml = isDestructive
+        ? `<div style="background: rgba(255, 59, 48, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(255, 59, 48, 0.3); box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);">
+               <i class="fa-solid fa-triangle-exclamation" style="color: #ff3b30; font-size: 24px;"></i>
+           </div>`
+        : `<div style="background: rgba(48, 209, 88, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(48, 209, 88, 0.3); box-shadow: 0 0 15px rgba(48, 209, 88, 0.2);">
+               <i class="fa-solid fa-user-plus" style="color: #30d158; font-size: 24px;"></i>
+           </div>`;
+
+    const okBtnClass = isDestructive ? "btn-action glow-red" : "btn-action";
+    const okBtnStyle = isDestructive 
+        ? "flex: 1; height: 40px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;"
+        : "flex: 1; height: 40px; border-radius: 8px; border: none; background: #30d158 !important; box-shadow: 0 4px 15px rgba(48, 209, 88, 0.3) !important; color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;";
+
     dialog.innerHTML = `
-        <div style="background: rgba(255, 59, 48, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid rgba(255, 59, 48, 0.3); box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);">
-            <i class="fa-solid fa-triangle-exclamation" style="color: #ff3b30; font-size: 24px;"></i>
-        </div>
+        ${iconHtml}
         <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">Confirm Action</h4>
-        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500;">${message}</p>
+        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="custom-confirm-cancel-btn" style="flex: 1; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
                 Cancel
             </button>
-            <button id="custom-confirm-ok-btn" class="btn-action glow-red" style="flex: 1; height: 40px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 0;">
-                Delete Reports
+            <button id="custom-confirm-ok-btn" class="${okBtnClass}" style="${okBtnStyle}">
+                ${okText}
             </button>
         </div>
     `;
@@ -8889,7 +8904,9 @@ function initAdminPanel() {
                         },
                         () => {
                             resetButtonToOriginal();
-                        }
+                        },
+                        "Delete Reports",
+                        true
                     );
                 }
             }, 100);
@@ -9328,40 +9345,49 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                 const newRole = isAssistantAdmin ? "user" : "assistant_admin";
                 const confirmMsg = isAssistantAdmin 
                     ? `Remove assistant admin role from ${req.firstname} ${req.lastname}?`
-                    : `Promote ${req.firstname} ${req.lastname} to Assistant Admin?\n\nThey will be able to:\n- Access the Admin Panel\n- Approve/Reject access requests\n- View Spelling & Templates\n\nThey will NOT be able to:\n- Revoke user access\n- Promote/demote users\n- Manage backups`;
+                    : `Promote ${req.firstname} ${req.lastname} to Assistant Admin?<br><br>They will be able to:<br>- Access the Admin Panel<br>- Approve/Reject access requests<br>- View Spelling & Templates<br><br>They will NOT be able to:<br>- Revoke user access<br>- Promote/demote users<br>- Manage backups`;
                 
-                if (confirm(confirmMsg)) {
-                    btnRole.disabled = true;
-                    btnRole.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                    
-                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain" },
-                        body: JSON.stringify({
-                            action: "set_user_role",
-                            passcode: passcode,
-                            clientUuid: req.clientUuid,
-                            role: newRole
+                const okButtonText = isAssistantAdmin ? "Remove Role" : "Promote";
+                const isDestructiveAction = isAssistantAdmin;
+
+                showCustomConfirmDialog(
+                    confirmMsg,
+                    () => {
+                        btnRole.disabled = true;
+                        btnRole.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                        
+                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain" },
+                            body: JSON.stringify({
+                                action: "set_user_role",
+                                passcode: passcode,
+                                clientUuid: req.clientUuid,
+                                role: newRole
+                            })
                         })
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
-                        } else {
-                            alert("Role change failed: " + data.message);
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === "success") {
+                                loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                            } else {
+                                alert("Role change failed: " + data.message);
+                                btnRole.disabled = false;
+                                btnRole.innerHTML = isAssistantAdmin 
+                                    ? `<i class="fa-solid fa-user-minus"></i> Remove Assistant`
+                                    : `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Set role error:", err);
+                            alert("Network error changing role.");
                             btnRole.disabled = false;
-                            btnRole.innerHTML = isAssistantAdmin 
-                                ? `<i class="fa-solid fa-user-minus"></i> Remove Assistant`
-                                : `<i class="fa-solid fa-user-shield"></i> Make Assistant`;
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Set role error:", err);
-                        alert("Network error changing role.");
-                        btnRole.disabled = false;
-                    });
-                }
+                        });
+                    },
+                    null,
+                    okButtonText,
+                    isDestructiveAction
+                );
             });
             
             actionsRow.appendChild(btnRole);
@@ -9383,35 +9409,41 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
             
             btnRevoke.addEventListener("click", () => {
-                if (confirm(`Are you sure you want to revoke access for ${req.firstname} ${req.lastname}?`)) {
-                    btnRevoke.disabled = true;
-                    btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                    
-                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain" },
-                        body: JSON.stringify(buildAuthBody({
-                            action: "reject_access_request",
-                            clientUuid: req.clientUuid
-                        }))
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
-                        } else {
-                            alert("Revocation failed: " + data.message);
+                showCustomConfirmDialog(
+                    `Are you sure you want to permanently revoke system access for ${req.firstname} ${req.lastname}? This action cannot be undone.`,
+                    () => {
+                        btnRevoke.disabled = true;
+                        btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                        
+                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain" },
+                            body: JSON.stringify(buildAuthBody({
+                                action: "reject_access_request",
+                                clientUuid: req.clientUuid
+                            }))
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === "success") {
+                                loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                            } else {
+                                alert("Revocation failed: " + data.message);
+                                btnRevoke.disabled = false;
+                                btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Revoke access error:", err);
+                            alert("Network error revoking access.");
                             btnRevoke.disabled = false;
                             btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Revoke access error:", err);
-                        alert("Network error revoking access.");
-                        btnRevoke.disabled = false;
-                        btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
-                    });
-                }
+                        });
+                    },
+                    null,
+                    "Revoke Access",
+                    true
+                );
             });
             
             actionsRow.appendChild(btnRevoke);

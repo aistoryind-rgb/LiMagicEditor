@@ -6862,6 +6862,7 @@ function initFloatingClipboard() {
                             </div>
                             <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px;">
                                 <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1;"><i class="fa-solid fa-copy"></i> Copy</button>
+                                <div id="pip-category-badge" class="pip-category-badge">—</div>
                                 <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Submit Bug</button>
                             </div>
                         </div>
@@ -7129,6 +7130,79 @@ function initFloatingClipboard() {
                         btn.classList.remove("active");
                     }
                 });
+
+                // Category badge update in Pro Mode
+                const pipCatBadge = pipWindow.document.getElementById("pip-category-badge");
+                if (pipCatBadge) {
+                    if (activeCat) {
+                        pipCatBadge.textContent = activeCat;
+                        
+                        // Dynamic themed glow
+                        let glowColor = "rgba(255, 255, 255, 0.05)";
+                        let borderColor = "rgba(255, 255, 255, 0.15)";
+                        let textColor = "#e2e8f0";
+                        let textShadow = "none";
+                        
+                        const catLower = activeCat.toLowerCase();
+                        if (catLower.includes("auto")) {
+                            glowColor = "rgba(245, 158, 11, 0.1)"; // amber
+                            borderColor = "rgba(245, 158, 11, 0.35)";
+                            textColor = "#fbbf24";
+                            textShadow = "0 0 8px rgba(245, 158, 11, 0.3)";
+                        } else if (catLower.includes("estate")) {
+                            glowColor = "rgba(10, 132, 255, 0.1)"; // blue
+                            borderColor = "rgba(10, 132, 255, 0.35)";
+                            textColor = "#0a84ff";
+                            textShadow = "0 0 8px rgba(10, 132, 255, 0.3)";
+                        } else if (catLower.includes("business")) {
+                            glowColor = "rgba(48, 209, 88, 0.1)"; // green
+                            borderColor = "rgba(48, 209, 88, 0.35)";
+                            textColor = "#30d158";
+                            textShadow = "0 0 8px rgba(48, 209, 88, 0.3)";
+                        } else if (catLower.includes("work")) {
+                            glowColor = "rgba(168, 85, 247, 0.1)"; // purple
+                            borderColor = "rgba(168, 85, 247, 0.35)";
+                            textColor = "#c084fc";
+                            textShadow = "0 0 8px rgba(168, 85, 247, 0.3)";
+                        } else if (catLower.includes("dating")) {
+                            glowColor = "rgba(236, 72, 153, 0.1)"; // pink
+                            borderColor = "rgba(236, 72, 153, 0.35)";
+                            textColor = "#f472b6";
+                            textShadow = "0 0 8px rgba(236, 72, 153, 0.3)";
+                        } else if (catLower.includes("services")) {
+                            glowColor = "rgba(45, 212, 191, 0.1)"; // teal
+                            borderColor = "rgba(45, 212, 191, 0.35)";
+                            textColor = "#2dd4bf";
+                            textShadow = "0 0 8px rgba(45, 212, 191, 0.3)";
+                        } else if (catLower.includes("discount")) {
+                            glowColor = "rgba(249, 115, 22, 0.1)"; // orange
+                            borderColor = "rgba(249, 115, 22, 0.35)";
+                            textColor = "#fb923c";
+                            textShadow = "0 0 8px rgba(249, 115, 22, 0.3)";
+                        } else if (catLower.includes("other")) {
+                            glowColor = "rgba(107, 114, 128, 0.15)"; // gray
+                            borderColor = "rgba(107, 114, 128, 0.35)";
+                            textColor = "#9ca3af";
+                        }
+                        
+                        pipCatBadge.style.background = glowColor;
+                        pipCatBadge.style.borderColor = borderColor;
+                        pipCatBadge.style.color = textColor;
+                        pipCatBadge.style.textShadow = textShadow;
+                        if (textShadow !== "none") {
+                            pipCatBadge.style.boxShadow = `0 0 10px ${glowColor.replace(/0\.1\)$/, '0.2)')}, inset 0 0 6px rgba(255, 255, 255, 0.02)`;
+                        } else {
+                            pipCatBadge.style.boxShadow = "inset 0 0 6px rgba(255, 255, 255, 0.02)";
+                        }
+                    } else {
+                        pipCatBadge.textContent = "—";
+                        pipCatBadge.style.background = "rgba(255, 255, 255, 0.05)";
+                        pipCatBadge.style.borderColor = "rgba(255, 255, 255, 0.12)";
+                        pipCatBadge.style.color = "rgba(255, 255, 255, 0.3)";
+                        pipCatBadge.style.textShadow = "none";
+                        pipCatBadge.style.boxShadow = "inset 0 0 6px rgba(255, 255, 255, 0.02)";
+                    }
+                }
 
                 // Submit Bug Button Sync
                 const pipBtnSubmitBugInline = pipWindow.document.getElementById("pip-btn-submit-bug-inline");

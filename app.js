@@ -1333,6 +1333,15 @@ function trackCopiedAd(rawVal) {
     renderPresetButtons();
 }
 
+// Force browser scroll to top on reload and prevent scroll restoration
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+window.scrollTo(0, 0);
+window.addEventListener("beforeunload", () => {
+    window.scrollTo(0, 0);
+});
+
 // Initialise application on DOM load
 document.addEventListener("DOMContentLoaded", () => {
     initAccessGate();
@@ -10552,5 +10561,439 @@ function initPolicyBook() {
 }
 
 
+/* ==========================================================================
+   Bug Triage & Training Panel
+   ========================================================================== */
+
+/**
+ * Extracts a spelling correction by comparing raw input words against expected output words.
+ * Returns an object { wrong, right } with the best phonetic diff, or null if none found.
+ */
+function extractSpellingCorrection(raw, expected) {
+    if (!raw || !expected) return null;
+    
+    const rawWords = raw.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+    const expectedWords = expected.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+    
+    if (rawWords.length === 0 || expectedWords.length === 0) return null;
+    
+    // Build a set of expected words for quick lookup
+    const expectedSet = new Set(expectedWords);
+    
+    // Find words in raw that do NOT appear in expected (misspelled candidates)
+    const misspelled = rawWords.filter(w => !expectedSet.has(w) && w.length > 1);
+    
+    if (misspelled.length === 0) return null;
+    
+    // For each misspelled word, find the closest match in expected using Levenshtein distance
+    function levenshtein(a, b) {
+        const m = a.length, n = b.length;
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                dp[i][j] = Math.min(
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                    dp[i - 1][j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0)
+                );
+            }
+        }
+        return dp[m][n];
+    }
+    
+    // Find raw words that are absent from expected but have a close match
+    const rawSet = new Set(rawWords);
+    const corrections = [];
+    
+    for (const wrong of misspelled) {
+        let bestMatch = null;
+        let bestDist = Infinity;
+        
+        for (const right of expectedWords) {
+            if (rawSet.has(right)) continue; // Skip words that already appear in raw
+            const dist = levenshtein(wrong, right);
+            // Only consider reasonable matches (distance < half the word length)
+            if (dist < bestDist && dist <= Math.max(Math.floor(right.length / 2), 2)) {
+                bestDist = dist;
+                bestMatch = right;
+            }
+        }
+        
+        if (bestMatch && bestMatch !== wrong) {
+            corrections.push({ wrong, right: bestMatch, distance: bestDist });
+        }
+    }
+    
+    if (corrections.length === 0) return null;
+    
+    // If multiple misspelled words map to the same correct multi-word brand, group them
+    // e.g., "lui vi" → "louis vuitton"
+    corrections.sort((a, b) => a.distance - b.distance);
+    
+    // Check if consecutive wrong words form a multi-word correction
+    const rawLower = raw.toLowerCase();
+    const expectedLower = expected.toLowerCase();
+    
+    // Try to find multi-word spans that differ
+    if (corrections.length >= 2) {
+        // Attempt to extract contiguous misspelled phrase
+        const wrongPhrase = corrections.map(c => c.wrong).join(" ");
+        const rightPhrase = corrections.map(c => c.right).join(" ");
+        
+        if (rawLower.includes(wrongPhrase)) {
+            return { wrong: wrongPhrase, right: rightPhrase };
+        }
+    }
+    
+    // Return the single best correction
+    return { wrong: corrections[0].wrong, right: corrections[0].right };
+}
+
+/**
+ * Generates a rendered diff HTML showing what changed between raw and expected.
+ */
+function renderTriageDiffHtml(raw, expected) {
+    if (!raw || !expected) return "<span style='opacity:0.5;'>No diff available</span>";
+    
+    const rawWords = raw.split(/\s+/);
+    const expectedWords = expected.split(/\s+/);
+    const expectedLower = new Set(expectedWords.map(w => w.toLowerCase().replace(/[^a-z0-9]/g, "")));
+    const rawLower = new Set(rawWords.map(w => w.toLowerCase().replace(/[^a-z0-9]/g, "")));
+    
+    let rawHtml = rawWords.map(w => {
+        const clean = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (clean && !expectedLower.has(clean)) {
+            return `<span style="background: rgba(255,69,58,0.2); color: #ff6b6b; padding: 1px 4px; border-radius: 3px; text-decoration: line-through;">${w}</span>`;
+        }
+        return `<span style="opacity: 0.6;">${w}</span>`;
+    }).join(" ");
+    
+    let expectedHtml = expectedWords.map(w => {
+        const clean = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (clean && !rawLower.has(clean)) {
+            return `<span style="background: rgba(48,209,88,0.2); color: #30d158; padding: 1px 4px; border-radius: 3px; font-weight: 600;">${w}</span>`;
+        }
+        return `<span style="opacity: 0.6;">${w}</span>`;
+    }).join(" ");
+    
+    return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px; line-height: 1.6;">
+            <div>
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Raw Input</div>
+                <div style="background: rgba(255,69,58,0.04); border: 1px solid rgba(255,69,58,0.1); border-radius: 6px; padding: 8px 10px; word-break: break-word;">${rawHtml}</div>
+            </div>
+            <div>
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Expected</div>
+                <div style="background: rgba(48,209,88,0.04); border: 1px solid rgba(48,209,88,0.1); border-radius: 6px; padding: 8px 10px; word-break: break-word;">${expectedHtml}</div>
+            </div>
+        </div>`;
+}
+
+/**
+ * High-fidelity mock bug reports for localhost/offline testing.
+ */
+function getMockBugReports() {
+    return [
+        {
+            timestamp: new Date(Date.now() - 120000).toLocaleString(),
+            category: "Clothing",
+            rawInput: "want to buy orange Lui Vi jacket",
+            expectedOutput: "Buying orange Louis Vuitton jacket",
+            rowIndex: 5
+        },
+        {
+            timestamp: new Date(Date.now() - 360000).toLocaleString(),
+            category: "Vehicles",
+            rawInput: "selling blue lambergini aventdor",
+            expectedOutput: "Selling blue Lamborghini Aventador",
+            rowIndex: 4
+        },
+        {
+            timestamp: new Date(Date.now() - 600000).toLocaleString(),
+            category: "Weapons",
+            rawInput: "buying glock 19 with silncer",
+            expectedOutput: "Buying Glock 19 with silencer",
+            rowIndex: 3
+        },
+        {
+            timestamp: new Date(Date.now() - 900000).toLocaleString(),
+            category: "Electronics",
+            rawInput: "sell iphone 15 pro max with airpods pro",
+            expectedOutput: "Selling iPhone 15 Pro Max with AirPods Pro",
+            rowIndex: 2
+        },
+        {
+            timestamp: new Date(Date.now() - 1800000).toLocaleString(),
+            category: "Properties",
+            rawInput: "renting 2bhk aparment in downtown",
+            expectedOutput: "Renting 2BHK apartment in Downtown",
+            rowIndex: 1
+        }
+    ];
+}
+
+/**
+ * Loads bug reports from backend (or mock data on localhost) and renders triage cards.
+ */
+function loadAndRenderBugTriage() {
+    const container = document.getElementById("admin-triage-list-container");
+    if (!container) return;
+    
+    const passcode = sessionStorage.getItem("li_admin_passcode");
+    const authUuid = localStorage.getItem("li_client_uuid");
+    
+    // Show loading state
+    container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px;">
+            <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading bug reports…</p>
+        </div>`;
+    
+    // Try backend first, fallback to mock
+    if (CONFIG.GOOGLE_SCRIPT_URL) {
+        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+                action: "get_bug_reports",
+                passcode: passcode,
+                clientUuid: authUuid
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "success" && data.reports) {
+                renderTriageCards(data.reports, container);
+            } else {
+                // Fallback to mock on error
+                renderTriageCards(getMockBugReports(), container);
+            }
+        })
+        .catch(() => {
+            renderTriageCards(getMockBugReports(), container);
+        });
+    } else {
+        // Offline / localhost mode - use mock data
+        setTimeout(() => {
+            renderTriageCards(getMockBugReports(), container);
+        }, 400);
+    }
+}
+
+/**
+ * Renders triage cards into the container.
+ */
+function renderTriageCards(reports, container) {
+    if (!reports || reports.length === 0) {
+        container.innerHTML = `
+            <div class="no-requests-msg" style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.01);">
+                <i class="fa-solid fa-circle-check" style="font-size: 32px; margin-bottom: 14px; display: block; color: #30d158; opacity: 0.7;"></i>
+                <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">All Clear!</span>
+                <p style="margin-top: 6px; font-size: 12.5px; opacity: 0.6;">No pending bug reports to triage.</p>
+            </div>`;
+        return;
+    }
+    
+    container.innerHTML = "";
+    
+    reports.forEach((report, idx) => {
+        const correction = extractSpellingCorrection(report.rawInput, report.expectedOutput);
+        const diffHtml = renderTriageDiffHtml(report.rawInput, report.expectedOutput);
+        
+        const card = document.createElement("div");
+        card.className = "triage-card";
+        card.style.cssText = `
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        `;
+        
+        // Category badge color map
+        const catColors = {
+            "Clothing": "#a78bfa",
+            "Vehicles": "#60a5fa",
+            "Weapons": "#f87171",
+            "Electronics": "#34d399",
+            "Properties": "#fbbf24",
+            "Services": "#fb923c",
+            "Food": "#f472b6",
+        };
+        const catColor = catColors[report.category] || "#94a3b8";
+        
+        card.innerHTML = `
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: ${catColor}22; color: ${catColor}; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid ${catColor}33;">${report.category || "Unknown"}</span>
+                    <span style="font-size: 11px; color: var(--text-muted); opacity: 0.7;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i>${report.timestamp}</span>
+                </div>
+                <span style="font-size: 10px; color: var(--text-muted); opacity: 0.4; font-family: var(--font-mono, monospace);">#${idx + 1}</span>
+            </div>
+            
+            <!-- Diff visualization -->
+            ${diffHtml}
+            
+            <!-- Suggested Training Block -->
+            ${correction ? `
+            <div style="background: rgba(255, 149, 0, 0.06); border: 1px solid rgba(255, 149, 0, 0.15); border-radius: 8px; padding: 10px 12px;">
+                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #ff9500; margin-bottom: 6px; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 4px;"></i> Suggested Training</div>
+                <div style="font-size: 13px; font-family: var(--font-mono, monospace); color: var(--text-primary);">
+                    <span style="background: rgba(255,69,58,0.15); color: #ff6b6b; padding: 2px 6px; border-radius: 4px; text-decoration: line-through;">${correction.wrong}</span>
+                    <span style="color: var(--text-muted); margin: 0 6px;">→</span>
+                    <span style="background: rgba(48,209,88,0.15); color: #30d158; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${correction.right}</span>
+                </div>
+            </div>` : `
+            <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 12px; text-align: center;">
+                <span style="font-size: 11.5px; color: var(--text-muted); opacity: 0.6;"><i class="fa-solid fa-info-circle" style="margin-right: 4px;"></i>No auto-correction detected — review manually</span>
+            </div>`}
+            
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; margin-top: 2px;">
+                ${correction ? `
+                <button type="button" class="btn-triage-train" data-wrong="${correction.wrong}" data-right="${correction.right}" style="
+                    flex: 1; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05)); border: 1px solid rgba(48,209,88,0.25); color: #30d158; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                ">
+                    <i class="fa-solid fa-bolt"></i> Train Spelling
+                </button>` : ""}
+                <button type="button" class="btn-triage-ignore" style="
+                    ${correction ? 'flex: 0 0 auto;' : 'flex: 1;'} background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 9px 14px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                ">
+                    <i class="fa-solid fa-xmark"></i> Ignore
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+        
+        // Wire up Train button
+        const trainBtn = card.querySelector(".btn-triage-train");
+        if (trainBtn) {
+            trainBtn.addEventListener("click", () => {
+                const wrong = trainBtn.getAttribute("data-wrong");
+                const right = trainBtn.getAttribute("data-right");
+                
+                // Add to customSpelling dictionary
+                customSpelling[wrong] = right;
+                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                saveCustomDataToBackend();
+                
+                // Re-render the spelling tab if it was already displayed
+                if (typeof renderCustomSpelling === "function") {
+                    renderCustomSpelling();
+                }
+                
+                // Success glow animation + collapse
+                trainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
+                trainBtn.style.background = "rgba(48,209,88,0.25)";
+                trainBtn.style.borderColor = "rgba(48,209,88,0.4)";
+                trainBtn.disabled = true;
+                
+                card.style.borderColor = "rgba(48,209,88,0.3)";
+                card.style.boxShadow = "0 0 20px rgba(48,209,88,0.1)";
+                
+                setTimeout(() => {
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.95) translateY(-10px)";
+                    card.style.maxHeight = card.scrollHeight + "px";
+                    requestAnimationFrame(() => {
+                        card.style.maxHeight = "0px";
+                        card.style.padding = "0px";
+                        card.style.margin = "0px";
+                        card.style.border = "none";
+                        card.style.gap = "0px";
+                    });
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if container is now empty
+                        if (container.children.length === 0) {
+                            renderTriageCards([], container);
+                        }
+                    }, 500);
+                }, 600);
+                
+                showCustomNotification(`Spelling trained: "${wrong}" → "${right}"`, "success");
+            });
+        }
+        
+        // Wire up Ignore button
+        const ignoreBtn = card.querySelector(".btn-triage-ignore");
+        if (ignoreBtn) {
+            ignoreBtn.addEventListener("click", () => {
+                ignoreBtn.innerHTML = `<i class="fa-solid fa-check"></i> Dismissed`;
+                ignoreBtn.style.color = "var(--text-muted)";
+                ignoreBtn.disabled = true;
+                
+                if (trainBtn) trainBtn.disabled = true;
+                
+                card.style.opacity = "0.5";
+                
+                setTimeout(() => {
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.95) translateY(-10px)";
+                    card.style.maxHeight = card.scrollHeight + "px";
+                    requestAnimationFrame(() => {
+                        card.style.maxHeight = "0px";
+                        card.style.padding = "0px";
+                        card.style.margin = "0px";
+                        card.style.border = "none";
+                        card.style.gap = "0px";
+                    });
+                    setTimeout(() => {
+                        card.remove();
+                        if (container.children.length === 0) {
+                            renderTriageCards([], container);
+                        }
+                    }, 500);
+                }, 300);
+                
+                showCustomNotification("Bug report dismissed", "info");
+            });
+        }
+    });
+}
+
+// Wire up the triage tab button click and refresh button
+(function initTriagePanel() {
+    const triageTabBtn = document.querySelector('.admin-tab-btn[data-target="tab-triage"]');
+    const refreshBtn = document.getElementById("btn-triage-refresh");
+    
+    if (triageTabBtn) {
+        triageTabBtn.addEventListener("click", () => {
+            // Only load if admin is authenticated
+            if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+                loadAndRenderBugTriage();
+            }
+        });
+    }
+    
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", () => {
+            if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+                // Spin animation on refresh icon
+                const icon = refreshBtn.querySelector("i");
+                if (icon) {
+                    icon.style.transition = "transform 0.5s ease";
+                    icon.style.transform = "rotate(360deg)";
+                    setTimeout(() => {
+                        icon.style.transition = "none";
+                        icon.style.transform = "rotate(0deg)";
+                    }, 500);
+                }
+                loadAndRenderBugTriage();
+            } else {
+                showCustomNotification("Please authenticate as admin first.", "warning");
+            }
+        });
+    }
+})();
 
 

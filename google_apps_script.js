@@ -121,6 +121,8 @@ function doPost(e) {
       return handleGetCustomData(headers);
     } else if (action === "save_custom_data") {
       return handleSaveCustomData(payload, headers);
+    } else if (action === "get_bug_reports") {
+      return handleGetBugReports(payload, headers);
     } else if (action === "get_history") {
       return handleGetHistory(payload, headers);
     } else {
@@ -1186,5 +1188,46 @@ function handleClearBugReports(data, headers) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
+/**
+ * Retrieves all bug reports from the Bug_Reports sheet for the triage panel.
+ * Returns them newest-first.
+ */
+function handleGetBugReports(payload, headers) {
+  const auth = authenticateAdmin(payload, headers);
+  if (!auth.authorized) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access. Invalid passcode."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const sheet = getOrCreateBugReportsSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    // Skip header row, reverse so newest is first
+    const reports = [];
+    for (let i = data.length - 1; i >= 1; i--) {
+      reports.push({
+        timestamp: data[i][0] || "",
+        category: data[i][1] || "",
+        rawInput: data[i][2] || "",
+        expectedOutput: data[i][3] || "",
+        rowIndex: i + 1  // 1-based sheet row for future deletion
+      });
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      reports: reports,
+      total: reports.length
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Error fetching bug reports: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
 

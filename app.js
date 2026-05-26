@@ -1570,6 +1570,7 @@ function renderSearchResults(query, filter) {
     displayMatches.forEach(item => {
         const card = document.createElement("div");
         card.className = "db-card";
+        card.title = "Double-click to copy name";
         card.innerHTML = `
             <div class="db-card-thumb ${item.thumbClass}">
                 <i class="fa-solid ${item.thumbIcon}"></i>
@@ -1585,6 +1586,16 @@ function renderSearchResults(query, filter) {
                 </div>
             </div>
         `;
+        
+        card.addEventListener("dblclick", () => {
+            navigator.clipboard.writeText(item.name).then(() => {
+                showCustomNotification(`Copied "${item.name}" to clipboard!`, "success");
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+                showCustomNotification("Failed to copy to clipboard", "error");
+            });
+        });
+
         resultsContainer.appendChild(card);
     });
 }

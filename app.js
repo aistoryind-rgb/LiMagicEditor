@@ -5518,6 +5518,23 @@ function formatOtherAd(adBody, action, ctx) {
                 if (matchedClothing.name.includes('*') && !typeVal) {
                     typeVal = extractTypeFromWildcard(rawItem);
                 }
+
+                // Filter out any numbers that are part of the clothing database name itself (e.g. 700 in "Abibas Pezy Boost 700 V3 Alvah shoes")
+                if (typeVal && matchedClothing.name) {
+                    const dbNumbers = matchedClothing.name.match(/\d+/g) || [];
+                    if (dbNumbers.length > 0) {
+                        const rawNumbers = typeVal.split(/,\s*|and\s+/).map(s => s.trim());
+                        const filteredNumbers = rawNumbers.filter(num => !dbNumbers.includes(num));
+                        if (filteredNumbers.length > 1) {
+                            const last = filteredNumbers.pop();
+                            typeVal = `${filteredNumbers.join(", ")} and ${last}`;
+                        } else if (filteredNumbers.length === 1) {
+                            typeVal = filteredNumbers[0];
+                        } else {
+                            typeVal = null;
+                        }
+                    }
+                }
                 
                 let finalClothing = "";
                 if (color) finalClothing += `${color} `;

@@ -8131,6 +8131,15 @@ function initBugReport() {
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {
         btnSubmitBugInline.addEventListener("click", () => {
+            if (btnSubmitBugInline.classList.contains("btn-sent")) {
+                alert("This bug report has already been sent to the developer and is currently under processing.");
+                return;
+            }
+            if (btnSubmitBugInline.classList.contains("submitting")) {
+                return;
+            }
+            
+            btnSubmitBugInline.classList.add("submitting");
             if (feedbackOverlay) feedbackOverlay.classList.remove("hide");
             if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
             if (feedbackSuccess) feedbackSuccess.classList.add("hide");
@@ -8151,6 +8160,7 @@ function initBugReport() {
 
                     if (!CONFIG.GOOGLE_SCRIPT_URL) {
                         setTimeout(() => {
+                            btnSubmitBugInline.classList.remove("submitting");
                             if (feedbackSpinner) feedbackSpinner.classList.add("hide");
                             if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
                             if (feedbackText) feedbackText.textContent = `Google Apps Script URL not configured. Category: ${activeCategory}.`;
@@ -8175,6 +8185,7 @@ function initBugReport() {
                         })
                         .then(response => response.json())
                         .then(data => {
+                            btnSubmitBugInline.classList.remove("submitting");
                             if (feedbackSpinner) feedbackSpinner.classList.add("hide");
                             if (data.status === "success") {
                                 if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
@@ -8191,6 +8202,7 @@ function initBugReport() {
                         })
                         .catch(err => {
                             console.error("Bug report upload error:", err);
+                            btnSubmitBugInline.classList.remove("submitting");
                             if (feedbackSpinner) feedbackSpinner.classList.add("hide");
                             if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
                             if (feedbackSuccess) feedbackSuccess.classList.remove("hide");

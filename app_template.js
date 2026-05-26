@@ -5542,7 +5542,6 @@ function initFloatingClipboard() {
                         <div class="pip-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <label for="pip-raw-ad" style="margin-bottom: 0;"><i class="fa-solid fa-file-import"></i> RAW ADVERTISEMENT CONTENT</label>
-                                <button id="pip-btn-clear-header" class="pip-uniform-btn btn-clear" style="width: auto !important; padding: 2px 8px !important; height: 20px !important; font-size: 9px !important; text-transform: uppercase;"><i class="fa-solid fa-trash-can"></i> Clear</button>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
                             <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
@@ -5803,7 +5802,6 @@ function initFloatingClipboard() {
             }
 
             const pipClear = pipWindow.document.getElementById("pip-btn-clear");
-            const pipClearHeader = pipWindow.document.getElementById("pip-btn-clear-header");
             const handleClear = () => {
                 pipRaw.value = "";
                 mainRaw.value = "";
@@ -5824,9 +5822,6 @@ function initFloatingClipboard() {
             };
             if (pipClear) {
                 pipClear.addEventListener("click", handleClear);
-            }
-            if (pipClearHeader) {
-                pipClearHeader.addEventListener("click", handleClear);
             }
 
             const pipTextElement = pipWindow.document.getElementById("pip-processed-text");
@@ -6236,6 +6231,8 @@ function initAccessGate() {
             if (data.status === "success") {
                 if (data.approved) {
                     localStorage.setItem("li_approved_token", "APPROVED");
+                    document.documentElement.classList.add("user-approved");
+                    document.documentElement.classList.remove("user-unauthorized");
                     if (gate) gate.classList.add("hide");
                     if (statusPollInterval) {
                         clearInterval(statusPollInterval);
@@ -6264,6 +6261,9 @@ function initAccessGate() {
                     }
                 } else {
                     localStorage.removeItem("li_approved_token");
+                    document.documentElement.classList.remove("user-approved");
+                    document.documentElement.classList.add("user-unauthorized");
+                    if (gate) gate.classList.remove("hide");
                     if (statusText) {
                         if (data.requestStatus === "rejected") {
                             statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Request Rejected`;
@@ -6292,7 +6292,12 @@ function initAccessGate() {
             console.error("Access verification error:", err);
             const savedToken = localStorage.getItem("li_approved_token");
             if (savedToken === "APPROVED") {
+                document.documentElement.classList.add("user-approved");
+                document.documentElement.classList.remove("user-unauthorized");
                 if (gate) gate.classList.add("hide");
+            } else {
+                document.documentElement.classList.remove("user-approved");
+                document.documentElement.classList.add("user-unauthorized");
             }
         });
     }
@@ -6300,9 +6305,13 @@ function initAccessGate() {
     // Initial verification
     const savedToken = localStorage.getItem("li_approved_token");
     if (savedToken === "APPROVED") {
+        document.documentElement.classList.add("user-approved");
+        document.documentElement.classList.remove("user-unauthorized");
         if (gate) gate.classList.add("hide");
         checkCurrentAccessStatus();
     } else {
+        document.documentElement.classList.remove("user-approved");
+        document.documentElement.classList.add("user-unauthorized");
         const reqFirstname = localStorage.getItem("li_request_firstname");
         const reqLastname = localStorage.getItem("li_request_lastname");
         const reqId = localStorage.getItem("li_request_id");

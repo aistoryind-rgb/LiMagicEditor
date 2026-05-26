@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LifeInvader EN3 Advertisement Editor</title>
     <meta name="description" content="Official EN3 LifeInvader Internal Advertisement processing and validation tool for GTA 5 Grand RP.">
+    <script>
+        // Inline check to prevent flashing and protect content before render
+        (function() {
+            var token = localStorage.getItem("li_approved_token");
+            if (token === "APPROVED") {
+                document.documentElement.classList.add("user-approved");
+            } else {
+                document.documentElement.classList.add("user-unauthorized");
+            }
+        })();
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -89,10 +89,24 @@ body {
     width: 100%;
     margin: 0 auto;
     padding: 24px;
-    display: flex;
+    display: none; /* Hidden by default for security */
     flex-direction: column;
     gap: 24px;
     flex-grow: 1;
+}
+
+/* Root authorization visibility controls */
+.user-approved .app-container {
+    display: flex !important;
+}
+.user-approved .access-gate-overlay {
+    display: none !important;
+}
+.user-unauthorized .app-container {
+    display: none !important;
+}
+.user-unauthorized .access-gate-overlay {
+    display: flex !important;
 }
 
 /* Header Branding Section */

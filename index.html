@@ -453,9 +453,36 @@
                         <div class="policy-card policy-book-card" style="width: 100%; box-sizing: border-box;">
                             <div class="book-header-wrapper">
                                 <h3><i class="fa-solid fa-book-open text-primary"></i> <span id="policy-book-title">Policy Reference Book</span></h3>
-                                <div class="book-search-box">
-                                    <i class="fa-solid fa-magnifying-glass"></i>
-                                    <input type="text" id="book-search-input" placeholder="Search policy...">
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" id="btn-book-train-toggle" style="background: rgba(48,209,88,0.1); border: 1px solid rgba(48,209,88,0.25); color: #30d158; padding: 6px 12px; font-size: 11.5px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600;">
+                                        <i class="fa-solid fa-graduation-cap"></i> Quick Train
+                                    </button>
+                                    <div class="book-search-box">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" id="book-search-input" placeholder="Search policy...">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Quick Train Panel inside Policy Book -->
+                            <div id="book-train-panel" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px; margin-bottom: 12px; transition: all 0.3s ease;">
+                                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-bolt"></i> Train spelling from Policy page</div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Wrong Spelling</div>
+                                        <input type="text" id="book-train-wrong" placeholder="e.g. lui vi" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
+                                    </div>
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Correct Spelling</div>
+                                        <input type="text" id="book-train-right" placeholder="e.g. Louis Vuitton" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+                                    <button type="button" id="btn-book-train-verify" style="background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.2); color: #ff9500; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(255, 149, 0, 0.2);">
+                                        <i class="fa-solid fa-search"></i> Check Policy
+                                    </button>
+                                    <button type="button" id="btn-book-train-submit" style="background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.25); color: #30d158; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(48, 209, 88, 0.25);">
+                                        <i class="fa-solid fa-bolt"></i> Train Spelling
+                                    </button>
                                 </div>
                             </div>
                             <div class="book-container">

@@ -10527,6 +10527,94 @@ function initPolicyBook() {
     const prevBtn = document.getElementById("book-prev-btn");
     const nextBtn = document.getElementById("book-next-btn");
     const searchInput = document.getElementById("book-search-input");
+    
+    // Quick Train Book Panel wiring
+    const trainToggle = document.getElementById("btn-book-train-toggle");
+    const trainPanel = document.getElementById("book-train-panel");
+    const trainVerify = document.getElementById("btn-book-train-verify");
+    const trainSubmit = document.getElementById("btn-book-train-submit");
+    const trainWrong = document.getElementById("book-train-wrong");
+    const trainRight = document.getElementById("book-train-right");
+
+    if (trainToggle && trainPanel) {
+        trainToggle.addEventListener("click", () => {
+            if (trainPanel.style.display === "none") {
+                trainPanel.style.display = "flex";
+                trainToggle.style.background = "rgba(48,209,88,0.2)";
+                trainToggle.style.borderColor = "rgba(48,209,88,0.4)";
+            } else {
+                trainPanel.style.display = "none";
+                trainToggle.style.background = "rgba(48,209,88,0.1)";
+                trainToggle.style.borderColor = "rgba(48,209,88,0.25)";
+            }
+        });
+    }
+
+    if (trainVerify && trainWrong && trainRight) {
+        trainVerify.addEventListener("click", () => {
+            const searchQ = (trainRight.value || trainWrong.value || "").trim();
+            if (searchQ) {
+                if (searchInput) {
+                    searchInput.value = searchQ;
+                    showBookSearchResults(searchQ);
+                }
+                showCustomNotification(`Searching Policy Reference Book for "${searchQ}"...`, "info");
+            } else {
+                showCustomNotification("Please enter a term to search.", "warning");
+            }
+        });
+    }
+
+    if (trainSubmit && trainWrong && trainRight) {
+        trainSubmit.addEventListener("click", () => {
+            const wrongVal = trainWrong.value.toLowerCase().trim();
+            const rightVal = trainRight.value.trim();
+
+            if (!wrongVal || !rightVal) {
+                showCustomNotification("Both wrong spelling and correct spelling must be filled.", "warning");
+                return;
+            }
+
+            // Strict Policy Verification
+            const foundInPolicy = validateWordAgainstPolicy(rightVal);
+            if (!foundInPolicy) {
+                showCustomNotification(`Training rejected: "${rightVal}" not found in the internal policy pages.`, "error");
+                
+                trainSubmit.style.animation = "none";
+                requestAnimationFrame(() => {
+                    trainSubmit.style.animation = "triageShake 0.4s ease";
+                });
+                return;
+            }
+
+            // Add to customSpelling dictionary
+            customSpelling[wrongVal] = rightVal;
+            localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+            saveCustomDataToBackend();
+
+            if (typeof renderCustomSpelling === "function") {
+                renderCustomSpelling();
+            }
+
+            // Reset inputs and show success
+            trainWrong.value = "";
+            trainRight.value = "";
+            showCustomNotification(`Spelling trained from policy: "${wrongVal}" → "${rightVal}"`, "success");
+            
+            const oldHtml = trainSubmit.innerHTML;
+            trainSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
+            trainSubmit.style.background = "rgba(48,209,88,0.25)";
+            trainSubmit.style.borderColor = "rgba(48,209,88,0.4)";
+            trainSubmit.disabled = true;
+            
+            setTimeout(() => {
+                trainSubmit.innerHTML = oldHtml;
+                trainSubmit.style.background = "rgba(48, 209, 88, 0.15)";
+                trainSubmit.style.borderColor = "rgba(48, 209, 88, 0.25)";
+                trainSubmit.disabled = false;
+            }, 1500);
+        });
+    }
 
     if (prevBtn) {
         prevBtn.addEventListener("click", () => {

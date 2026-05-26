@@ -1971,8 +1971,8 @@ function correctSpelling(text, ctx) {
     // Sort keys by length descending to match multi-word phrases first
     const sortedEntries = Object.entries(activeMisspellings).sort((a, b) => b[0].length - a[0].length);
     for (const [wrong, right] of sortedEntries) {
-        // Skip number-only keys (like "700" or "5") to prevent corrupting model numbers, price digits, etc.
-        if (/^\d+$/.test(wrong)) {
+        // Skip number-only keys (like "700" or "5") from commonMisspellings to prevent corrupting model numbers, price digits, etc., but allow if explicitly trained
+        if (/^\d+$/.test(wrong) && !customSpelling.hasOwnProperty(wrong) && (!ctx.extraSpelling || !ctx.extraSpelling.hasOwnProperty(wrong))) {
             continue;
         }
         let regex;
@@ -12293,6 +12293,15 @@ function renderTriageCards(reports, container) {
                 });
             }
         };
+        
+        // Auto-train on load: if there are any matches available in Policy, database, or items, apply them automatically
+        const policyTrained = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
+        if (!policyTrained) {
+            const dbTrained = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
+            if (!dbTrained) {
+                trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
+            }
+        }
         
         // Initial build
         updateCardBody();

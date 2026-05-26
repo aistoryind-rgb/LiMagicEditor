@@ -11187,6 +11187,223 @@ function loadAndRenderBugTriage() {
 }
 
 /**
+ * Helper to get the live ad validation output details.
+ */
+function getLiveFixedOutputDetails(rawInput, category) {
+    const context = {
+        raw: rawInput,
+        phoneNumber: "",
+        actionOverride: "auto",
+        status: "passed",
+        rejectionReason: "",
+        blacklistReason: "",
+        logs: [],
+        category: category || "Other",
+        finalText: "",
+        priceInfo: null
+    };
+    try {
+        runValidationPipeline(context, category || "auto");
+    } catch (e) {
+        console.error("getLiveFixedOutputDetails error:", e);
+    }
+    return {
+        text: context.finalText || rawInput,
+        status: context.status,
+        rejectionReason: context.rejectionReason || context.blacklistReason || "None"
+    };
+}
+
+/**
+ * Learns spelling and formatting mapping from a similar example ad.
+ */
+function learnFromSimilarExample(rawText, similarText, category) {
+    if (!rawText || !similarText) return false;
+    const rawTokens = rawText.split(/\s+/).filter(Boolean);
+    const similarTokens = similarText.split(/\s+/).filter(Boolean);
+    let trainedCount = 0;
+    
+    for (let i = 0; i < rawTokens.length; i++) {
+        const rawTok = rawTokens[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!rawTok || rawTok.length < 2) continue;
+        
+        let bestSimTok = null;
+        let bestDist = Infinity;
+        for (const simTok of similarTokens) {
+            const cleanSimTok = simTok.toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (!cleanSimTok) continue;
+            const dist = levenshteinDistance(rawTok, cleanSimTok);
+            if (dist < bestDist && dist <= 2) {
+                bestDist = dist;
+                bestSimTok = simTok;
+            }
+        }
+        
+        if (bestSimTok) {
+            const originalRawWord = rawTokens[i].toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
+            const cleanSimWord = bestSimTok.replace(/^[^\w"']+|[^\w"']+$/g, "");
+            if (originalRawWord && cleanSimWord && originalRawWord !== cleanSimWord.toLowerCase()) {
+                customSpelling[originalRawWord] = cleanSimWord;
+                trainedCount++;
+            }
+        }
+    }
+    
+    const rawDigits = rawText.match(/\b\d{4,10}\b/);
+    const simDigits = similarText.match(/\b\d+(?:-\d+)+\b/);
+    if (rawDigits && simDigits) {
+        customSpelling[rawDigits[0]] = simDigits[0];
+        trainedCount++;
+    }
+    
+    if (trainedCount > 0) {
+        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+        saveCustomDataToBackend();
+        if (typeof renderCustomSpelling === "function") {
+            renderCustomSpelling();
+        }
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Searches the vehicles, clothing, or items database lists for fuzzy matches.
+ */
+function trainFromDatabase(rawText, dbType) {
+    const words = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 2);
+    const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
+    const candidates = words.filter(w => !stopwords.has(w));
+    
+    let dbWords = [];
+    if (dbType === "vehicles_clothing") {
+        const categories = ['helicopters', 'boats', 'planes', 'motorcycles', 'not_sellable_cars', 'sellable_cars'];
+        for (const cat of categories) {
+            if (VEHICLE_DB[cat]) {
+                VEHICLE_DB[cat].forEach(name => dbWords.push(name));
+            }
+        }
+        const genders = ['male', 'female'];
+        for (const g of genders) {
+            if (CLOTHING_DB[g]) {
+                for (const subcat in CLOTHING_DB[g]) {
+                    CLOTHING_DB[g][subcat].forEach(name => dbWords.push(name));
+                }
+            }
+        }
+    } else if (dbType === "items") {
+        for (const cat in ITEMS_DB) {
+            ITEMS_DB[cat].forEach(name => dbWords.push(name));
+        }
+    }
+    
+    let trainedCount = 0;
+    for (const cand of candidates) {
+        let exactMatch = dbWords.find(w => w.toLowerCase() === cand);
+        if (exactMatch) {
+            if (cand !== exactMatch.toLowerCase()) {
+                customSpelling[cand] = exactMatch;
+                trainedCount++;
+            }
+            continue;
+        }
+        
+        let bestWord = null;
+        let bestDist = Infinity;
+        for (const dbWord of dbWords) {
+            const dbWordLower = dbWord.toLowerCase();
+            const dbWordTokens = dbWordLower.split(/\s+/);
+            for (const token of dbWordTokens) {
+                const dist = levenshteinDistance(cand, token);
+                if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
+                    bestDist = dist;
+                    bestWord = dbWord;
+                }
+            }
+        }
+        
+        if (bestWord) {
+            customSpelling[cand] = bestWord;
+            trainedCount++;
+        }
+    }
+    
+    if (trainedCount > 0) {
+        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+        saveCustomDataToBackend();
+        if (typeof renderCustomSpelling === "function") {
+            renderCustomSpelling();
+        }
+        return true;
+    }
+    return false;
+}
+
+
+function resolveBugReport(report, card, isIgnore = false) {
+    card.style.opacity = "0.5";
+    
+    const resolveAction = () => {
+        card.style.borderColor = isIgnore ? "rgba(255,255,255,0.1)" : "rgba(48,209,88,0.4)";
+        card.style.boxShadow = isIgnore ? "none" : "0 0 20px rgba(48,209,88,0.15)";
+        
+        setTimeout(() => {
+            card.style.opacity = "0";
+            card.style.transform = "scale(0.95) translateY(-10px)";
+            card.style.maxHeight = card.scrollHeight + "px";
+            requestAnimationFrame(() => {
+                card.style.maxHeight = "0px";
+                card.style.padding = "0px";
+                card.style.margin = "0px";
+                card.style.border = "none";
+                card.style.gap = "0px";
+            });
+            setTimeout(() => {
+                const container = card.parentNode;
+                card.remove();
+                if (container && container.children.length === 0) {
+                    renderTriageCards([], container);
+                }
+            }, 500);
+        }, 300);
+        
+        showCustomNotification(isIgnore ? "Bug report ignored." : "Bug report confirmed & resolved successfully!", "success");
+    };
+
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        resolveAction();
+        return;
+    }
+    
+    const passcode = sessionStorage.getItem("li_admin_passcode");
+    const authUuid = localStorage.getItem("li_client_uuid");
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "resolve_bug_report",
+            rawInput: report.rawInput,
+            timestamp: report.timestamp,
+            passcode: passcode,
+            authUuid: authUuid
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            resolveAction();
+        } else {
+            showCustomNotification(data.message || "Error resolving bug report.", "error");
+            card.style.opacity = "1";
+        }
+    })
+    .catch(err => {
+        resolveAction();
+    });
+}
+
+/**
  * Renders triage cards into the container.
  */
 function renderTriageCards(reports, container) {
@@ -11203,11 +11420,6 @@ function renderTriageCards(reports, container) {
     container.innerHTML = "";
     
     reports.forEach((report, idx) => {
-        const expectedClean = cleanExpectedOutput(report.rawInput, report.expectedOutput, report.category);
-        const correction = extractSpellingCorrection(report.rawInput, expectedClean);
-        const diffHtml = renderTriageDiffHtml(report.rawInput, expectedClean);
-        const searchWord = getPolicySearchTerm(report.rawInput, expectedClean, correction);
-        
         const card = document.createElement("div");
         card.className = "triage-card";
         card.style.cssText = `
@@ -11233,452 +11445,234 @@ function renderTriageCards(reports, container) {
             "Services": "#fb923c",
             "Food": "#f472b6",
         };
-        const catColor = catColors[report.category] || "#94a3b8";
         
-        card.innerHTML = `
-            <!-- Header -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="background: ${catColor}22; color: ${catColor}; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid ${catColor}33;">${report.category || "Unknown"}</span>
-                    <span style="font-size: 11px; color: var(--text-muted); opacity: 0.7;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i>${report.timestamp}</span>
-                </div>
-                <span style="font-size: 10px; color: var(--text-muted); opacity: 0.4; font-family: var(--font-mono, monospace);">#${idx + 1}</span>
-            </div>
+        let currentCategory = report.category || "Other";
+        const catColor = catColors[currentCategory] || "#94a3b8";
+        
+        // Function to render card inner content
+        const updateCardBody = () => {
+            const liveFixed = getLiveFixedOutputDetails(report.rawInput, currentCategory);
+            const isPassed = liveFixed.status === "passed";
             
-            <!-- Diff visualization -->
-            ${diffHtml}
-            
-            <!-- Suggested Training Block -->
-            ${correction ? `
-            <div style="background: rgba(255, 149, 0, 0.06); border: 1px solid rgba(255, 149, 0, 0.15); border-radius: 8px; padding: 10px 12px;">
-                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #ff9500; margin-bottom: 6px; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 4px;"></i> Suggested Training</div>
-                <div style="font-size: 13px; font-family: var(--font-mono, monospace); color: var(--text-primary);">
-                    <span style="background: rgba(255,69,58,0.15); color: #ff6b6b; padding: 2px 6px; border-radius: 4px; text-decoration: line-through;">${correction.wrong}</span>
-                    <span style="color: var(--text-muted); margin: 0 6px;">→</span>
-                    <span style="background: rgba(48,209,88,0.15); color: #30d158; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${correction.right}</span>
-                </div>
-            </div>` : `
-            <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 12px; text-align: center;">
-                <span style="font-size: 11.5px; color: var(--text-muted); opacity: 0.6;"><i class="fa-solid fa-info-circle" style="margin-right: 4px;"></i>No auto-correction detected — review manually</span>
-            </div>`}
-            
-            <!-- Manual Training Panel (Hidden by default) -->
-            <div class="manual-train-panel" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px; margin-top: 4px; transition: all 0.3s ease;">
-                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-pen-to-square"></i> Manual Correction Training</div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 120px;">
-                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Wrong Spelling</div>
-                        <input type="text" class="manual-wrong-input" placeholder="e.g. lui vi" value="${correction ? correction.wrong : ''}" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
+            // Side-by-side dark boxes layout
+            const diffHtml = `
+                <div style="display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Raw Input</div>
+                        <div style="flex: 1; padding: 12px; border-radius: 8px; background: rgba(255,69,58,0.03); border: 1px solid rgba(255,69,58,0.12); font-family: var(--font-mono, monospace); font-size: 13.5px; line-height: 1.5; color: var(--text-primary); word-break: break-word;">
+                            ${report.rawInput}
+                        </div>
                     </div>
-                    <div style="flex: 1; min-width: 120px;">
-                        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 3px;">Correct Spelling</div>
-                        <input type="text" class="manual-right-input" placeholder="e.g. Louis Vuitton" value="${correction ? correction.right : ''}" style="width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); color: var(--text-primary); font-size: 12px;">
-                    </div>
-                </div>
-                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; flex-wrap: wrap;">
-                    <button type="button" class="btn-manual-view-vehicles-clothing" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.2); color: #a78bfa; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
-                        <i class="fa-solid fa-car"></i> Vehicles and Clothing list
-                    </button>
-                    <button type="button" class="btn-manual-view-items" style="background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); color: #22d3ee; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
-                        <i class="fa-solid fa-box"></i> Item list
-                    </button>
-                    <button type="button" class="btn-manual-verify-policy" style="background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.2); color: #ff9500; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(255, 149, 0, 0.2);">
-                        <i class="fa-solid fa-search"></i> Check Policy
-                    </button>
-                    <button type="button" class="btn-manual-train-spelling" style="background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.25); color: #30d158; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; border: 1px solid rgba(48, 209, 88, 0.25);">
-                        <i class="fa-solid fa-bolt"></i> Train Spelling
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div style="display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
-                ${correction ? `
-                <button type="button" class="btn-triage-train" data-wrong="${correction.wrong}" data-right="${correction.right}" style="
-                    flex: 1.5; min-width: 100px; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05)); border: 1px solid rgba(48,209,88,0.25); color: #30d158; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                ">
-                    <i class="fa-solid fa-bolt"></i> Train Spelling
-                </button>` : ""}
-                
-                <button type="button" class="btn-triage-train-policy" style="
-                    flex: 1.5; min-width: 100px; background: linear-gradient(135deg, rgba(255,149,0,0.15), rgba(255,149,0,0.05)); border: 1px solid rgba(255,149,0,0.25); color: #ff9500; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                ">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Train from Policy
-                </button>
-                
-                <button type="button" class="btn-triage-manual-toggle" style="
-                    flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #60a5fa; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease;
-                ">
-                    <i class="fa-solid fa-sliders"></i> Adjust
-                </button>
-                
-                <button type="button" class="btn-triage-ignore" style="
-                    flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                ">
-                    <i class="fa-solid fa-xmark"></i> Ignore
-                </button>
-            </div>
-        `;
-        
-        container.appendChild(card);
-        
-        // ── Clickable Diff Words ───────────────────────────────────────
-        card.querySelectorAll(".clickable-diff-word").forEach(span => {
-            span.addEventListener("click", () => {
-                const word = span.getAttribute("data-word");
-                if (word && word.length > 1) {
-                    searchPolicyBookAndSwitch(word);
-                    showCustomNotification(`Searching Policy Reference Book for "${word}"...`, "info");
-                }
-            });
-        });
-        
-        // Elements needed for button listeners
-        const trainPolicyBtn = card.querySelector(".btn-triage-train-policy");
-        const manualToggleBtn = card.querySelector(".btn-triage-manual-toggle");
-        const manualPanel = card.querySelector(".manual-train-panel");
-        const manualTrainSpellingBtn = card.querySelector(".btn-manual-train-spelling");
-        const trainBtn = card.querySelector(".btn-triage-train");
-        
-        // ── Train from Policy Button ────────────────────────────────────
-        if (trainPolicyBtn) {
-            trainPolicyBtn.addEventListener("click", () => {
-                const trainedCorr = selfTrainFromPolicy(report.rawInput, report.category);
-                if (trainedCorr) {
-                    // Update validation pipeline inline to show corrected ad
-                    const context = {
-                        raw: report.rawInput,
-                        phoneNumber: "",
-                        actionOverride: "auto",
-                        status: "passed",
-                        rejectionReason: "",
-                        blacklistReason: "",
-                        logs: [],
-                        category: "Other",
-                        finalText: "",
-                        priceInfo: null
-                    };
-                    try {
-                        runValidationPipeline(context, report.category || "auto");
-                    } catch (e) {
-                        console.error(e);
-                    }
-                    const newResult = context.finalText || report.rawInput;
-                    
-                    // Show inline success result
-                    card.style.borderColor = "rgba(48,209,88,0.4)";
-                    card.style.boxShadow = "0 0 20px rgba(48,209,88,0.15)";
-                    
-                    const resultDiv = document.createElement("div");
-                    resultDiv.style.cssText = `
-                        background: rgba(48,209,88,0.06);
-                        border: 1px solid rgba(48,209,88,0.25);
-                        border-radius: 8px;
-                        padding: 12px;
-                        margin-top: 10px;
-                        font-size: 13px;
-                        color: #30d158;
-                        font-family: var(--font-heading);
-                    `;
-                    resultDiv.innerHTML = `
-                        <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;"><i class="fa-solid fa-square-check"></i> Trained &amp; Format Updated</div>
-                        <div style="color: var(--text-primary); font-family: monospace; word-break: break-word;">${newResult}</div>
-                    `;
-                    card.appendChild(resultDiv);
-                    
-                    // Update button states
-                    trainPolicyBtn.disabled = true;
-                    trainPolicyBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
-                    trainPolicyBtn.style.background = "rgba(48,209,88,0.25)";
-                    trainPolicyBtn.style.borderColor = "rgba(48,209,88,0.4)";
-                    
-                    if (trainBtn) trainBtn.disabled = true;
-                    if (manualTrainSpellingBtn) manualTrainSpellingBtn.disabled = true;
-                    
-                    setTimeout(() => {
-                        card.style.opacity = "0";
-                        card.style.transform = "scale(0.95) translateY(-10px)";
-                        card.style.maxHeight = card.scrollHeight + "px";
-                        requestAnimationFrame(() => {
-                            card.style.maxHeight = "0px";
-                            card.style.padding = "0px";
-                            card.style.margin = "0px";
-                            card.style.border = "none";
-                            card.style.gap = "0px";
-                        });
-                        setTimeout(() => {
-                            card.remove();
-                            if (container.children.length === 0) {
-                                renderTriageCards([], container);
+                    <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Fixed Output</div>
+                        <div class="fixed-output-box" style="flex: 1; padding: 12px; border-radius: 8px; font-family: var(--font-mono, monospace); font-size: 13.5px; line-height: 1.5; word-break: break-word; transition: all 0.3s ease;
+                            ${isPassed ? 
+                              'background: rgba(48,209,88,0.04); border: 1px solid rgba(48,209,88,0.25); color: #30d158; box-shadow: 0 0 10px rgba(48,209,88,0.05);' : 
+                              'background: rgba(255,69,58,0.04); border: 1px solid rgba(255,69,58,0.25); color: #ff6b6b; box-shadow: 0 0 10px rgba(255,69,58,0.05);'
                             }
-                        }, 500);
-                    }, 2500);
+                        ">
+                            ${liveFixed.text}
+                            ${!isPassed ? `<div style="margin-top: 6px; font-size: 11px; opacity: 0.8; font-weight: 600;"><i class="fa-solid fa-circle-exclamation"></i> Rejection Reason: ${liveFixed.rejectionReason}</div>` : ""}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Re-populate the category selection list
+            const categoriesList = ["Auto", "Real Estate", "Businesses", "Work", "Dating", "Services", "Discounts", "Other"];
+            const categoryOptionsHtml = categoriesList.map(cat => 
+                `<option value="${cat}" ${cat === currentCategory ? "selected" : ""}>${cat}</option>`
+            ).join("");
+
+            card.innerHTML = `
+                <!-- Header -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="category-badge" style="background: ${catColor}22; color: ${catColor}; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid ${catColor}33;">${currentCategory}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); opacity: 0.7;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i>${report.timestamp}</span>
+                    </div>
+                    <span style="font-size: 10px; color: var(--text-muted); opacity: 0.4; font-family: var(--font-mono, monospace);">#${idx + 1}</span>
+                </div>
+                
+                <!-- Side-by-side Raw vs Fixed Output -->
+                ${diffHtml}
+                
+                <!-- Manual Training Panel (Hidden by default) -->
+                <div class="manual-train-panel" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 10px; margin-top: 4px; transition: all 0.3s ease;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-pen-to-square"></i> Manual Training Override</div>
                     
-                    showCustomNotification(`Spelling trained: "${trainedCorr.wrong}" → "${trainedCorr.right}"`, "success");
-                } else {
-                    // Fallback to manual adjust panel
-                    showCustomNotification("No matching policy example found. Please train manually.", "warning");
-                    if (manualPanel && manualToggleBtn) {
+                    <div style="display: flex; gap: 10px; flex-direction: column;">
+                        <div>
+                            <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Similar Example / Target Output</div>
+                            <input type="text" class="manual-similar-input" placeholder="e.g. Selling &quot;Suntrap&quot;. Price: Negotiable." value="${liveFixed.text}" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); color: var(--text-primary); font-size: 12.5px; font-family: var(--font-mono, monospace);">
+                        </div>
+                        
+                        <div>
+                            <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Category</div>
+                            <select class="manual-category-select" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); color: var(--text-primary); font-size: 12.5px; outline: none; cursor: pointer;">
+                                ${categoryOptionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+                        <button type="button" class="btn-manual-train-apply" style="background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.25); color: #30d158; padding: 7px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                            <i class="fa-solid fa-graduation-cap"></i> Train
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
+                    <button type="button" class="btn-triage-confirm" style="
+                        flex: 1.5; min-width: 100px; background: linear-gradient(135deg, rgba(48,209,88,0.2), rgba(48,209,88,0.08)); border: 1px solid rgba(48,209,88,0.35); color: #30d158; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    ">
+                        <i class="fa-solid fa-square-check"></i> Confirm
+                    </button>
+                    
+                    <button type="button" class="btn-triage-train-policy" style="
+                        flex: 1; min-width: 90px; background: linear-gradient(135deg, rgba(255,149,0,0.15), rgba(255,149,0,0.05)); border: 1px solid rgba(255,149,0,0.25); color: #ff9500; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    ">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Train from Policy
+                    </button>
+                    
+                    <button type="button" class="btn-triage-train-vehicles-clothing" style="
+                        flex: 1; min-width: 90px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.2); color: #a78bfa; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    ">
+                        <i class="fa-solid fa-car"></i> Train Vehicles/Clothing
+                    </button>
+                    
+                    <button type="button" class="btn-triage-train-items" style="
+                        flex: 1; min-width: 90px; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); color: #22d3ee; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    ">
+                        <i class="fa-solid fa-box"></i> Train Items
+                    </button>
+                    
+                    <button type="button" class="btn-triage-manual-toggle" style="
+                        flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #60a5fa; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease;
+                    ">
+                        <i class="fa-solid fa-sliders"></i> Adjust
+                    </button>
+                    
+                    <button type="button" class="btn-triage-ignore" style="
+                        flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                    ">
+                        <i class="fa-solid fa-xmark"></i> Ignore
+                    </button>
+                </div>
+            `;
+            
+            // Wire event listeners on newly set innerHTML
+            const confirmBtn = card.querySelector(".btn-triage-confirm");
+            const trainPolicyBtn = card.querySelector(".btn-triage-train-policy");
+            const trainVehiclesClothingBtn = card.querySelector(".btn-triage-train-vehicles-clothing");
+            const trainItemsBtn = card.querySelector(".btn-triage-train-items");
+            const manualToggleBtn = card.querySelector(".btn-triage-manual-toggle");
+            const manualPanel = card.querySelector(".manual-train-panel");
+            const manualTrainApplyBtn = card.querySelector(".btn-manual-train-apply");
+            const ignoreBtn = card.querySelector(".btn-triage-ignore");
+            
+            // ── Confirm / Resolve Button ──
+            if (confirmBtn) {
+                confirmBtn.addEventListener("click", () => {
+                    resolveBugReport(report, card);
+                });
+            }
+            
+            // ── Train from Policy Button ──
+            if (trainPolicyBtn) {
+                trainPolicyBtn.addEventListener("click", () => {
+                    const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory);
+                    if (trainedCorr) {
+                        showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}"`, "success");
+                        updateCardBody();
+                    } else {
+                        showCustomNotification("No matching policy example found. Please train manually.", "warning");
+                        if (manualPanel && manualToggleBtn) {
+                            manualPanel.style.display = "flex";
+                            manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
+                            manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
+                        }
+                    }
+                });
+            }
+            
+            // ── Train from Vehicles & Clothing Button ──
+            if (trainVehiclesClothingBtn) {
+                trainVehiclesClothingBtn.addEventListener("click", () => {
+                    const success = trainFromDatabase(report.rawInput, "vehicles_clothing");
+                    if (success) {
+                        showCustomNotification("Trained from Vehicles & Clothing database list successfully!", "success");
+                        updateCardBody();
+                    } else {
+                        showCustomNotification("No matching vehicle or clothing items found in database.", "warning");
+                    }
+                });
+            }
+            
+            // ── Train from Items Button ──
+            if (trainItemsBtn) {
+                trainItemsBtn.addEventListener("click", () => {
+                    const success = trainFromDatabase(report.rawInput, "items");
+                    if (success) {
+                        showCustomNotification("Trained from Items database list successfully!", "success");
+                        updateCardBody();
+                    } else {
+                        showCustomNotification("No matching items found in database.", "warning");
+                    }
+                });
+            }
+            
+            // ── Manual Train Toggle Button ──
+            if (manualToggleBtn && manualPanel) {
+                manualToggleBtn.addEventListener("click", () => {
+                    if (manualPanel.style.display === "none") {
                         manualPanel.style.display = "flex";
                         manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
                         manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
-                        const wrongInput = card.querySelector(".manual-wrong-input");
-                        if (wrongInput) {
-                            wrongInput.focus();
-                        }
+                    } else {
+                        manualPanel.style.display = "none";
+                        manualToggleBtn.style.background = "rgba(255,255,255,0.03)";
+                        manualToggleBtn.style.borderColor = "rgba(255,255,255,0.08)";
                     }
-                }
-            });
-        }
-        
-        // ── Manual Train Toggle Button ─────────────────────────────────
-        if (manualToggleBtn && manualPanel) {
-            manualToggleBtn.addEventListener("click", () => {
-                if (manualPanel.style.display === "none") {
-                    manualPanel.style.display = "flex";
-                    manualToggleBtn.style.background = "rgba(96, 165, 250, 0.15)";
-                    manualToggleBtn.style.borderColor = "rgba(96, 165, 250, 0.3)";
-                } else {
-                    manualPanel.style.display = "none";
-                    manualToggleBtn.style.background = "rgba(255,255,255,0.03)";
-                    manualToggleBtn.style.borderColor = "rgba(255,255,255,0.08)";
-                }
-            });
-        }
-        
-        // ── Manual View Vehicles & Clothing List Button ──────────────────────
-        const manualVehiclesClothingBtn = card.querySelector(".btn-manual-view-vehicles-clothing");
-        if (manualVehiclesClothingBtn) {
-            manualVehiclesClothingBtn.addEventListener("click", () => {
-                const wrongInput = card.querySelector(".manual-wrong-input");
-                const rightInput = card.querySelector(".manual-right-input");
-                const searchQ = (rightInput.value || wrongInput.value || "").trim();
-                if (searchQ) {
-                    let filter = "vehicles";
-                    const isClothing = (report.category && report.category.toLowerCase() === "clothing") ||
-                                       /clothing|dress|shirt|pant|shoe|wear|suit|hat|mask|bag|glasses|watch/i.test(searchQ);
-                    if (isClothing) {
-                        filter = "clothing";
+                });
+            }
+            
+            // ── Manual Train Apply Button ──
+            if (manualTrainApplyBtn) {
+                manualTrainApplyBtn.addEventListener("click", () => {
+                    const similarInput = card.querySelector(".manual-similar-input");
+                    const catSelect = card.querySelector(".manual-category-select");
+                    const similarVal = (similarInput.value || "").trim();
+                    const selectedCat = catSelect.value;
+                    
+                    if (!similarVal) {
+                        showCustomNotification("Please provide a similar example ad.", "warning");
+                        return;
                     }
-                    searchDatabaseExplorer(searchQ, filter);
-                    showCustomNotification(`Searching Database Explorer (${filter === "clothing" ? "Clothing" : "Vehicles"}) for "${searchQ}"...`, "info");
-                } else {
-                    showCustomNotification("Please enter a term to search.", "warning");
-                }
-            });
-        }
+                    
+                    currentCategory = selectedCat;
+                    const trained = learnFromSimilarExample(report.rawInput, similarVal, selectedCat);
+                    if (trained) {
+                        showCustomNotification("Manual training completed successfully!", "success");
+                    } else {
+                        showCustomNotification(`Running formatting pipeline for category ${selectedCat}...`, "info");
+                    }
+                    updateCardBody();
+                });
+            }
+            
+            // ── Ignore Button ──
+            if (ignoreBtn) {
+                ignoreBtn.addEventListener("click", () => {
+                    resolveBugReport(report, card, true); // silent / ignore resolve
+                });
+            }
+        };
         
-        // ── Manual View Item List Button ───────────────────────────────
-        const manualItemsBtn = card.querySelector(".btn-manual-view-items");
-        if (manualItemsBtn) {
-            manualItemsBtn.addEventListener("click", () => {
-                const wrongInput = card.querySelector(".manual-wrong-input");
-                const rightInput = card.querySelector(".manual-right-input");
-                const searchQ = (rightInput.value || wrongInput.value || "").trim();
-                if (searchQ) {
-                    searchDatabaseExplorer(searchQ, "items");
-                    showCustomNotification(`Searching Database Explorer (Items) for "${searchQ}"...`, "info");
-                } else {
-                    showCustomNotification("Please enter a term to search.", "warning");
-                }
-            });
-        }
-
-        // ── Manual Verify in Policy Button ──────────────────────────────
-        const manualVerifyBtn = card.querySelector(".btn-manual-verify-policy");
-        if (manualVerifyBtn) {
-            manualVerifyBtn.addEventListener("click", () => {
-                const wrongInput = card.querySelector(".manual-wrong-input");
-                const rightInput = card.querySelector(".manual-right-input");
-                const searchQ = (rightInput.value || wrongInput.value || "").trim();
-                if (searchQ) {
-                    searchPolicyBookAndSwitch(searchQ);
-                    showCustomNotification(`Searching Policy Reference Book for "${searchQ}"...`, "info");
-                } else {
-                    showCustomNotification("Please enter a term to search.", "warning");
-                }
-            });
-        }
-        
-        // ── Manual Train Spelling Button ───────────────────────────────
-        if (manualTrainSpellingBtn) {
-            manualTrainSpellingBtn.addEventListener("click", () => {
-                const wrongInput = card.querySelector(".manual-wrong-input");
-                const rightInput = card.querySelector(".manual-right-input");
-                const wrongVal = (wrongInput.value || "").toLowerCase().trim();
-                const rightVal = (rightInput.value || "").trim();
-                
-                if (!wrongVal || !rightVal) {
-                    showCustomNotification("Both wrong spelling and correct spelling must be filled.", "warning");
-                    card.style.animation = "none";
-                    requestAnimationFrame(() => {
-                        card.style.animation = "triageShake 0.4s ease";
-                    });
-                    return;
-                }
-                
-                // Policy Validation
-                const foundInPolicy = validateWordAgainstPolicy(rightVal);
-                if (!foundInPolicy) {
-                    showCustomNotification(`Training rejected: "${rightVal}" not found in the internal policy pages.`, "error");
-                    card.style.borderColor = "rgba(255,69,58,0.4)";
-                    card.style.boxShadow = "0 0 15px rgba(255,69,58,0.15)";
-                    card.style.animation = "none";
-                    requestAnimationFrame(() => {
-                        card.style.animation = "triageShake 0.4s ease";
-                    });
-                    setTimeout(() => {
-                        card.style.borderColor = "rgba(255,255,255,0.06)";
-                        card.style.boxShadow = "none";
-                    }, 1500);
-                    return;
-                }
-                
-                // Add to customSpelling dictionary
-                customSpelling[wrongVal] = rightVal;
-                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-                saveCustomDataToBackend();
-                
-                if (typeof renderCustomSpelling === "function") {
-                    renderCustomSpelling();
-                }
-                
-                // Animation & Dismiss
-                manualTrainSpellingBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
-                manualTrainSpellingBtn.style.background = "rgba(48,209,88,0.25)";
-                manualTrainSpellingBtn.style.borderColor = "rgba(48,209,88,0.4)";
-                manualTrainSpellingBtn.disabled = true;
-                if (trainBtn) trainBtn.disabled = true;
-                if (trainPolicyBtn) trainPolicyBtn.disabled = true;
-                
-                card.style.borderColor = "rgba(48,209,88,0.3)";
-                card.style.boxShadow = "0 0 20px rgba(48,209,88,0.1)";
-                
-                setTimeout(() => {
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.95) translateY(-10px)";
-                    card.style.maxHeight = card.scrollHeight + "px";
-                    requestAnimationFrame(() => {
-                        card.style.maxHeight = "0px";
-                        card.style.padding = "0px";
-                        card.style.margin = "0px";
-                        card.style.border = "none";
-                        card.style.gap = "0px";
-                    });
-                    setTimeout(() => {
-                        card.remove();
-                        if (container.children.length === 0) {
-                            renderTriageCards([], container);
-                        }
-                    }, 500);
-                }, 600);
-                
-                showCustomNotification(`Spelling trained manually: "${wrongVal}" → "${rightVal}"`, "success");
-            });
-        }
-        
-        // ── Wire up Train button (Auto) ──────────────────────────────────
-        if (trainBtn) {
-            trainBtn.addEventListener("click", () => {
-                const wrong = trainBtn.getAttribute("data-wrong");
-                const right = trainBtn.getAttribute("data-right");
-                
-                // Policy Validation
-                const foundInPolicy = validateWordAgainstPolicy(right);
-                if (!foundInPolicy) {
-                    showCustomNotification(`Training rejected: "${right}" not found in the internal policy pages.`, "error");
-                    card.style.borderColor = "rgba(255,69,58,0.4)";
-                    card.style.boxShadow = "0 0 15px rgba(255,69,58,0.15)";
-                    card.style.animation = "none";
-                    requestAnimationFrame(() => {
-                        card.style.animation = "triageShake 0.4s ease";
-                    });
-                    setTimeout(() => {
-                        card.style.borderColor = "rgba(255,255,255,0.06)";
-                        card.style.boxShadow = "none";
-                    }, 1500);
-                    return;
-                }
-                
-                // Add to customSpelling dictionary
-                customSpelling[wrong] = right;
-                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-                saveCustomDataToBackend();
-                
-                if (typeof renderCustomSpelling === "function") {
-                    renderCustomSpelling();
-                }
-                
-                // Success glow animation + collapse
-                trainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
-                trainBtn.style.background = "rgba(48,209,88,0.25)";
-                trainBtn.style.borderColor = "rgba(48,209,88,0.4)";
-                trainBtn.disabled = true;
-                if (manualTrainSpellingBtn) manualTrainSpellingBtn.disabled = true;
-                if (trainPolicyBtn) trainPolicyBtn.disabled = true;
-                
-                card.style.borderColor = "rgba(48,209,88,0.3)";
-                card.style.boxShadow = "0 0 20px rgba(48,209,88,0.1)";
-                
-                setTimeout(() => {
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.95) translateY(-10px)";
-                    card.style.maxHeight = card.scrollHeight + "px";
-                    requestAnimationFrame(() => {
-                        card.style.maxHeight = "0px";
-                        card.style.padding = "0px";
-                        card.style.margin = "0px";
-                        card.style.border = "none";
-                        card.style.gap = "0px";
-                    });
-                    setTimeout(() => {
-                        card.remove();
-                        if (container.children.length === 0) {
-                            renderTriageCards([], container);
-                        }
-                    }, 500);
-                }, 600);
-                
-                showCustomNotification(`Spelling trained: "${wrong}" → "${right}"`, "success");
-            });
-        }
-        
-        // ── Wire up Ignore button ───────────────────────────────────────
-        const ignoreBtn = card.querySelector(".btn-triage-ignore");
-        if (ignoreBtn) {
-            ignoreBtn.addEventListener("click", () => {
-                ignoreBtn.innerHTML = `<i class="fa-solid fa-check"></i> Dismissed`;
-                ignoreBtn.style.color = "var(--text-muted)";
-                ignoreBtn.disabled = true;
-                
-                if (trainBtn) trainBtn.disabled = true;
-                if (trainPolicyBtn) trainPolicyBtn.disabled = true;
-                if (manualTrainSpellingBtn) manualTrainSpellingBtn.disabled = true;
-                
-                card.style.opacity = "0.5";
-                
-                setTimeout(() => {
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.95) translateY(-10px)";
-                    card.style.maxHeight = card.scrollHeight + "px";
-                    requestAnimationFrame(() => {
-                        card.style.maxHeight = "0px";
-                        card.style.padding = "0px";
-                        card.style.margin = "0px";
-                        card.style.border = "none";
-                        card.style.gap = "0px";
-                    });
-                    setTimeout(() => {
-                        card.remove();
-                        if (container.children.length === 0) {
-                            renderTriageCards([], container);
-                        }
-                    }, 500);
-                }, 300);
-                
-                showCustomNotification("Bug report dismissed", "info");
-            });
-        }
+        // Initial build
+        updateCardBody();
+        container.appendChild(card);
     });
 }
 

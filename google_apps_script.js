@@ -123,6 +123,8 @@ function doPost(e) {
       return handleSaveCustomData(payload, headers);
     } else if (action === "get_bug_reports") {
       return handleGetBugReports(payload, headers);
+    } else if (action === "resolve_bug_report") {
+      return handleResolveBugReport(payload, headers);
     } else if (action === "get_history") {
       return handleGetHistory(payload, headers);
     } else {
@@ -1226,6 +1228,53 @@ function handleGetBugReports(payload, headers) {
     return ContentService.createTextOutput(JSON.stringify({
       status: "error",
       message: "Error fetching bug reports: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleResolveBugReport(payload, headers) {
+  const auth = checkAdminAuth(payload);
+  if (!auth.authorized) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Unauthorized access."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const rawInput = (payload.rawInput || "").toString().trim();
+  const timestamp = (payload.timestamp || "").toString().trim();
+  
+  if (!rawInput) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Missing rawInput."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const sheet = getOrCreateBugReportsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let deleted = false;
+  
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const sheetRaw = (rows[i][2] || "").toString().trim();
+    const sheetTime = (rows[i][0] || "").toString().trim();
+    
+    if (sheetRaw === rawInput && (!timestamp || sheetTime === timestamp)) {
+      sheet.deleteRow(i + 1);
+      deleted = true;
+      break;
+    }
+  }
+  
+  if (deleted) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Bug report resolved and removed."
+    })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Bug report not found in database."
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }

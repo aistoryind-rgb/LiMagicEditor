@@ -3493,28 +3493,47 @@ textarea:focus, input:focus, select:focus {
     white-space: nowrap;
 }
 
-/* Triage Manual Training Shortcuts */
-.btn-manual-view-vehicles-clothing:hover {
-    background: rgba(167, 139, 250, 0.2) !important;
-    border-color: rgba(167, 139, 250, 0.45) !important;
-    box-shadow: 0 0 10px rgba(167, 139, 250, 0.3) !important;
+/* Triage Card Action Buttons & Manual Training Glows */
+.btn-triage-confirm:hover {
+    background: linear-gradient(135deg, rgba(48,209,88,0.35), rgba(48,209,88,0.15)) !important;
+    border-color: rgba(48,209,88,0.6) !important;
+    box-shadow: 0 0 15px rgba(48,209,88,0.3) !important;
+    color: #30d158 !important;
+}
+.btn-triage-train-policy:hover {
+    background: linear-gradient(135deg, rgba(255,149,0,0.3), rgba(255,149,0,0.1)) !important;
+    border-color: rgba(255,149,0,0.5) !important;
+    box-shadow: 0 0 15px rgba(255,149,0,0.25) !important;
+    color: #ff9500 !important;
+}
+.btn-triage-train-vehicles-clothing:hover {
+    background: rgba(167, 139, 250, 0.25) !important;
+    border-color: rgba(167, 139, 250, 0.5) !important;
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.3) !important;
     color: #c084fc !important;
 }
-.btn-manual-view-items:hover {
-    background: rgba(34, 211, 238, 0.2) !important;
-    border-color: rgba(34, 211, 238, 0.45) !important;
-    box-shadow: 0 0 10px rgba(34, 211, 238, 0.3) !important;
+.btn-triage-train-items:hover {
+    background: rgba(34, 211, 238, 0.25) !important;
+    border-color: rgba(34, 211, 238, 0.5) !important;
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.3) !important;
     color: #67e8f9 !important;
 }
-.btn-manual-verify-policy:hover {
-    background: rgba(255, 149, 0, 0.2) !important;
-    border-color: rgba(255, 149, 0, 0.4) !important;
-    box-shadow: 0 0 10px rgba(255, 149, 0, 0.25) !important;
+.btn-triage-manual-toggle:hover {
+    background: rgba(96, 165, 250, 0.25) !important;
+    border-color: rgba(96, 165, 250, 0.5) !important;
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.3) !important;
+    color: #60a5fa !important;
 }
-.btn-manual-train-spelling:hover:not(:disabled) {
-    background: rgba(48, 209, 88, 0.25) !important;
-    border-color: rgba(48, 209, 88, 0.45) !important;
-    box-shadow: 0 0 10px rgba(48, 209, 88, 0.3) !important;
+.btn-triage-ignore:hover {
+    background: rgba(255, 69, 58, 0.15) !important;
+    border-color: rgba(255, 69, 58, 0.45) !important;
+    box-shadow: 0 0 15px rgba(255, 69, 58, 0.2) !important;
+    color: #ff453a !important;
+}
+.btn-manual-train-apply:hover {
+    background: rgba(48, 209, 88, 0.3) !important;
+    border-color: rgba(48, 209, 88, 0.5) !important;
+    box-shadow: 0 0 12px rgba(48, 209, 88, 0.25) !important;
 }
 
 

@@ -142,6 +142,145 @@ function doGet(e) {
   const headers = {
     "Access-Control-Allow-Origin": "*"
   };
+  
+  const action = e.parameter.action;
+  if (action === "approve_access_request" || action === "reject_access_request") {
+    const passcode = e.parameter.passcode || "";
+    if (passcode !== ADMIN_PASSCODE) {
+      return HtmlService.createHtmlOutput(`
+        <div style="font-family: sans-serif; text-align: center; padding: 50px; background-color: #121214; color: #ff453a; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; margin: 0;">
+          <h1 style="font-size: 28px; margin-bottom: 10px;">Access Denied</h1>
+          <p style="font-size: 16px; color: #a1a1a6;">Invalid passcode or unauthorized request link.</p>
+        </div>
+      `);
+    }
+    
+    const clientUuid = e.parameter.clientUuid || "";
+    if (!clientUuid) {
+      return HtmlService.createHtmlOutput(`
+        <div style="font-family: sans-serif; text-align: center; padding: 50px; background-color: #121214; color: #ff9f0a; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; margin: 0;">
+          <h1 style="font-size: 28px; margin-bottom: 10px;">Missing Identifier</h1>
+          <p style="font-size: 16px; color: #a1a1a6;">The request is missing the required Hardware ID (UUID).</p>
+        </div>
+      `);
+    }
+    
+    const sheet = getOrCreateAccessRequestsSheet();
+    const rows = sheet.getDataRange().getValues();
+    let updated = false;
+    let userName = "";
+    
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][4] === clientUuid) {
+        userName = `${rows[i][1]} ${rows[i][2]} (In-Game ID: ${rows[i][3]})`;
+        if (action === "approve_access_request") {
+          sheet.getRange(i + 1, 6).setValue("approved");
+          if (!rows[i][6]) sheet.getRange(i + 1, 7).setValue("user");
+        } else {
+          sheet.getRange(i + 1, 6).setValue("rejected");
+          sheet.getRange(i + 1, 7).setValue("");
+        }
+        updated = true;
+        break;
+      }
+    }
+    
+    if (updated) {
+      const actText = action === "approve_access_request" ? "Approved" : "Rejected";
+      const color = action === "approve_access_request" ? "#30d158" : "#ff453a";
+      const bgGlow = action === "approve_access_request" ? "rgba(48, 209, 88, 0.1)" : "rgba(255, 69, 58, 0.1)";
+      return HtmlService.createHtmlOutput(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Access Request ${actText}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              background-color: #0b0b0c;
+              color: #f5f5f7;
+              font-family: 'Outfit', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              box-sizing: border-box;
+            }
+            .card {
+              background: #121214;
+              border: 1px solid rgba(255,255,255,0.08);
+              border-radius: 16px;
+              padding: 40px 30px;
+              text-align: center;
+              max-width: 440px;
+              width: 95%;
+              box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 100px ${bgGlow};
+            }
+            .icon-circle {
+              width: 72px;
+              height: 72px;
+              border-radius: 50%;
+              background: ${bgGlow};
+              border: 2px solid ${color};
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto 24px;
+              color: ${color};
+              font-size: 32px;
+              font-weight: bold;
+            }
+            h1 {
+              font-size: 26px;
+              margin: 0 0 12px;
+              font-weight: 700;
+            }
+            .user-info {
+              background: rgba(255,255,255,0.03);
+              border: 1px solid rgba(255,255,255,0.06);
+              border-radius: 8px;
+              padding: 15px;
+              margin: 20px 0;
+              font-size: 14px;
+              color: #e1e1e6;
+              line-height: 1.5;
+              text-align: left;
+            }
+            .footer-text {
+              font-size: 13px;
+              color: #8e8e93;
+              margin: 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="icon-circle">${action === "approve_access_request" ? "✓" : "✗"}</div>
+            <h1>Request ${actText}</h1>
+            <p style="color: #a1a1a6; font-size: 15px; margin: 0;">The access request has been processed successfully.</p>
+            <div class="user-info">
+              <strong>User:</strong> ${userName}<br>
+              <strong>Status:</strong> <span style="color: ${color}; font-weight: 600;">${actText}</span>
+            </div>
+            <p class="footer-text">You can close this window now.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      return HtmlService.createHtmlOutput(`
+        <div style="font-family: sans-serif; text-align: center; padding: 50px; background-color: #121214; color: #ff453a; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; margin: 0;">
+          <h1 style="font-size: 28px; margin-bottom: 10px;">Not Found</h1>
+          <p style="font-size: 16px; color: #a1a1a6;">This access request was not found or has been removed.</p>
+        </div>
+      `);
+    }
+  }
+  
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
     message: "LifeInvader Google Apps Script backend is active."
@@ -224,6 +363,81 @@ function handleAccessRequest(data, headers) {
   } else {
     // Append new request
     sheet.appendRow([timestamp, firstname, lastname, id, clientUuid, "pending"]);
+  }
+  
+  // Prepare approval/rejection links
+  let webAppUrl = "";
+  try {
+    webAppUrl = ScriptApp.getService().getUrl();
+  } catch(err) {
+    Logger.log("Could not get Web App URL: " + err.toString());
+  }
+  
+  if (webAppUrl) {
+    const approveUrl = `${webAppUrl}?action=approve_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
+    const rejectUrl = `${webAppUrl}?action=reject_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
+    
+    const emailSubject = `[LifeInvader Access Request] ${firstname} ${lastname} (ID: ${id})`;
+    const emailHtmlBody = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0b0c; color: #f5f5f7; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; box-sizing: border-box;">
+        <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-top: 0;">
+          LifeInvader Access Request
+        </h2>
+        <p style="font-size: 15px; color: #a1a1a6; line-height: 1.5;">
+          A new request to access the **LifeInvader Ads Assist** portal has been submitted.
+        </p>
+        
+        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 18px; margin: 20px 0; font-size: 14px; line-height: 1.6;">
+          <table cellpadding="4" cellspacing="0" style="width: 100%; color: #e1e1e6;">
+            <tr>
+              <td style="font-weight: 600; width: 120px; color: #8e8e93;">Name:</td>
+              <td>${firstname} ${lastname}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #8e8e93;">In-Game ID:</td>
+              <td style="font-family: monospace; font-size: 15px; color: #30d158; font-weight: 600;">${id}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #8e8e93;">Hardware ID:</td>
+              <td style="font-family: monospace; font-size: 12px; color: #a1a1a6;">${clientUuid}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #8e8e93;">Timestamp:</td>
+              <td>${timestamp}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p style="font-size: 15px; color: #a1a1a6; font-weight: 600; margin-bottom: 20px;">
+          Process this request immediately using the actions below:
+        </p>
+        
+        <div style="margin: 25px 0;">
+          <a href="${approveUrl}" style="display: inline-block; background-color: #30d158; color: #ffffff; padding: 12px 24px; font-size: 14px; font-weight: 700; text-decoration: none; border-radius: 8px; text-align: center; margin-right: 15px; border: 1px solid #24b046;">
+            Approve Access
+          </a>
+          <a href="${rejectUrl}" style="display: inline-block; background-color: #ff453a; color: #ffffff; padding: 12px 24px; font-size: 14px; font-weight: 700; text-decoration: none; border-radius: 8px; text-align: center; border: 1px solid #e0352b;">
+            Reject Access
+          </a>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 25px 0;">
+        <p style="font-size: 12px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center;">
+          This is an automated notification from your LifeInvader Ads Assist Web App.
+        </p>
+      </div>
+    `;
+    
+    try {
+      MailApp.sendEmail({
+        to: ADMIN_EMAIL,
+        subject: emailSubject,
+        htmlBody: emailHtmlBody
+      });
+      Logger.log("Access request notification email sent to admin successfully.");
+    } catch(mailErr) {
+      Logger.log("Error sending access request email: " + mailErr.toString());
+    }
   }
   
   return ContentService.createTextOutput(JSON.stringify({

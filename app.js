@@ -6843,8 +6843,9 @@ function initFloatingClipboard() {
                                     <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                                 </div>
                             </div>
-                            <div class="processed-action-row" style="display: flex; justify-content: flex-start; margin-top: 8px;">
-                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled><i class="fa-solid fa-copy"></i> Copy</button>
+                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px;">
+                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1;"><i class="fa-solid fa-copy"></i> Copy</button>
+                                <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Submit Bug</button>
                             </div>
                         </div>
                         
@@ -7089,6 +7090,28 @@ function initFloatingClipboard() {
                         btn.classList.remove("active");
                     }
                 });
+
+                // Submit Bug Button Sync
+                const pipBtnSubmitBugInline = pipWindow.document.getElementById("pip-btn-submit-bug-inline");
+                const mainBtnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+                
+                if (pipBtnSubmitBugInline && mainBtnSubmitBugInline) {
+                    if (mainBtnSubmitBugInline.classList.contains("hide")) {
+                        pipBtnSubmitBugInline.classList.add("hide");
+                    } else {
+                        pipBtnSubmitBugInline.classList.remove("hide");
+                        if (mainBtnSubmitBugInline.classList.contains("btn-sent")) {
+                            pipBtnSubmitBugInline.className = "pip-uniform-btn btn-action btn-sent";
+                            pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                        } else if (mainBtnSubmitBugInline.classList.contains("btn-submitting")) {
+                            pipBtnSubmitBugInline.className = "pip-uniform-btn btn-action btn-submitting";
+                            pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+                        } else {
+                            pipBtnSubmitBugInline.className = "pip-uniform-btn btn-action glow-red";
+                            pipBtnSubmitBugInline.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Bug`;
+                        }
+                    }
+                }
             };
 
             // Initial display update
@@ -7214,6 +7237,16 @@ function initFloatingClipboard() {
                         const rawVal = pipWindow.document.getElementById("pip-raw-ad").value;
                         logAdToBackend(rawVal, textVal, "rejected");
                     });
+                });
+            }
+
+            const pipBtnSubmitBugInline = pipWindow.document.getElementById("pip-btn-submit-bug-inline");
+            if (pipBtnSubmitBugInline) {
+                pipBtnSubmitBugInline.addEventListener("click", () => {
+                    const mainBtn = document.getElementById("btn-submit-bug-inline");
+                    if (mainBtn) {
+                        mainBtn.click();
+                    }
                 });
             }
 
@@ -7349,6 +7382,7 @@ function initFloatingClipboard() {
             mainObserver.observe(document.getElementById("blacklist-container"), { attributes: true });
             mainObserver.observe(document.getElementById("btn-toggle-sell"), { attributes: true });
             mainObserver.observe(document.getElementById("btn-toggle-buy"), { attributes: true });
+            mainObserver.observe(document.getElementById("btn-submit-bug-inline"), { attributes: true });
 
             // Handle PiP Window closing
             pipWindow.addEventListener("unload", () => {
@@ -9089,9 +9123,14 @@ function renderCustomTemplates() {
 }
 
 function showCustomNotification(message, type = 'success') {
-    let container = document.getElementById("history-toast-container");
+    let targetDoc = document;
+    if (pipWindowInstance && !pipWindowInstance.closed) {
+        targetDoc = pipWindowInstance.document;
+    }
+    
+    let container = targetDoc.getElementById("history-toast-container");
     if (!container) {
-        container = document.createElement("div");
+        container = targetDoc.createElement("div");
         container.id = "history-toast-container";
         container.style.position = "fixed";
         container.style.top = "30px";
@@ -9102,10 +9141,10 @@ function showCustomNotification(message, type = 'success') {
         container.style.flexDirection = "column";
         container.style.alignItems = "center";
         container.style.gap = "10px";
-        document.body.appendChild(container);
+        targetDoc.body.appendChild(container);
     }
     
-    const toast = document.createElement("div");
+    const toast = targetDoc.createElement("div");
     toast.style.background = "rgba(18, 18, 20, 0.96)";
     toast.style.color = "white";
     toast.style.padding = "12px 24px";

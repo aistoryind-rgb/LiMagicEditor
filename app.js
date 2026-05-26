@@ -1759,6 +1759,9 @@ function correctSpelling(text, ctx) {
 
     // Common item spelling errors
     const commonMisspellings = {
+        "crypto currency": "token",
+        "cryptocurrency": "token",
+        "crypto": "token",
         "quilty": "quality",
         "lf": "looking for an",
         "platinom": "platinum",
@@ -1937,7 +1940,9 @@ function correctSpelling(text, ctx) {
     };
 
     const activeMisspellings = Object.assign({}, commonMisspellings, customSpelling, ctx.extraSpelling || {});
-    for (const [wrong, right] of Object.entries(activeMisspellings)) {
+    // Sort keys by length descending to match multi-word phrases first
+    const sortedEntries = Object.entries(activeMisspellings).sort((a, b) => b[0].length - a[0].length);
+    for (const [wrong, right] of sortedEntries) {
         // Skip number-only keys (like "700" or "5") to prevent corrupting model numbers, price digits, etc.
         if (/^\d+$/.test(wrong)) {
             continue;
@@ -11385,11 +11390,58 @@ function cleanExpectedOutput(rawInput, expectedOutput, category) {
 }
 
 /**
+ * Dynamically extracts negative constraints / NOT-rules from POLICY_PAGES.
+ * E.g. token(s): (NOT crypto or cryptocurrency) -> crypto -> token, cryptocurrency -> token.
+ */
+function extractPolicyRules() {
+    const rules = {};
+    if (typeof POLICY_PAGES === "undefined" || !Array.isArray(POLICY_PAGES)) {
+        return rules;
+    }
+    const regex = /\b([a-z\s\-]+)\(s\)?:\s*\((?:do\s+)?not\s+(?:use\s+)?([a-z\s/\\|or,]+)\)/gi;
+    for (let i = 0; i < POLICY_PAGES.length; i++) {
+        const plainText = POLICY_PAGES[i].content.replace(/<[^>]*>/g, " ");
+        let match;
+        regex.lastIndex = 0;
+        while ((match = regex.exec(plainText)) !== null) {
+            const rightItem = match[1].trim().toLowerCase();
+            const rawDisallowed = match[2].trim().toLowerCase();
+            const wrongItems = rawDisallowed
+                .split(/\b(?:or|and)\b|[,/\\|]/)
+                .map(item => item.trim())
+                .filter(item => item.length > 0);
+            for (const wrong of wrongItems) {
+                rules[wrong] = rightItem;
+            }
+        }
+    }
+    // Explicit fallback assignments
+    if (!rules["crypto"]) rules["crypto"] = "token";
+    if (!rules["cryptocurrency"]) rules["cryptocurrency"] = "token";
+    if (!rules["crypto currency"]) rules["crypto currency"] = "token";
+    return rules;
+}
+
+/**
  * Searches policy pages for a matching pattern or similar cased spelling rules,
  * registers it, saves/syncs it to local storage and the backend, and returns the match.
  */
 function selfTrainFromPolicy(rawInput, category, dict = customSpelling) {
     if (!rawInput) return null;
+    
+    // A. Check extracted policy rules first
+    const policyRules = extractPolicyRules();
+    const rawLower = rawInput.toLowerCase();
+    const sortedWrong = Object.keys(policyRules).sort((a, b) => b.length - a.length);
+    for (const wrong of sortedWrong) {
+        const escapedWrong = wrong.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedWrong}\\b`, "i");
+        if (regex.test(rawLower)) {
+            const right = policyRules[wrong];
+            dict[wrong] = right;
+            return { wrong: wrong, right: right };
+        }
+    }
     
     // 1. Try digit sequences first (e.g. 7777777)
     const digitMatch = rawInput.match(/\b\d{4,10}\b/);
@@ -11598,6 +11650,49 @@ function learnFromSimilarExample(rawText, similarText, category, dict = customSp
     if (rawDigits && simDigits) {
         dict[rawDigits[0]] = simDigits[0];
         trainedCount++;
+    }
+    
+    if (trainedCount === 0) {
+        // Fallback phrase alignment for completely different words/phrases (e.g. crypto currency -> token)
+        const stopwords = new Set([
+            "buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", 
+            "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", 
+            "luminous", "quality", "years", "experience", "and", "the", "for", "near", "a", "an", 
+            "of", "to", "at", "in", "on", "or", "out", "per", "week", "month"
+        ]);
+        
+        const cleanWords = (text) => {
+            return text.toLowerCase()
+                .replace(/[^a-z0-9\s]/g, "")
+                .split(/\s+/)
+                .filter(w => {
+                    if (!w || w.length < 2) return false;
+                    if (stopwords.has(w)) return false;
+                    if (/^\d+$/.test(w)) return false;
+                    if (/^\d+k$/i.test(w) || /^\d+m$/i.test(w)) return false;
+                    return true;
+                });
+        };
+        
+        const rawSig = cleanWords(rawText);
+        const simSig = cleanWords(similarText);
+        
+        if (rawSig.length > 0 && simSig.length > 0) {
+            const rawPhrase = rawSig.join(" ");
+            const simPhrase = simSig.join(" ");
+            
+            if (rawPhrase !== simPhrase) {
+                let mappedSimPhrase = simPhrase;
+                if (simPhrase.endsWith("s") && simPhrase !== "jeans" && simPhrase !== "trousers") {
+                    const singularCand = simPhrase.slice(0, -1);
+                    if (singularCand === "token" || singularCand === "video card" || singularCand === "paint can" || singularCand === "container" || singularCand === "wire" || singularCand === "seed") {
+                        mappedSimPhrase = singularCand;
+                    }
+                }
+                dict[rawPhrase] = mappedSimPhrase;
+                trainedCount++;
+            }
+        }
     }
     
     return trainedCount > 0;

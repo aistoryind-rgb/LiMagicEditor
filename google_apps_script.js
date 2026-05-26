@@ -770,36 +770,54 @@ function handleBugReport(data, headers) {
   }
   
   // 2. Prepare and send email
-  const subject = `[LifeInvader Bug Report] Correction Request (${category})`;
+  const isInline = expectedOutput.indexOf("[Inline False-Rejection Report]") !== -1;
+  const displayTitle = isInline ? "LifeInvader False-Rejection Report" : "LifeInvader Correction Request";
+  const borderStyle1 = "border: 1.5px solid #ff453a;"; // Red border for raw ad input
+  const borderStyle2 = "border: 1.5px solid #ff9f0a;"; // Yellow/orange warning border for output
   
+  let driveLinkHtml = "";
+  if (driveFileUrl && driveFileUrl.startsWith("http")) {
+    driveLinkHtml = `
+      <div style="margin-top: 15px; font-size: 13px; color: #8e8e93;">
+        <strong>Screenshot saved to Drive:</strong> <a href="${driveFileUrl}" target="_blank" style="color: #30d158; text-decoration: none;">View in Google Drive</a>
+      </div>
+    `;
+  }
+
+  const subject = `[${category}] ${displayTitle}`;
   const htmlBody = `
-    <h3>LifeInvader Ad Editor Bug Report / Correction Request</h3>
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; width: 100%; max-width: 600px;">
-      <tr bgcolor="#f2f2f2">
-        <th align="left" width="150">Field</th>
-        <th align="left">Details</th>
-      </tr>
-      <tr>
-        <td><strong>Timestamp</strong></td>
-        <td>${timestamp}</td>
-      </tr>
-      <tr>
-        <td><strong>Category</strong></td>
-        <td>${category}</td>
-      </tr>
-      <tr>
-        <td><strong>Raw Advertisement Input</strong></td>
-        <td><pre style="margin: 0; white-space: pre-wrap;">${rawInput}</pre></td>
-      </tr>
-      <tr>
-        <td><strong>Expected Output / Description</strong></td>
-        <td><pre style="margin: 0; white-space: pre-wrap;">${expectedOutput}</pre></td>
-      </tr>
-      <tr>
-        <td><strong>Google Drive Link</strong></td>
-        <td><a href="${driveFileUrl.startsWith('http') ? driveFileUrl : '#'}" target="_blank">${escHtml(driveFileUrl)}</a></td>
-      </tr>
-    </table>
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; background-color: #0a0b10; color: #f5f5f7; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; box-sizing: border-box;">
+      <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-top: 0;">
+        <span style="color: #ff453a;">●</span> ${displayTitle}
+      </h2>
+      
+      <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5;">
+        A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${category}</strong> at ${timestamp}.
+      </p>
+      
+      <!-- Box 1: What the Editor Typed (Raw Input) -->
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px;">
+          What the Editor Typed
+        </div>
+        <div style="background-color: #121214; ${borderStyle1} border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${rawInput}</div>
+      </div>
+      
+      <!-- Box 2: What the System Gave (Processed Output) -->
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px;">
+          What the System Returned / Expected Correction
+        </div>
+        <div style="background-color: #121214; ${borderStyle2} border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${expectedOutput}</div>
+      </div>
+      
+      ${driveLinkHtml}
+      
+      <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 25px 0;">
+      <p style="font-size: 12px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center;">
+        This is an automated notification from your LifeInvader Ads Assist Web App.
+      </p>
+    </div>
   `;
   
   const emailParams = {

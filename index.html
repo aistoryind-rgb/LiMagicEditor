@@ -258,6 +258,9 @@
                                 <button id="btn-copy-ad" class="btn-copy" disabled>
                                     <i class="fa-solid fa-copy"></i> Copy
                                 </button>
+                                <button id="btn-submit-bug-inline" class="btn-action glow-red hide" style="max-width: 140px; margin-top: 0; padding: 6px 14px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 32px; text-transform: uppercase;">
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Bug
+                                </button>
                             </div>
                         </div>
 
@@ -513,40 +516,40 @@
                                     <div class="form-group col-6">
                                         <label>Issue Category</label>
                                         <div id="bug-category-selector" class="category-options-box">
-                                            <div class="category-option active" data-value="Spelling error">
-                                                <i class="fa-solid fa-font"></i>
-                                                <span>Spelling error / Typo</span>
+                                            <div class="category-option active" data-value="Real Estate">
+                                                <i class="fa-solid fa-house"></i>
+                                                <span>REAL ESTATE</span>
                                             </div>
-                                            <div class="category-option" data-value="Category mismatch">
-                                                <i class="fa-solid fa-tags"></i>
-                                                <span>Category detection issue</span>
-                                            </div>
-                                            <div class="category-option" data-value="Type mismatch">
-                                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                                                <span>Type mismatch (Ad type)</span>
-                                            </div>
-                                            <div class="category-option" data-value="Incorrect rule/mapping">
-                                                <i class="fa-solid fa-circle-exclamation"></i>
-                                                <span>Incorrect policy rule / mapping</span>
-                                            </div>
-                                            <div class="category-option" data-value="Missing vehicle">
+                                            <div class="category-option" data-value="Auto">
                                                 <i class="fa-solid fa-car"></i>
-                                                <span>Missing vehicle name</span>
+                                                <span>AUTO</span>
                                             </div>
-                                            <div class="category-option" data-value="Missing item">
-                                                <i class="fa-solid fa-database"></i>
-                                                <span>Missing item database entry</span>
+                                            <div class="category-option" data-value="Businesses">
+                                                <i class="fa-solid fa-briefcase"></i>
+                                                <span>BUSINESSES</span>
                                             </div>
-                                            <div class="category-option" data-value="Visual interface bug">
-                                                <i class="fa-solid fa-eye"></i>
-                                                <span>Visual interface bug</span>
+                                            <div class="category-option" data-value="Discounts">
+                                                <i class="fa-solid fa-percent"></i>
+                                                <span>DISCOUNTS</span>
+                                            </div>
+                                            <div class="category-option" data-value="Work">
+                                                <i class="fa-solid fa-helmet-safety"></i>
+                                                <span>WORK</span>
+                                            </div>
+                                            <div class="category-option" data-value="Dating">
+                                                <i class="fa-solid fa-heart"></i>
+                                                <span>DATING</span>
+                                            </div>
+                                            <div class="category-option" data-value="Services">
+                                                <i class="fa-solid fa-wrench"></i>
+                                                <span>SERVICES</span>
                                             </div>
                                             <div class="category-option" data-value="Other">
-                                                <i class="fa-solid fa-ellipsis"></i>
-                                                <span>Other issue / Suggestion</span>
+                                                <i class="fa-solid fa-infinity"></i>
+                                                <span>OTHER</span>
                                             </div>
                                         </div>
-                                        <input type="hidden" id="bug-category" value="Spelling error" required>
+                                        <input type="hidden" id="bug-category" value="Real Estate" required>
                                     </div>
                                     <div class="form-group col-6">
                                         <label>Screenshot Upload (Optional)</label>
@@ -563,11 +566,7 @@
                                 </div>
                                 
                                 <div class="form-row" style="margin-top: 15px;">
-                                    <div class="form-group col-6">
-                                        <label for="bug-raw-input">Raw Advertisement Input</label>
-                                        <textarea id="bug-raw-input" placeholder="e.g. trading white snowboarders mask for six tail fox" rows="4"></textarea>
-                                    </div>
-                                    <div class="form-group col-6">
+                                    <div class="form-group col-12">
                                         <label for="bug-expected">Expected Output / Description of Correction</label>
                                         <textarea id="bug-expected" placeholder="e.g. The action should be Trading and the output should not include Price: Negotiable." rows="4" required></textarea>
                                     </div>
@@ -871,6 +870,9 @@
             <span style="opacity: 0.6;">LifeInvader</span> &middot; EN3 Internal Ad Processing System &middot; &copy; 2026
         </footer>
     </div>
+
+    <!-- HTML2Canvas Screenshot Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- Application Script -->
     <script src="app.js"></script>

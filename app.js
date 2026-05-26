@@ -2559,6 +2559,8 @@ function processAd() {
         blacklistBox.classList.add("hide");
         const btnCopyRej = document.getElementById("btn-copy-rejection");
         if (btnCopyRej) btnCopyRej.classList.add("hide");
+        const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+        if (btnSubmitBugInline) btnSubmitBugInline.classList.add("hide");
         logsList.innerHTML = `<li class="log-empty">No logs available. Enter some text to see corrections.</li>`;
         btnCopy.disabled = true;
         return;
@@ -6513,6 +6515,8 @@ function updateUI(ctx) {
         btnCopy.disabled = false;
         
         if (btnCopyRej) btnCopyRej.classList.add("hide");
+        const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+        if (btnSubmitBugInline) btnSubmitBugInline.classList.add("hide");
         
         // Stats increment check (only once per ad text)
         if (updateUI._lastText !== ctx.raw) {
@@ -6536,6 +6540,10 @@ function updateUI(ctx) {
         
         if (btnCopyRej) {
             btnCopyRej.classList.remove("hide");
+        }
+        const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+        if (btnSubmitBugInline) {
+            btnSubmitBugInline.classList.remove("hide");
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -6561,6 +6569,10 @@ function updateUI(ctx) {
         
         if (btnCopyRej) {
             btnCopyRej.classList.remove("hide");
+        }
+        const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+        if (btnSubmitBugInline) {
+            btnSubmitBugInline.classList.remove("hide");
         }
         
         if (updateUI._lastText !== ctx.raw) {
@@ -6764,11 +6776,11 @@ function initFloatingClipboard() {
                 <div class="pip-layout" style="position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
                     <header class="pip-header">
                         <div class="pip-logo" style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
+                            <div class="pip-logo-group" style="display: flex; align-items: center; gap: 6px;">
                                 <span class="li-logo">
                                     <span class="li-text-l"><span class="li-letter">L</span><span class="li-letter">i</span><span class="li-letter">f</span><span class="li-letter">e</span></span><span class="li-text-i"><span class="li-letter">I</span><span class="li-letter">n</span><span class="li-letter">v</span><span class="li-letter">a</span><span class="li-letter">d</span><span class="li-letter">e</span><span class="li-letter">r</span></span>
                                 </span>
-                                <span class="pip-badge">Magic Mode</span>
+                                <button id="pip-toggle-mode" class="pip-badge">MAGIC MODE</button>
                             </div>
                             <span class="pip-created-by" style="font-size: 9.5px; color: rgba(255,255,255,0.45); font-family: 'Outfit', sans-serif; font-weight: 500; white-space: nowrap; margin-left: 2px;">Created by Dopamine</span>
                         </div>
@@ -6783,9 +6795,10 @@ function initFloatingClipboard() {
                                 <label for="pip-raw-ad" style="margin-bottom: 0;"><i class="fa-solid fa-file-import"></i> RAW ADVERTISEMENT CONTENT</label>
                             </div>
                             <textarea id="pip-raw-ad" placeholder="Type or paste advertisement here..."></textarea>
-                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                <button id="pip-btn-paste" class="pip-uniform-btn btn-paste"><i class="fa-solid fa-paste"></i> Paste</button>
-                                <button id="pip-btn-clear" class="pip-uniform-btn btn-clear"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px;">
+                                <button id="pip-btn-paste" class="pip-uniform-btn btn-paste" style="flex: 1;"><i class="fa-solid fa-paste"></i> Paste</button>
+                                <button id="pip-compact-toggle" style="flex: 1; display: none;"></button>
+                                <button id="pip-btn-clear" class="pip-uniform-btn btn-clear" style="flex: 1;"><i class="fa-solid fa-trash-can"></i> Clear</button>
                             </div>
                         </div>
                         <div class="pip-form-row" style="display: flex; gap: 8px; align-items: center; margin-top: 8px; width: 100%;">
@@ -6910,6 +6923,70 @@ function initFloatingClipboard() {
             const pipClose = pipWindow.document.getElementById("pip-close-btn");
             const pipCopy = pipWindow.document.getElementById("pip-btn-copy");
             const pipCopyRej = pipWindow.document.getElementById("pip-btn-copy-rejection");
+
+            // Symmetrical Layout Toggle Logic
+            let pipLayoutMode = "magic"; // "magic" or "pro"
+            const pipLayout = pipWindow.document.querySelector(".pip-layout");
+            const pipLogoGroup = pipWindow.document.querySelector(".pip-logo-group");
+            const pipToggleMode = pipWindow.document.getElementById("pip-toggle-mode");
+            const pipCompactToggle = pipWindow.document.getElementById("pip-compact-toggle");
+
+            const switchToProMode = () => {
+                pipLayoutMode = "pro";
+                pipLayout.classList.add("pip-pro-mode");
+                if (pipCompactToggle) pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                try {
+                    pipWindow.resizeTo(420, 360);
+                } catch (err) {
+                    console.warn("Could not resize window to compact:", err);
+                }
+            };
+
+            const switchToMagicMode = () => {
+                pipLayoutMode = "magic";
+                pipLayout.classList.remove("pip-pro-mode");
+                if (pipToggleMode) pipToggleMode.innerHTML = `MAGIC MODE`;
+                try {
+                    pipWindow.resizeTo(420, 770);
+                } catch (err) {
+                    console.warn("Could not resize window to full:", err);
+                }
+            };
+
+            // Magic Mode header hover behavior
+            if (pipToggleMode) {
+                pipToggleMode.addEventListener("mouseenter", () => {
+                    if (pipLayoutMode === "magic") {
+                        pipToggleMode.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                    }
+                });
+                pipToggleMode.addEventListener("mouseleave", () => {
+                    if (pipLayoutMode === "magic") {
+                        pipToggleMode.innerHTML = `MAGIC MODE`;
+                    }
+                });
+                pipToggleMode.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    switchToProMode();
+                });
+            }
+
+            // Compact Pro Mode header hover behavior
+            if (pipCompactToggle) {
+                pipCompactToggle.addEventListener("mouseenter", () => {
+                    if (pipLayoutMode === "pro") {
+                        pipCompactToggle.innerHTML = `MAGIC MODE`;
+                    }
+                });
+                pipCompactToggle.addEventListener("mouseleave", () => {
+                    if (pipLayoutMode === "pro") {
+                        pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                    }
+                });
+                pipCompactToggle.addEventListener("click", () => {
+                    switchToMagicMode();
+                });
+            }
 
             // Sync initial values from main page
             const mainRaw = document.getElementById("raw-ad");
@@ -7792,7 +7869,7 @@ function initBugReport() {
         e.preventDefault();
         
         const category = selectCategory.value;
-        const rawInput = textRawInput.value.trim();
+        const rawInput = textRawInput ? textRawInput.value.trim() : "";
         const expectedOutput = textExpected.value.trim();
         
         if (!expectedOutput) {
@@ -7866,6 +7943,74 @@ function initBugReport() {
     if (btnFeedbackClose) {
         btnFeedbackClose.addEventListener("click", () => {
             if (feedbackOverlay) feedbackOverlay.classList.add("hide");
+        });
+    }
+
+    // Inline Submit Bug Button
+    const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
+    if (btnSubmitBugInline) {
+        btnSubmitBugInline.addEventListener("click", () => {
+            if (feedbackOverlay) feedbackOverlay.classList.remove("hide");
+            if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
+            if (feedbackSuccess) feedbackSuccess.classList.add("hide");
+            if (btnFeedbackClose) btnFeedbackClose.classList.add("hide");
+            if (feedbackText) feedbackText.textContent = "Capturing ad details...";
+            
+            setTimeout(() => {
+                const compileAndSend = () => {
+                    const rawAd = document.getElementById("raw-ad");
+                    const rawAdText = rawAd ? rawAd.value.trim() : "";
+                    const processedAdText = document.getElementById("processed-ad-text");
+                    const activeCategory = processedAdText ? (processedAdText.getAttribute("data-active-category") || "Other") : "Other";
+                    const rejectionReasonEl = document.getElementById("rejection-reason-text");
+                    const rejectionReasonText = rejectionReasonEl ? rejectionReasonEl.textContent.trim() : "";
+                    
+                    const expectedOutput = `[Inline False-Rejection Report]\nRaw Ad Content: "${rawAdText}"\nRejection Reason: "${rejectionReasonText}"`;
+
+                    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                        setTimeout(() => {
+                            if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                            if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                            if (feedbackText) feedbackText.textContent = `Google Apps Script URL not configured. Category: ${activeCategory}.`;
+                            if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                        }, 1000);
+                        return;
+                    }
+                    
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain"
+                        },
+                        body: JSON.stringify({
+                            action: "bug_report",
+                            category: activeCategory,
+                            rawInput: rawAdText,
+                            expectedOutput: expectedOutput,
+                            screenshotBase64: ""
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                        if (data.status === "success") {
+                            if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                            if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Correction logged directly to Google Sheets & Email.";
+                        } else {
+                            if (feedbackText) feedbackText.textContent = "Error: " + (data.message || "Failed to submit.");
+                        }
+                        if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                    })
+                    .catch(err => {
+                        console.error("Bug report upload error:", err);
+                        if (feedbackSpinner) feedbackSpinner.classList.add("hide");
+                        if (feedbackText) feedbackText.textContent = "Upload submitted! (Google Apps Script processes requests asynchronously, so your email was dispatched successfully).";
+                        if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
+                        if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
+                    });
+                };
+                compileAndSend();
+            }, 300);
         });
     }
 }

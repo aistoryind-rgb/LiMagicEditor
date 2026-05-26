@@ -1105,3 +1105,35 @@ function handleSaveCustomData(data, headers) {
   }
 }
 
+/**
+ * Run this function manually in the Google Apps Script editor to clear all bug reports
+ * and delete all screenshot images from your Google Drive folder.
+ */
+function clearAllBugReportsManually() {
+  Logger.log("Opening history spreadsheet...");
+  const ss = getOrCreateHistorySpreadsheet();
+  const sheet = ss.getSheetByName("Bug_Reports");
+  if (sheet) {
+    sheet.clear();
+    sheet.appendRow(["Timestamp", "Category", "Raw Input", "Expected Output"]);
+    Logger.log("Successfully cleared Bug_Reports sheet.");
+  } else {
+    Logger.log("Bug_Reports sheet not found.");
+  }
+  
+  Logger.log("Accessing Google Drive folder...");
+  let deletedCount = 0;
+  const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+  const files = folder.getFiles();
+  while (files.hasNext()) {
+    const file = files.next();
+    const name = file.getName();
+    if (name.startsWith("bug_report_")) {
+      file.setTrashed(true);
+      deletedCount++;
+    }
+  }
+  Logger.log("Successfully trashed " + deletedCount + " bug report images from Google Drive!");
+}
+
+

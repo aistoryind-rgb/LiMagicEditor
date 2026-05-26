@@ -8818,19 +8818,79 @@ function initAdminPanel() {
 
     const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
     if (btnClearBugs) {
-        btnClearBugs.addEventListener("click", () => {
-            const isConfirmed = confirm("Are you sure you want to permanently clear all logged bug reports and delete their screenshot images from Google Drive?\n\nThis action cannot be undone, but will not affect user logins or custom templates.");
-            if (!isConfirmed) return;
+        let holdInterval = null;
+        const holdDuration = 3000; // 3 seconds
+        let elapsed = 0;
+        let isHolding = false;
+        const originalHtml = `<i class="fa-solid fa-trash-can"></i> Clear All Bug Reports`;
+
+        const updateButtonProgress = (pct) => {
+            const remainingSecs = ((holdDuration - elapsed) / 1000).toFixed(1);
+            // Linear progress gradient overlay representing holding duration
+            const progressBg = `linear-gradient(90deg, rgba(255, 59, 48, 0.45) ${pct}%, rgba(22, 22, 28, 0.9) ${pct}%)`;
+            btnClearBugs.style.background = progressBg;
             
+            if (pct < 100) {
+                btnClearBugs.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin"></i> Hold to Clear (${remainingSecs}s)...`;
+            }
+        };
+
+        const startHold = (e) => {
+            if (btnClearBugs.disabled || isHolding) return;
+            const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+            if (isAssistant) return;
+
+            isHolding = true;
+            elapsed = 0;
+            e.preventDefault();
+
+            // Style active hold
+            btnClearBugs.style.transition = "none";
+            btnClearBugs.style.transform = "scale(0.97)";
+            updateButtonProgress(0);
+
+            holdInterval = setInterval(() => {
+                elapsed += 100;
+                const pct = Math.min((elapsed / holdDuration) * 100, 100);
+                updateButtonProgress(pct);
+
+                if (elapsed >= holdDuration) {
+                    clearInterval(holdInterval);
+                    holdInterval = null;
+                    isHolding = false;
+                    triggerClearBugs();
+                }
+            }, 100);
+        };
+
+        const cancelHold = () => {
+            if (!isHolding) return;
+            isHolding = false;
+            if (holdInterval) {
+                clearInterval(holdInterval);
+                holdInterval = null;
+            }
+            btnClearBugs.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearBugs.style.transform = "";
+            btnClearBugs.style.background = "";
+            btnClearBugs.innerHTML = originalHtml;
+        };
+
+        const triggerClearBugs = () => {
             const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
             if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                cancelHold();
                 return showCustomNotification("Google Apps Script URL is not configured.", "error");
             }
-            
+
+            // Disable button during loading
             btnClearBugs.disabled = true;
-            const originalHtml = btnClearBugs.innerHTML;
-            btnClearBugs.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Clearing...`;
-            
+            btnClearBugs.style.transition = "background 0.3s ease, transform 0.2s ease";
+            btnClearBugs.style.transform = "";
+            btnClearBugs.style.background = "#ff9500"; // Amber warning color during deletion
+            btnClearBugs.style.boxShadow = "0 4px 15px rgba(255, 149, 0, 0.3)";
+            btnClearBugs.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Deleting reports...`;
+
             fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 mode: "cors",
@@ -8845,19 +8905,56 @@ function initAdminPanel() {
             .then(res => res.json())
             .then(data => {
                 if (data.status === "success") {
+                    // Success! Transition to beautiful glowing green
+                    btnClearBugs.style.background = "#30d158"; // Emerald green
+                    btnClearBugs.style.borderColor = "#30d158";
+                    btnClearBugs.style.boxShadow = "0 4px 20px rgba(48, 209, 88, 0.5)";
+                    btnClearBugs.innerHTML = `<i class="fa-solid fa-circle-check"></i> Bug report cleared`;
                     showCustomNotification(data.message || "Successfully cleared all bug reports and screenshots.", "success");
+                    
+                    // Keep green for 3 seconds, then return to normal
+                    setTimeout(() => {
+                        btnClearBugs.disabled = false;
+                        btnClearBugs.style.background = "";
+                        btnClearBugs.style.borderColor = "";
+                        btnClearBugs.style.boxShadow = "";
+                        btnClearBugs.innerHTML = originalHtml;
+                    }, 3000);
                 } else {
                     alert("Clear failed: " + data.message);
+                    resetButtonToOriginal();
                 }
             })
             .catch(err => {
                 console.error("Error clearing bug reports:", err);
                 alert("Error contacting the backend: " + err.toString());
-            })
-            .finally(() => {
-                btnClearBugs.disabled = false;
-                btnClearBugs.innerHTML = originalHtml;
+                resetButtonToOriginal();
             });
+        };
+
+        const resetButtonToOriginal = () => {
+            btnClearBugs.disabled = false;
+            btnClearBugs.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearBugs.style.transform = "";
+            btnClearBugs.style.background = "";
+            btnClearBugs.style.borderColor = "";
+            btnClearBugs.style.boxShadow = "";
+            btnClearBugs.innerHTML = originalHtml;
+        };
+
+        // Attach mouse events
+        btnClearBugs.addEventListener("mousedown", startHold);
+        btnClearBugs.addEventListener("mouseup", cancelHold);
+        btnClearBugs.addEventListener("mouseleave", cancelHold);
+
+        // Attach touch events for mobile/tablet support
+        btnClearBugs.addEventListener("touchstart", startHold);
+        btnClearBugs.addEventListener("touchend", cancelHold);
+        btnClearBugs.addEventListener("touchcancel", cancelHold);
+
+        // Block accidental normal click behavior
+        btnClearBugs.addEventListener("click", (e) => {
+            e.preventDefault();
         });
     }
 }

@@ -374,8 +374,10 @@ function handleAccessRequest(data, headers) {
   }
   
   if (webAppUrl) {
-    const approveUrl = `${webAppUrl}?action=approve_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
-    const rejectUrl = `${webAppUrl}?action=reject_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
+    // Apply /a/*/ workaround to bypass multi-account Google redirection bugs on mobile devices
+    const cleanUrl = webAppUrl.replace("/macros/s/", "/a/*/macros/s/");
+    const approveUrl = `${cleanUrl}?action=approve_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
+    const rejectUrl = `${cleanUrl}?action=reject_access_request&clientUuid=${clientUuid}&passcode=${ADMIN_PASSCODE}`;
     
     const emailSubject = `[LifeInvader Access Request] ${firstname} ${lastname} (ID: ${id})`;
     const emailHtmlBody = `

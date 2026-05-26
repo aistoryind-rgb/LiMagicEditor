@@ -11573,41 +11573,48 @@ function renderTriageCards(reports, container) {
                 </div>
                 
                 <!-- Action Buttons -->
-                <div style="display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
-                    <button type="button" class="btn-triage-confirm" style="
-                        flex: 1.5; min-width: 100px; background: linear-gradient(135deg, rgba(48,209,88,0.2), rgba(48,209,88,0.08)); border: 1px solid rgba(48,209,88,0.35); color: #30d158; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                    ">
-                        <i class="fa-solid fa-square-check"></i> Confirm
-                    </button>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                    <!-- Row 1: Resolution -->
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-triage-confirm" style="
+                            flex: 1; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.06)); border: 1px solid rgba(48,209,88,0.3); color: #30d158; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                        ">
+                            <i class="fa-solid fa-square-check"></i> Confirm
+                        </button>
+                        
+                        <button type="button" class="btn-triage-ignore" style="
+                            flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: var(--text-muted); padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
+                        ">
+                            <i class="fa-solid fa-xmark"></i> Ignore
+                        </button>
+                    </div>
                     
-                    <button type="button" class="btn-triage-train-policy" style="
-                        flex: 1; min-width: 90px; background: linear-gradient(135deg, rgba(255,149,0,0.15), rgba(255,149,0,0.05)); border: 1px solid rgba(255,149,0,0.25); color: #ff9500; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                    ">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Train from Policy
-                    </button>
+                    <!-- Row 2: Training Engine -->
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn-triage-train-policy" style="
+                            flex: 1; background: linear-gradient(135deg, rgba(255,149,0,0.12), rgba(255,149,0,0.04)); border: 1px solid rgba(255,149,0,0.2); color: #ff9500; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
+                        ">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Train Policy
+                        </button>
+                        
+                        <button type="button" class="btn-triage-train-vehicles-clothing" style="
+                            flex: 1; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.18); color: #a78bfa; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
+                        ">
+                            <i class="fa-solid fa-car"></i> Train Auto/Clothing
+                        </button>
+                        
+                        <button type="button" class="btn-triage-train-items" style="
+                            flex: 1; background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.18); color: #22d3ee; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
+                        ">
+                            <i class="fa-solid fa-box"></i> Train Items
+                        </button>
+                    </div>
                     
-                    <button type="button" class="btn-triage-train-vehicles-clothing" style="
-                        flex: 1; min-width: 90px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.2); color: #a78bfa; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                    ">
-                        <i class="fa-solid fa-car"></i> Train Vehicles/Clothing
-                    </button>
-                    
-                    <button type="button" class="btn-triage-train-items" style="
-                        flex: 1; min-width: 90px; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2); color: #22d3ee; padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                    ">
-                        <i class="fa-solid fa-box"></i> Train Items
-                    </button>
-                    
+                    <!-- Row 3: Advanced Overrides -->
                     <button type="button" class="btn-triage-manual-toggle" style="
-                        flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #60a5fa; padding: 8px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease;
+                        width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: #60a5fa; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;
                     ">
-                        <i class="fa-solid fa-sliders"></i> Adjust
-                    </button>
-                    
-                    <button type="button" class="btn-triage-ignore" style="
-                        flex: 0 0 auto; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); padding: 8px 10px; border-radius: 8px; font-family: var(--font-heading); font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                    ">
-                        <i class="fa-solid fa-xmark"></i> Ignore
+                        <i class="fa-solid fa-sliders"></i> Manual Adjust Overrides
                     </button>
                 </div>
             `;

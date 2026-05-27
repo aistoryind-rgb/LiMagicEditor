@@ -2557,51 +2557,7 @@ function initAdProcessing() {
         });
     }
 
-    // Wire Gemini Assist controls — Auto-AI toggle button
-    const checkAutoApply = document.getElementById("check-ai-auto-apply");
-    const btnAutoToggle = document.getElementById("btn-ai-auto-toggle");
-    const toggleDot = document.getElementById("ai-auto-toggle-dot");
-    const toggleKnob = document.getElementById("ai-auto-toggle-knob");
 
-    const updateAutoAIToggleVisual = (isOn) => {
-        if (!btnAutoToggle || !toggleDot || !toggleKnob) return;
-        if (isOn) {
-            btnAutoToggle.style.background = "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05))";
-            btnAutoToggle.style.borderColor = "rgba(167,139,250,0.35)";
-            btnAutoToggle.style.color = "#a78bfa";
-            btnAutoToggle.style.boxShadow = "0 0 12px rgba(167,139,250,0.15)";
-            toggleDot.style.background = "rgba(167,139,250,0.5)";
-            toggleKnob.style.left = "8px";
-            toggleKnob.style.background = "#a78bfa";
-            toggleKnob.style.boxShadow = "0 0 4px rgba(167,139,250,0.6)";
-        } else {
-            btnAutoToggle.style.background = "rgba(255,255,255,0.03)";
-            btnAutoToggle.style.borderColor = "rgba(255,255,255,0.08)";
-            btnAutoToggle.style.color = "rgba(255,255,255,0.4)";
-            btnAutoToggle.style.boxShadow = "none";
-            toggleDot.style.background = "rgba(255,255,255,0.12)";
-            toggleKnob.style.left = "1.5px";
-            toggleKnob.style.background = "rgba(255,255,255,0.3)";
-            toggleKnob.style.boxShadow = "none";
-        }
-    };
-
-    if (checkAutoApply) {
-        const savedState = localStorage.getItem("li_auto_ai_enabled") === "true";
-        checkAutoApply.checked = savedState;
-        updateAutoAIToggleVisual(savedState);
-    }
-
-    if (btnAutoToggle && checkAutoApply) {
-        btnAutoToggle.addEventListener("click", () => {
-            checkAutoApply.checked = !checkAutoApply.checked;
-            localStorage.setItem("li_auto_ai_enabled", checkAutoApply.checked);
-            updateAutoAIToggleVisual(checkAutoApply.checked);
-            if (typeof showCustomNotification === "function") {
-                showCustomNotification(checkAutoApply.checked ? "Auto-AI enabled — Gemini will auto-correct as you type." : "Auto-AI disabled.", "success");
-            }
-        });
-    }
 
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
     if (btnGeminiAssist) {
@@ -2679,50 +2635,7 @@ function triggerLiveGeminiAssist() {
     });
 }
 
-function runAutoAIEngine(rawText) {
-    const categoryEl = document.getElementById("category-override");
-    const category = categoryEl ? categoryEl.value : "auto";
-    const mainBtn = document.getElementById("btn-gemini-assist");
-    
-    let pipBtn = null;
-    if (typeof pipWindow !== "undefined" && pipWindow && !pipWindow.closed) {
-        pipBtn = pipWindow.document.getElementById("pip-btn-ai-assist");
-    }
 
-    if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Auto-AI...`;
-    if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Auto-AI...`;
-
-    getGeminiSparkSuggestion(rawText, category, (suggestion) => {
-        if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-        if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-
-        const latestRaw = document.getElementById("raw-ad").value.trim();
-        if (latestRaw !== rawText) return; // User changed text, ignore stale result
-
-        if (suggestion && suggestion.text) {
-            const processedEl = document.getElementById("processed-ad-text");
-            if (processedEl) {
-                processedEl.textContent = suggestion.text;
-                processedEl.classList.remove("placeholder");
-                processedEl.dispatchEvent(new Event("input"));
-                
-                const btnCopy = document.getElementById("btn-copy-ad");
-                if (btnCopy) btnCopy.disabled = false;
-
-                const banner = document.getElementById("ad-status-banner");
-                if (banner) {
-                    banner.setAttribute("data-status", "passed");
-                    banner.querySelector(".status-title").textContent = "Auto-AI Applied";
-                    banner.querySelector(".status-icon").innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i>`;
-                }
-
-                if (typeof updatePipDisplay === "function") {
-                    updatePipDisplay();
-                }
-            }
-        }
-    });
-}
 
 function processAd() {
     const rawAd = document.getElementById("raw-ad").value;
@@ -2818,17 +2731,7 @@ function processAd() {
     // Update HTML UI elements
     updateUI(context);
 
-    // Auto-AI check
-    const checkAutoApply = document.getElementById("check-ai-auto-apply");
-    if (checkAutoApply && checkAutoApply.checked) {
-        if (autoAIDebounceTimeout) clearTimeout(autoAIDebounceTimeout);
-        autoAIDebounceTimeout = setTimeout(() => {
-            const currentRaw = document.getElementById("raw-ad").value.trim();
-            if (currentRaw) {
-                runAutoAIEngine(currentRaw);
-            }
-        }, 500);
-    }
+
 }
 
 const OFFICIAL_TEMPLATES = [
@@ -12965,13 +12868,8 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
 function updateAIAssistButtonsVisibility() {
     const isAdmin = sessionStorage.getItem("li_admin_authenticated") === "true";
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
-    const btnAutoToggle = document.getElementById("btn-ai-auto-toggle");
-    
     if (btnGeminiAssist) {
         btnGeminiAssist.style.display = isAdmin ? "inline-flex" : "none";
-    }
-    if (btnAutoToggle) {
-        btnAutoToggle.style.display = isAdmin ? "inline-flex" : "none";
     }
 
     if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
@@ -14206,22 +14104,32 @@ function renderTriageCards(reports, container) {
                     const origHtml = trainGeminiBtn.innerHTML;
                     trainGeminiBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Querying AI Spark...`;
 
-                    // Initialize chat history if not present
-                    if (!report.geminiChatHistory || report.geminiChatHistory.length === 0) {
-                        report.geminiChatHistory = [];
-                    }
-
-                    runGeminiCopilotTurn(report, currentCategory, null, (success, suggestion) => {
+                    getGeminiBugTriageSuggestion(report.rawInput, report.expectedOutput, currentCategory, report.screenshotBase64 || null, (suggestion) => {
                         trainGeminiBtn.disabled = false;
                         trainGeminiBtn.innerHTML = origHtml;
 
-                        if (success && suggestion) {
+                        if (suggestion && suggestion.text) {
+                            const tempSpelling = {};
+                            learnFromSimilarExample(report.rawInput, suggestion.text, currentCategory, tempSpelling);
+                            
+                            const spellingList = Object.entries(tempSpelling)
+                                .map(([wrong, right]) => `"${wrong}" → "${right}"`)
+                                .join(", ");
+
+                            report.aiProposal = {
+                                text: suggestion.text,
+                                reason: suggestion.reason || "Auto-detected correction",
+                                spellingList: spellingList,
+                                timeFixed: new Date().toLocaleTimeString()
+                            };
+
+                            // Auto-apply proposed suggestion to the card preview
                             report.manualOverrideText = suggestion.text;
-                            report.trainedMethod = "Trained from Gemini Spark";
-                            report.manualPanelOpen = false;
-                            report.copilotOpen = true;
+                            report.trainedMethod = "Trained via Gemini Spark (Review)";
+                            Object.assign(report.stagedSpelling, tempSpelling);
+
                             updateCardBody();
-                            showCustomNotification(`AI suggestion loaded: "${suggestion.text}" (Review and click Confirm to save)`, "success");
+                            showCustomNotification("Gemini Spark correction proposed! Review and click Confirm.", "success");
                         } else {
                             showCustomNotification("Gemini Spark failed to predict a correction. Try again or use other engines.", "error");
                         }
@@ -14412,52 +14320,20 @@ function renderTriageCards(reports, container) {
             }
         }
         
-        // Trigger Async Suggestion (Gemini Auto-Triage or Fuzzy Fallback)
-        setTimeout(() => {
-            const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
-            if (localKey) {
-                getGeminiBugTriageSuggestion(report.rawInput, report.expectedOutput, currentCategory, report.screenshotBase64 || null, (suggestion) => {
-                    if (suggestion && suggestion.text) {
-                        const tempSpelling = {};
-                        learnFromSimilarExample(report.rawInput, suggestion.text, currentCategory, tempSpelling);
-                        
-                        const spellingList = Object.entries(tempSpelling)
-                            .map(([wrong, right]) => `"${wrong}" → "${right}"`)
-                            .join(", ");
+        // Search local translations for similarity (Zero API Credits)
+        const bestLocalMatch = findLocalFuzzyMatch(report.rawInput);
+        if (bestLocalMatch) {
+            report.aiProposal = {
+                text: bestLocalMatch.text,
+                reason: `Fuzzy history match (${bestLocalMatch.score}% similarity) matching trained raw: "${bestLocalMatch.rawMatched}"`,
+                spellingList: "",
+                timeFixed: new Date().toLocaleTimeString()
+            };
 
-                        report.aiProposal = {
-                            text: suggestion.text,
-                            reason: suggestion.reason || "Auto-detected correction",
-                            spellingList: spellingList,
-                            timeFixed: new Date().toLocaleTimeString()
-                        };
-
-                        // Auto-apply proposed suggestion to the card preview
-                        report.manualOverrideText = suggestion.text;
-                        report.trainedMethod = "Trained via Gemini Spark (Pending Review)";
-                        Object.assign(report.stagedSpelling, tempSpelling);
-
-                        updateCardBody();
-                    }
-                });
-            } else {
-                // Search local translations for similarity
-                const bestLocalMatch = findLocalFuzzyMatch(report.rawInput);
-                if (bestLocalMatch) {
-                    report.aiProposal = {
-                        text: bestLocalMatch.text,
-                        reason: `Fuzzy history match (${bestLocalMatch.score}% similarity) matching trained raw: "${bestLocalMatch.rawMatched}"`,
-                        spellingList: "",
-                        timeFixed: new Date().toLocaleTimeString()
-                    };
-
-                    report.manualOverrideText = bestLocalMatch.text;
-                    report.trainedMethod = "Trained automatically (Fuzzy Match - Pending Review)";
-                    
-                    updateCardBody();
-                }
-            }
-        }, 150 + idx * 3000);
+            report.manualOverrideText = bestLocalMatch.text;
+            report.trainedMethod = "Trained automatically (Fuzzy Match - Pending Review)";
+            updateCardBody();
+        }
 
         // Initial build
         updateCardBody();

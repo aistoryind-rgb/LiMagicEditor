@@ -1411,6 +1411,8 @@ function initTabs() {
             document.getElementById(tabId).classList.add("active");
             if (tabId === "tab-ai-assistant") {
                 refreshAIAssistantTabVisibility();
+            } else if (tabId === "tab-bug-triage") {
+                refreshBugTriageTabVisibility();
             }
         });
     });
@@ -9304,6 +9306,7 @@ function initAdminPanel() {
             refreshMainHistory();
             loadAndRenderAccessRequests(password, null, true);
             refreshAIAssistantTabVisibility();
+            refreshBugTriageTabVisibility();
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -11414,6 +11417,7 @@ function initPolicyBook() {
         });
     }
 
+
     if (trainVerify && trainWrong && trainRight) {
         trainVerify.addEventListener("click", () => {
             const searchQ = (trainRight.value || trainWrong.value || "").trim();
@@ -12401,6 +12405,22 @@ function refreshAIAssistantTabVisibility() {
     }
 }
 
+function refreshBugTriageTabVisibility() {
+    const lockScreen = document.getElementById("bug-triage-lock-screen");
+    const triageContent = document.getElementById("bug-triage-active-content");
+    if (!lockScreen || !triageContent) return;
+
+    const isAuth = sessionStorage.getItem("li_admin_authenticated") === "true";
+    if (isAuth) {
+        lockScreen.classList.add("hide");
+        triageContent.classList.remove("hide");
+        loadAndRenderBugTriage();
+    } else {
+        lockScreen.classList.remove("hide");
+        triageContent.classList.add("hide");
+    }
+}
+
 function updateAIGeminiStatusDisplay() {
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
     const statusText = document.getElementById("ai-gemini-status-text");
@@ -12601,6 +12621,7 @@ function initGeminiEngine() {
         });
     }
     refreshAIAssistantTabVisibility();
+    refreshBugTriageTabVisibility();
 }
 
 function getDatabaseMatchesContext(rawText) {
@@ -13594,14 +13615,28 @@ function renderTriageCards(reports, container) {
 
 // Wire up the triage tab button click and refresh button
 (function initTriagePanel() {
-    const triageTabBtn = document.querySelector('.admin-tab-btn[data-target="tab-triage"]');
+    const triageTabBtn = document.getElementById("tab-btn-bug-triage") || document.querySelector('.tab-btn[data-tab="tab-bug-triage"]');
     const refreshBtn = document.getElementById("btn-triage-refresh");
+    const unlockLoginBtn = document.getElementById("btn-bug-unlock-login");
     
     if (triageTabBtn) {
         triageTabBtn.addEventListener("click", () => {
-            // Only load if admin is authenticated
             if (sessionStorage.getItem("li_admin_authenticated") === "true") {
                 loadAndRenderBugTriage();
+            }
+        });
+    }
+    
+    if (unlockLoginBtn) {
+        unlockLoginBtn.addEventListener("click", () => {
+            // Switch to Admin Panel tab to authenticate
+            const adminTabBtn = document.getElementById("tab-btn-admin");
+            if (adminTabBtn) {
+                adminTabBtn.click();
+                setTimeout(() => {
+                    const passInput = document.getElementById("admin-passcode-input");
+                    if (passInput) passInput.focus();
+                }, 100);
             }
         });
     }

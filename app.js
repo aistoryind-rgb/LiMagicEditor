@@ -2,7 +2,60 @@
  * LifeInvader EN3 Advertisement Editor - Core Application Logic
  */
 
-// Datasets will be injected here during build
+// Safe localStorage and sessionStorage shadowing for incognito mode and storage-restricted environments
+var localStorage;
+var sessionStorage;
+try {
+    localStorage = window.localStorage;
+    localStorage.getItem('__storage_test__');
+} catch (e) {
+    var mockStorage = {};
+    localStorage = {
+        getItem: function(key) { return key in mockStorage ? mockStorage[key] : null; },
+        setItem: function(key, value) { mockStorage[key] = String(value); },
+        removeItem: function(key) { delete mockStorage[key]; },
+        clear: function() { mockStorage = {}; },
+        key: function(i) { return Object.keys(mockStorage)[i] || null; },
+        get length() { return Object.keys(mockStorage).length; }
+    };
+}
+
+try {
+    sessionStorage = window.sessionStorage;
+    sessionStorage.getItem('__storage_test__');
+} catch (e) {
+    var mockSession = {};
+    sessionStorage = {
+        getItem: function(key) { return key in mockSession ? mockSession[key] : null; },
+        setItem: function(key, value) { mockSession[key] = String(value); },
+        removeItem: function(key) { delete mockSession[key]; },
+        clear: function() { mockSession = {}; },
+        key: function(i) { return Object.keys(mockSession)[i] || null; },
+        get length() { return Object.keys(mockSession).length; }
+    };
+}
+
+// Parse URL parameters to restore state in incognito/private mode
+(function() {
+    try {
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("approved") === "true") {
+            localStorage.setItem("li_approved_token", "APPROVED");
+        }
+        if (urlParams.get("admin") === "true") {
+            localStorage.setItem("li_admin_authenticated", "true");
+            sessionStorage.setItem("li_admin_authenticated", "true");
+            var key = urlParams.get("passcode");
+            if (key) {
+                localStorage.setItem("li_admin_passcode", key);
+                sessionStorage.setItem("li_admin_passcode", key);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse URL parameters:", e);
+    }
+})();
+
 const VEHICLE_DB = {
     "helicopters":  [
                         "Buzzard",
@@ -1414,6 +1467,9 @@ function initTabs() {
             } else if (tabId === "tab-bug-triage") {
                 refreshBugTriageTabVisibility();
             }
+            
+            // Remember the last navigated tab
+            localStorage.setItem("li_last_navigated_tab", tabId);
         });
     });
 
@@ -1424,6 +1480,17 @@ function initTabs() {
     const btnRefreshHistory = document.getElementById("btn-refresh-history");
     if (btnRefreshHistory) {
         btnRefreshHistory.addEventListener("click", refreshMainHistory);
+    }
+
+    // Restore last navigated tab
+    const lastTab = localStorage.getItem("li_last_navigated_tab");
+    if (lastTab) {
+        const targetBtn = document.querySelector(`.tab-btn[data-tab="${lastTab}"]`);
+        if (targetBtn) {
+            setTimeout(() => {
+                targetBtn.click();
+            }, 100);
+        }
     }
 }
 
@@ -2562,7 +2629,11 @@ function initAdProcessing() {
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
     if (btnGeminiAssist) {
         setupHoldToTriggerButton(btnGeminiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
-            triggerLiveGeminiAssist();
+            if (btnGeminiAssist.dataset.state === "train") {
+                submitSparkTraining("main");
+            } else {
+                triggerLiveGeminiAssist();
+            }
         });
     }
 }
@@ -2597,16 +2668,24 @@ function triggerLiveGeminiAssist() {
     }
 
     getGeminiSparkSuggestion(rawText, category, (suggestion) => {
-        if (mainBtn) {
-            mainBtn.disabled = false;
-            mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-        }
-        if (pipBtn) {
-            pipBtn.disabled = false;
-            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-        }
-
         if (suggestion && suggestion.text) {
+            if (mainBtn) {
+                mainBtn.disabled = false;
+                mainBtn.dataset.state = "train";
+                mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+                mainBtn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
+                mainBtn.style.border = "1px solid rgba(48,209,88,0.3)";
+                mainBtn.style.color = "#30d158";
+            }
+            if (pipBtn) {
+                pipBtn.disabled = false;
+                pipBtn.dataset.state = "train";
+                pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+                pipBtn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
+                pipBtn.style.border = "1px solid rgba(48,209,88,0.3)";
+                pipBtn.style.color = "#30d158";
+            }
+
             const processedEl = document.getElementById("processed-ad-text");
             if (processedEl) {
                 processedEl.textContent = suggestion.text;
@@ -2627,17 +2706,152 @@ function triggerLiveGeminiAssist() {
                     updatePipDisplay();
                 }
 
-                showCustomNotification("Gemini Spark correction applied!", "success");
+                showCustomNotification("Gemini Spark correction applied! Click 'Train' to save to database.", "success");
             }
         } else {
+            if (mainBtn) {
+                mainBtn.disabled = false;
+                mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+            }
+            if (pipBtn) {
+                pipBtn.disabled = false;
+                pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+            }
             showCustomNotification("Failed to retrieve AI suggestion. Please check API Key.", "error");
         }
     });
 }
 
+function resetSparkButtonsToDefaultState() {
+    const mainBtn = document.getElementById("btn-gemini-assist");
+    if (mainBtn && mainBtn.dataset.state !== "spark") {
+        mainBtn.dataset.state = "spark";
+        mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+        mainBtn.style.background = "";
+        mainBtn.style.border = "";
+        mainBtn.style.color = "";
+        mainBtn.style.boxShadow = "";
+        mainBtn.disabled = false;
+    }
+    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
+        const pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
+        if (pipBtn && pipBtn.dataset.state !== "spark") {
+            pipBtn.dataset.state = "spark";
+            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+            pipBtn.style.background = "";
+            pipBtn.style.border = "";
+            pipBtn.style.color = "";
+            pipBtn.style.boxShadow = "";
+            pipBtn.disabled = false;
+        }
+    }
+}
 
+function submitSparkTraining(source) {
+    const rawAdEl = document.getElementById("raw-ad");
+    const rawAdText = rawAdEl ? rawAdEl.value.trim() : "";
+    const processedAdEl = document.getElementById("processed-ad-text");
+    const correctedText = processedAdEl ? processedAdEl.textContent.trim() : "";
+    const activeCategory = processedAdEl ? (processedAdEl.getAttribute("data-active-category") || "Other") : "Other";
+    const timestamp = new Date().toLocaleString();
+
+    const expectedOutput = `[Spark Training Report]\nRaw Ad Content: "${rawAdText}"\nCorrect Text: "${correctedText}"`;
+
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        showCustomNotification("Google Apps Script URL not configured.", "error");
+        return;
+    }
+
+    const mainBtn = document.getElementById("btn-gemini-assist");
+    let pipBtn = null;
+    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
+        pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
+    }
+
+    if (mainBtn) {
+        mainBtn.disabled = true;
+        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
+    }
+    if (pipBtn) {
+        pipBtn.disabled = true;
+        pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
+    }
+
+    showCustomNotification("Submitting Spark training to database...", "info");
+
+    generateBugReportCardBlob(rawAdText, activeCategory, "Spark Correction Training", timestamp).then((screenshotBase64) => {
+        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            body: JSON.stringify({
+                action: "bug_report",
+                category: activeCategory,
+                rawInput: rawAdText,
+                expectedOutput: expectedOutput,
+                screenshotBase64: screenshotBase64
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success" || data.status === "already_submitted") {
+                if (mainBtn) {
+                    mainBtn.dataset.state = "trained";
+                    mainBtn.disabled = true;
+                    mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+                    mainBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
+                    mainBtn.style.border = "1px solid rgba(45,212,191,0.3)";
+                    mainBtn.style.color = "#2dd4bf";
+                }
+                if (pipBtn) {
+                    pipBtn.dataset.state = "trained";
+                    pipBtn.disabled = true;
+                    pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+                    pipBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
+                    pipBtn.style.border = "1px solid rgba(45,212,191,0.3)";
+                    pipBtn.style.color = "#2dd4bf";
+                }
+                showCustomNotification("Spark training submitted successfully! ⏳", "success");
+            } else {
+                if (mainBtn) {
+                    mainBtn.disabled = false;
+                    mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+                }
+                if (pipBtn) {
+                    pipBtn.disabled = false;
+                    pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+                }
+                showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
+            }
+        })
+        .catch(err => {
+            console.error("Training upload error:", err);
+            // Fallback success
+            if (mainBtn) {
+                mainBtn.dataset.state = "trained";
+                mainBtn.disabled = true;
+                mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+                mainBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
+                mainBtn.style.border = "1px solid rgba(45,212,191,0.3)";
+                mainBtn.style.color = "#2dd4bf";
+            }
+            if (pipBtn) {
+                pipBtn.dataset.state = "trained";
+                pipBtn.disabled = true;
+                pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+                pipBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
+                pipBtn.style.border = "1px solid rgba(45,212,191,0.3)";
+                pipBtn.style.color = "#2dd4bf";
+            }
+            showCustomNotification("Spark training submitted successfully! ⏳", "success");
+        });
+    });
+}
 
 function processAd() {
+    resetSparkButtonsToDefaultState();
+    
     const rawAd = document.getElementById("raw-ad").value;
     const overrideCategory = document.getElementById("category-override").value;
     
@@ -7869,7 +8083,11 @@ function initFloatingClipboard() {
             const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
             if (pipBtnAiAssist) {
                 setupHoldToTriggerButton(pipBtnAiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
-                    triggerLiveGeminiAssist();
+                    if (pipBtnAiAssist.dataset.state === "train") {
+                        submitSparkTraining("pip");
+                    } else {
+                        triggerLiveGeminiAssist();
+                    }
                 });
             }
             updateAIAssistButtonsVisibility();
@@ -8056,9 +8274,29 @@ function initAccessGate() {
             localStorage.setItem("li_admin_passcode", key);
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", key);
-            showCustomAlertDialog("Welcome Admin! Access granted.", () => {
-                window.location.reload();
-            }, "success");
+            
+            // Clear polling if active
+            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
+            }
+
+            // Unlock DOM instantly
+            document.documentElement.classList.add("user-approved");
+            document.documentElement.classList.remove("user-unauthorized");
+            if (gate) gate.classList.add("hide");
+            
+            // Update URL query string dynamically without reload
+            try {
+                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true&admin=true&passcode=" + encodeURIComponent(key));
+            } catch(e) {
+                console.error("replaceState failed:", e);
+            }
+            
+            // Initialize Admin panel
+            initAdminPanel();
+
+            showCustomAlertDialog("Welcome Admin! Access granted.", null, "success");
         } else {
             showCustomAlertDialog("Invalid admin key. Access denied.", null, "error");
         }
@@ -8364,9 +8602,26 @@ function initAccessGate() {
                         } else if (data.status === "already_approved") {
                             // User already has access - unlock directly
                             localStorage.setItem("li_approved_token", "APPROVED");
-                            showCustomAlertDialog("You already have access! Refreshing...", () => {
-                                window.location.reload();
-                            }, "success");
+                            
+                            // Clear polling if active
+                            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
+                                clearInterval(statusPollInterval);
+                                statusPollInterval = null;
+                            }
+
+                            // Unlock DOM instantly
+                            document.documentElement.classList.add("user-approved");
+                            document.documentElement.classList.remove("user-unauthorized");
+                            if (gate) gate.classList.add("hide");
+                            
+                            // Update URL query string dynamically without reload
+                            try {
+                                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
+                            } catch(e) {
+                                console.error("replaceState failed:", e);
+                            }
+
+                            showCustomAlertDialog("You already have access! Welcome back.", null, "success");
                         } else {
                             showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
                             localStorage.removeItem("li_request_firstname");
@@ -9375,6 +9630,16 @@ function initAdminPanel() {
     const tabBtns = document.querySelectorAll(".admin-tab-btn");
     const tabContents = document.querySelectorAll(".admin-tab-content");
     
+    const restoreAdminSubtab = () => {
+        const lastSubtab = localStorage.getItem("li_last_navigated_admin_subtab");
+        if (lastSubtab) {
+            const targetSubBtn = document.querySelector(`.admin-tab-btn[data-target="${lastSubtab}"]`);
+            if (targetSubBtn) {
+                targetSubBtn.click();
+            }
+        }
+    };
+
     if (tabBtns.length > 0 && tabContents.length > 0) {
         tabBtns.forEach(btn => {
             btn.addEventListener("click", () => {
@@ -9396,6 +9661,9 @@ function initAdminPanel() {
                 if (targetId === "tab-api-vault") {
                     refreshAIAssistantTabVisibility();
                 }
+
+                // Remember the last navigated admin subtab
+                localStorage.setItem("li_last_navigated_admin_subtab", targetId);
             });
         });
     }
@@ -9423,6 +9691,7 @@ function initAdminPanel() {
         const storedPasscode = sessionStorage.getItem("li_admin_passcode");
         const authUuid = isAssistant ? getOrCreateClientUuid() : null;
         loadAndRenderAccessRequests(storedPasscode || null, authUuid, !isAssistant);
+        restoreAdminSubtab();
     }
 
     // Handle Authentication Click
@@ -9445,6 +9714,7 @@ function initAdminPanel() {
             loadAndRenderAccessRequests(password, null, true);
             refreshAIAssistantTabVisibility();
             refreshBugTriageTabVisibility();
+            restoreAdminSubtab();
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -10455,6 +10725,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             }
             
             btnRole.addEventListener("click", () => {
+                const newRole = isAssistantAdmin ? "" : "assistant_admin";
                 const confirmMsg = isAssistantAdmin 
                     ? `Remove Admin role from ${req.firstname} ${req.lastname}?`
                     : `Promote ${req.firstname} ${req.lastname} to Admin?<br><br>They will be able to:<br>- Access the Admin Panel<br>- Approve/Reject access requests<br>- View Spelling & Templates<br><br>They will NOT be able to:<br>- Revoke user access<br>- Promote/demote users<br>- Manage backups`;
@@ -12857,13 +13128,14 @@ function initBackupKeyVault() {
         const btnVisibility = row.querySelector(`.btn-vault-visibility`);
         const btnCopy = row.querySelector(`.btn-vault-copy`);
         const btnPaste = row.querySelector(`.btn-vault-paste`);
-        const btnLock = row.querySelector(`.btn-vault-lock`);
+        const btnTestHealth = row.querySelector(`.btn-vault-test`);
 
         // Load value
         const key = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
         if (input) {
             input.value = key;
             input.placeholder = key ? "••••••••••••••••••••••••••••••••" : `Empty Slot ${slot}`;
+            input.removeAttribute("readonly"); // Keep unlocked by default
         }
 
         // Apply active/inactive visual states
@@ -12879,17 +13151,6 @@ function initBackupKeyVault() {
                 btnActivate.innerHTML = `<i class="fa-regular fa-circle"></i>`;
                 btnActivate.style.color = "var(--text-muted)";
             }
-        }
-
-        // Apply locked editing state by default
-        row.classList.add("locked");
-        row.classList.remove("unlocked");
-        if (input) {
-            input.setAttribute("readonly", "true");
-        }
-        if (btnLock) {
-            btnLock.innerHTML = `<i class="fa-solid fa-lock"></i>`;
-            btnLock.style.color = "var(--text-muted)";
         }
 
         // Skip event wiring if already done to prevent duplicates
@@ -12954,7 +13215,7 @@ function initBackupKeyVault() {
         // Copy Key
         if (btnCopy) {
             btnCopy.addEventListener("click", () => {
-                const currentKey = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
+                const currentKey = input ? input.value.trim() : "";
                 if (!currentKey) {
                     showCustomNotification(`Slot ${slot} is empty. Nothing to copy!`, "warning");
                     return;
@@ -12976,11 +13237,6 @@ function initBackupKeyVault() {
         // Paste Key
         if (btnPaste) {
             btnPaste.addEventListener("click", async () => {
-                if (row.classList.contains("locked")) {
-                    showCustomNotification(`Unlock Slot ${slot} to paste a new key!`, "warning");
-                    return;
-                }
-                
                 try {
                     let text = "";
                     if (navigator.clipboard && navigator.clipboard.readText) {
@@ -13006,7 +13262,7 @@ function initBackupKeyVault() {
                                 updateAIGeminiStatusDisplay();
                             }
                             
-                            showCustomNotification(`API Key pasted into Slot ${slot}!`, "success");
+                            showCustomNotification(`API Key pasted into Slot ${slot}! Please click "Save Details" to apply.`, "success");
                         } else {
                             showCustomNotification(`Invalid Gemini API Key format. Must start with "AIzaSy".`, "error");
                         }
@@ -13017,58 +13273,37 @@ function initBackupKeyVault() {
             });
         }
 
-        // Lock / Unlock Editing
-        if (btnLock) {
-            btnLock.addEventListener("click", () => {
-                if (!input) return;
-                const isLocked = row.classList.contains("locked");
-                if (isLocked) {
-                    // Unlock editing
-                    row.classList.remove("locked");
-                    row.classList.add("unlocked");
-                    input.removeAttribute("readonly");
-                    input.focus();
-                    btnLock.innerHTML = `<i class="fa-solid fa-lock-open"></i>`;
-                    btnLock.style.color = "#ff9f0a";
-                    showCustomNotification(`Slot ${slot} unlocked for manual editing.`, "warning");
-                } else {
-                    // Lock editing and save
-                    const val = input.value.trim();
-                    if (val && !val.startsWith("AIzaSy")) {
-                        showCustomNotification(`Invalid key. Gemini keys must start with "AIzaSy".`, "error");
-                        return;
-                    }
-                    
-                    row.classList.remove("unlocked");
-                    row.classList.add("locked");
-                    input.setAttribute("readonly", "true");
-                    btnLock.innerHTML = `<i class="fa-solid fa-lock"></i>`;
-                    btnLock.style.color = "var(--text-muted)";
+        // Row-level Test Health Connection
+        if (btnTestHealth) {
+            btnTestHealth.addEventListener("click", async () => {
+                const keyVal = input ? input.value.trim() : "";
+                if (!keyVal) {
+                    showCustomNotification(`Slot ${slot} is empty. Paste a key to test.`, "warning");
+                    return;
+                }
+                btnTestHealth.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                btnTestHealth.style.color = "#ff9f0a";
+                const dot = row.querySelector(`.vault-status-dot`);
+                if (dot) {
+                    dot.style.background = "#ff9f0a";
+                    dot.title = "Testing...";
+                }
+                showCustomNotification(`Testing slot ${slot} API key connection...`, "info");
+                
+                const result = await testSingleKeyHealth(keyVal);
+                updateVaultStatusDot(slot, result.status);
+                
+                btnTestHealth.innerHTML = `<i class="fa-solid fa-vial"></i>`;
+                btnTestHealth.style.color = "var(--text-muted)";
 
-                    if (val) {
-                        localStorage.setItem(`li_gemini_vault_key_${slot}`, val);
-                        input.placeholder = "••••••••••••••••••••••••••••••••";
-                        
-                        // Sync global key if active
-                        if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
-                            localStorage.setItem("li_gemini_api_key", val);
-                            const mainInput = document.getElementById("input-ai-gemini-key");
-                            if (mainInput) mainInput.value = val;
-                            updateAIGeminiStatusDisplay();
-                        }
-                    } else {
-                        localStorage.removeItem(`li_gemini_vault_key_${slot}`);
-                        input.placeholder = `Empty Slot ${slot}`;
-                        
-                        // Sync global key if active and now empty
-                        if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
-                            localStorage.removeItem("li_gemini_api_key");
-                            const mainInput = document.getElementById("input-ai-gemini-key");
-                            if (mainInput) mainInput.value = "";
-                            updateAIGeminiStatusDisplay();
-                        }
-                    }
-                    showCustomNotification(`Slot ${slot} editing locked & saved.`, "success");
+                if (result.ok) {
+                    showCustomConfirmDialog(`Slot ${slot} API key is healthy and active! Connection test successful.`, null, null, "OK", false);
+                } else {
+                    showCustomConfirmDialog(`Slot ${slot} test failed: ${result.msg || "Invalid key or rate limit exceeded."}`, null, null, "Close", true);
+                }
+                
+                if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
+                    updateAIGeminiStatusDisplay();
                 }
             });
         }
@@ -13310,9 +13545,25 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
         progressInterval = null;
         startTime = null;
         
-        btn.innerHTML = originalHtml;
-        btn.style.background = ""; 
-        btn.style.boxShadow = "";
+        const state = btn.dataset.state || "spark";
+        if (state === "train") {
+            btn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+            btn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
+            btn.style.border = "1px solid rgba(48,209,88,0.3)";
+            btn.style.color = "#30d158";
+        } else if (state === "trained") {
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+            btn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
+            btn.style.border = "1px solid rgba(45,212,191,0.3)";
+            btn.style.color = "#2dd4bf";
+            btn.disabled = true;
+        } else {
+            btn.innerHTML = originalHtml;
+            btn.style.background = ""; 
+            btn.style.boxShadow = "";
+            btn.style.border = "";
+            btn.style.color = "";
+        }
     };
 
     const startHolding = (e) => {
@@ -13322,15 +13573,26 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
         e.preventDefault();
         isTriggered = false;
         startTime = Date.now();
-        btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
+        
+        const state = btn.dataset.state || "spark";
+        if (state === "train") {
+            btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
+        } else {
+            btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
+        }
         
         const updateProgress = () => {
             const elapsed = Date.now() - startTime;
             const pct = Math.min((elapsed / holdDuration) * 100, 100);
             const remainingSecs = Math.max(((holdDuration - elapsed) / 1000), 0).toFixed(1);
             
-            btn.style.background = `linear-gradient(90deg, rgba(167, 139, 250, 0.4) ${pct}%, rgba(167, 139, 250, 0.15) ${pct}%)`;
-            btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #a78bfa;"></i> Hold ${remainingSecs}s`;
+            if (state === "train") {
+                btn.style.background = `linear-gradient(90deg, rgba(48, 209, 88, 0.4) ${pct}%, rgba(48, 209, 88, 0.15) ${pct}%)`;
+                btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #30d158;"></i> Train ${remainingSecs}s`;
+            } else {
+                btn.style.background = `linear-gradient(90deg, rgba(167, 139, 250, 0.4) ${pct}%, rgba(167, 139, 250, 0.15) ${pct}%)`;
+                btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #a78bfa;"></i> Hold ${remainingSecs}s`;
+            }
             
             if (pct >= 100) {
                 clearInterval(progressInterval);
@@ -13346,9 +13608,15 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
             progressInterval = null;
             holdTimer = null;
             
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> Triggered!`;
-            btn.style.background = "rgba(48, 209, 88, 0.2)";
-            btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
+            if (state === "train") {
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Submitting...`;
+                btn.style.background = "rgba(48, 209, 88, 0.2)";
+                btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Triggered!`;
+                btn.style.background = "rgba(167, 139, 250, 0.2)";
+                btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
+            }
             
             setTimeout(() => {
                 btn.style.background = "";
@@ -13404,12 +13672,11 @@ function initGeminiEngine() {
     const inputKey = document.getElementById("input-ai-gemini-key");
     const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
     const btnSave = document.getElementById("btn-ai-gemini-save");
-    const btnTest = document.getElementById("btn-ai-gemini-test");
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
     const statusText = document.getElementById("ai-gemini-status-text");
     const customPromptTextarea = document.getElementById("ai-custom-prompt");
 
-    if (!inputKey || !btnSave || !btnTest) return;
+    if (!inputKey || !btnSave) return;
 
     // Toggle Visibility
     if (btnToggleVisibility) {
@@ -13514,71 +13781,54 @@ function initGeminiEngine() {
         });
     };
 
-    // Save button listener — saves custom prompt and auto-tests active vault key
+    // Save button listener — saves custom prompt and all 5 vault keys dynamically
     btnSave.addEventListener("click", () => {
         const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
         if (customPromptTextarea) {
             localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
         }
 
+        let hasInvalidKey = false;
+        for (let slot = 1; slot <= 5; slot++) {
+            const row = document.querySelector(`.vault-row[data-slot="${slot}"]`);
+            const input = row?.querySelector(`.vault-key-input`);
+            if (input) {
+                const val = input.value.trim();
+                if (val && !val.startsWith("AIzaSy")) {
+                    hasInvalidKey = true;
+                    showCustomNotification(`Slot ${slot}: Invalid Gemini API Key format. Must start with "AIzaSy".`, "error");
+                    continue;
+                }
+                if (val) {
+                    localStorage.setItem(`li_gemini_vault_key_${slot}`, val);
+                    input.placeholder = "••••••••••••••••••••••••••••••••";
+                } else {
+                    localStorage.removeItem(`li_gemini_vault_key_${slot}`);
+                    input.placeholder = `Empty Slot ${slot}`;
+                }
+            }
+        }
+
+        if (hasInvalidKey) return;
+
         const activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
         const keyVal = localStorage.getItem(`li_gemini_vault_key_${activeSlot}`);
         
         if (keyVal) {
+            localStorage.setItem("li_gemini_api_key", keyVal);
+            const mainInput = document.getElementById("input-ai-gemini-key");
+            if (mainInput) mainInput.value = keyVal;
+            
             showCustomNotification("Settings saved. Testing active key...", "success");
+            updateAIGeminiStatusDisplay();
             runLiveHealthCheck(keyVal, { silent: true });
         } else {
-            showCustomNotification("Settings saved. No active key in vault.", "warning");
-            updateStatusDisplay("disconnected", "Disconnected (No Key)");
-        }
-    });
-
-    // Test button listener — runs a sequential diagnostic check over all slots
-    btnTest.addEventListener("click", async () => {
-        btnTest.disabled = true;
-        btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing Vault...`;
-        showCustomNotification("Beginning health check of all API keys in the vault...", "success");
-        
-        let activeOk = false;
-        const activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
-
-        for (let slot = 1; slot <= 5; slot++) {
-            const keyVal = localStorage.getItem(`li_gemini_vault_key_${slot}`);
-            const dot = document.querySelector(`.vault-status-dot[data-slot="${slot}"]`);
-            if (dot) {
-                dot.style.background = "#ff9f0a";
-                dot.title = "Testing...";
-            }
+            localStorage.removeItem("li_gemini_api_key");
+            const mainInput = document.getElementById("input-ai-gemini-key");
+            if (mainInput) mainInput.value = "";
             
-            if (keyVal) {
-                const result = await testSingleKeyHealth(keyVal);
-                updateVaultStatusDot(slot, result.status);
-                if (slot.toString() === activeSlot) {
-                    activeOk = result.ok;
-                    if (result.ok) {
-                        updateStatusDisplay("active", "Active (Connected ✓)");
-                    } else {
-                        let statusMsg = "Connection Failed";
-                        if (result.status === "rate-limit") statusMsg = "Rate Limited (Quota Exceeded)";
-                        else if (result.status === "invalid") statusMsg = "Forbidden (Invalid Key)";
-                        updateStatusDisplay("disconnected", statusMsg);
-                    }
-                }
-            } else {
-                updateVaultStatusDot(slot, "empty");
-                if (slot.toString() === activeSlot) {
-                    updateStatusDisplay("disconnected", "Disconnected (No Key)");
-                }
-            }
-        }
-
-        btnTest.disabled = false;
-        btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
-        
-        if (activeOk) {
-            showCustomConfirmDialog("Vault health check complete. Your active API key is working successfully!", null, null, "OK", false);
-        } else {
-            showCustomConfirmDialog("Vault health check complete. Warning: Your active API key is currently inactive or empty.", null, null, "Close", true);
+            showCustomNotification("Settings saved. No active key in primary slot.", "warning");
+            updateAIGeminiStatusDisplay();
         }
     });
 

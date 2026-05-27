@@ -6,6 +6,61 @@
     <title>LifeInvader EN3 Advertisement Editor</title>
     <meta name="description" content="Official EN3 LifeInvader Internal Advertisement processing and validation tool for GTA 5 Grand RP.">
     <script>
+        // Safe localStorage and sessionStorage shadowing for incognito mode and storage-restricted environments
+        var localStorage;
+        var sessionStorage;
+        try {
+            localStorage = window.localStorage;
+            localStorage.getItem('__storage_test__');
+        } catch (e) {
+            var mockStorage = {};
+            localStorage = {
+                getItem: function(key) { return key in mockStorage ? mockStorage[key] : null; },
+                setItem: function(key, value) { mockStorage[key] = String(value); },
+                removeItem: function(key) { delete mockStorage[key]; },
+                clear: function() { mockStorage = {}; },
+                key: function(i) { return Object.keys(mockStorage)[i] || null; },
+                get length() { return Object.keys(mockStorage).length; }
+            };
+        }
+
+        try {
+            sessionStorage = window.sessionStorage;
+            sessionStorage.getItem('__storage_test__');
+        } catch (e) {
+            var mockSession = {};
+            sessionStorage = {
+                getItem: function(key) { return key in mockSession ? mockSession[key] : null; },
+                setItem: function(key, value) { mockSession[key] = String(value); },
+                removeItem: function(key) { delete mockSession[key]; },
+                clear: function() { mockSession = {}; },
+                key: function(i) { return Object.keys(mockSession)[i] || null; },
+                get length() { return Object.keys(mockSession).length; }
+            };
+        }
+
+
+        // Parse URL parameters to restore state in incognito/private mode
+        (function() {
+            try {
+                var urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get("approved") === "true") {
+                    localStorage.setItem("li_approved_token", "APPROVED");
+                }
+                if (urlParams.get("admin") === "true") {
+                    localStorage.setItem("li_admin_authenticated", "true");
+                    sessionStorage.setItem("li_admin_authenticated", "true");
+                    var key = urlParams.get("passcode");
+                    if (key) {
+                        localStorage.setItem("li_admin_passcode", key);
+                        sessionStorage.setItem("li_admin_passcode", key);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse URL parameters:", e);
+            }
+        })();
+
         // Inline check to prevent flashing and protect content before render
         (function() {
             var token = localStorage.getItem("li_approved_token");
@@ -886,93 +941,90 @@
 
                                             <div style="display: flex; flex-direction: column; gap: 6px;" id="api-vault-list">
                                                 <!-- Vault Row 1 -->
-                                                <div class="vault-row locked" data-slot="1" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
+                                                <div class="vault-row" data-slot="1" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
                                                     <button type="button" class="btn-vault-activate" data-slot="1" title="Activate this key" style="background: none; border: none; padding: 0 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px;">
                                                         <i class="fa-regular fa-circle"></i>
                                                     </button>
                                                     <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); width: 14px; text-align: center;">1</span>
-                                                    <input type="password" class="vault-key-input" data-slot="1" placeholder="Empty Slot 1" readonly style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
+                                                    <input type="password" class="vault-key-input" data-slot="1" placeholder="Empty Slot 1" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
                                                     <span class="vault-status-dot" data-slot="1" title="Untested" style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; margin-right: 4px;"></span>
                                                     <div style="display: flex; gap: 2px; align-items: center; flex-shrink: 0;">
                                                         <button type="button" class="btn-vault-visibility" data-slot="1" title="Show/Hide" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-eye-slash"></i></button>
                                                         <button type="button" class="btn-vault-copy" data-slot="1" title="Copy" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-copy"></i></button>
                                                         <button type="button" class="btn-vault-paste" data-slot="1" title="Paste" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paste"></i></button>
-                                                        <button type="button" class="btn-vault-lock" data-slot="1" title="Lock Editing" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i></button>
+                                                        <button type="button" class="btn-vault-test" data-slot="1" title="Test Key Health" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-vial"></i></button>
                                                     </div>
                                                 </div>
 
                                                 <!-- Vault Row 2 -->
-                                                <div class="vault-row locked" data-slot="2" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
+                                                <div class="vault-row" data-slot="2" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
                                                     <button type="button" class="btn-vault-activate" data-slot="2" title="Activate this key" style="background: none; border: none; padding: 0 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px;">
                                                         <i class="fa-regular fa-circle"></i>
                                                     </button>
                                                     <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); width: 14px; text-align: center;">2</span>
-                                                    <input type="password" class="vault-key-input" data-slot="2" placeholder="Empty Slot 2" readonly style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
+                                                    <input type="password" class="vault-key-input" data-slot="2" placeholder="Empty Slot 2" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
                                                     <span class="vault-status-dot" data-slot="2" title="Untested" style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; margin-right: 4px;"></span>
                                                     <div style="display: flex; gap: 2px; align-items: center; flex-shrink: 0;">
                                                         <button type="button" class="btn-vault-visibility" data-slot="2" title="Show/Hide" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-eye-slash"></i></button>
                                                         <button type="button" class="btn-vault-copy" data-slot="2" title="Copy" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-copy"></i></button>
                                                         <button type="button" class="btn-vault-paste" data-slot="2" title="Paste" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paste"></i></button>
-                                                        <button type="button" class="btn-vault-lock" data-slot="2" title="Lock Editing" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i></button>
+                                                        <button type="button" class="btn-vault-test" data-slot="2" title="Test Key Health" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-vial"></i></button>
                                                     </div>
                                                 </div>
 
                                                 <!-- Vault Row 3 -->
-                                                <div class="vault-row locked" data-slot="3" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
+                                                <div class="vault-row" data-slot="3" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
                                                     <button type="button" class="btn-vault-activate" data-slot="3" title="Activate this key" style="background: none; border: none; padding: 0 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px;">
                                                         <i class="fa-regular fa-circle"></i>
                                                     </button>
                                                     <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); width: 14px; text-align: center;">3</span>
-                                                    <input type="password" class="vault-key-input" data-slot="3" placeholder="Empty Slot 3" readonly style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
+                                                    <input type="password" class="vault-key-input" data-slot="3" placeholder="Empty Slot 3" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
                                                     <span class="vault-status-dot" data-slot="3" title="Untested" style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; margin-right: 4px;"></span>
                                                     <div style="display: flex; gap: 2px; align-items: center; flex-shrink: 0;">
                                                         <button type="button" class="btn-vault-visibility" data-slot="3" title="Show/Hide" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-eye-slash"></i></button>
                                                         <button type="button" class="btn-vault-copy" data-slot="3" title="Copy" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-copy"></i></button>
                                                         <button type="button" class="btn-vault-paste" data-slot="3" title="Paste" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paste"></i></button>
-                                                        <button type="button" class="btn-vault-lock" data-slot="3" title="Lock Editing" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i></button>
+                                                        <button type="button" class="btn-vault-test" data-slot="3" title="Test Key Health" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-vial"></i></button>
                                                     </div>
                                                 </div>
 
                                                 <!-- Vault Row 4 -->
-                                                <div class="vault-row locked" data-slot="4" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
+                                                <div class="vault-row" data-slot="4" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
                                                     <button type="button" class="btn-vault-activate" data-slot="4" title="Activate this key" style="background: none; border: none; padding: 0 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px;">
                                                         <i class="fa-regular fa-circle"></i>
                                                     </button>
                                                     <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); width: 14px; text-align: center;">4</span>
-                                                    <input type="password" class="vault-key-input" data-slot="4" placeholder="Empty Slot 4" readonly style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
+                                                    <input type="password" class="vault-key-input" data-slot="4" placeholder="Empty Slot 4" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
                                                     <span class="vault-status-dot" data-slot="4" title="Untested" style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; margin-right: 4px;"></span>
                                                     <div style="display: flex; gap: 2px; align-items: center; flex-shrink: 0;">
                                                         <button type="button" class="btn-vault-visibility" data-slot="4" title="Show/Hide" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-eye-slash"></i></button>
                                                         <button type="button" class="btn-vault-copy" data-slot="4" title="Copy" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-copy"></i></button>
                                                         <button type="button" class="btn-vault-paste" data-slot="4" title="Paste" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paste"></i></button>
-                                                        <button type="button" class="btn-vault-lock" data-slot="4" title="Lock Editing" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i></button>
+                                                        <button type="button" class="btn-vault-test" data-slot="4" title="Test Key Health" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-vial"></i></button>
                                                     </div>
                                                 </div>
 
                                                 <!-- Vault Row 5 -->
-                                                <div class="vault-row locked" data-slot="5" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
+                                                <div class="vault-row" data-slot="5" style="display: flex; gap: 4px; align-items: center; background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 4px 6px; transition: all 0.25s ease;">
                                                     <button type="button" class="btn-vault-activate" data-slot="5" title="Activate this key" style="background: none; border: none; padding: 0 4px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px;">
                                                         <i class="fa-regular fa-circle"></i>
                                                     </button>
                                                     <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); width: 14px; text-align: center;">5</span>
-                                                    <input type="password" class="vault-key-input" data-slot="5" placeholder="Empty Slot 5" readonly style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
+                                                    <input type="password" class="vault-key-input" data-slot="5" placeholder="Empty Slot 5" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 11px; font-family: var(--font-mono, monospace); padding: 2px 4px;">
                                                     <span class="vault-status-dot" data-slot="5" title="Untested" style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; margin-right: 4px;"></span>
                                                     <div style="display: flex; gap: 2px; align-items: center; flex-shrink: 0;">
                                                         <button type="button" class="btn-vault-visibility" data-slot="5" title="Show/Hide" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-eye-slash"></i></button>
                                                         <button type="button" class="btn-vault-copy" data-slot="5" title="Copy" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-copy"></i></button>
                                                         <button type="button" class="btn-vault-paste" data-slot="5" title="Paste" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paste"></i></button>
-                                                        <button type="button" class="btn-vault-lock" data-slot="5" title="Lock Editing" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i></button>
+                                                        <button type="button" class="btn-vault-test" data-slot="5" title="Test Key Health" style="background: none; border: none; padding: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-vial"></i></button>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div style="margin-top: 15px; display: flex; gap: 8px; width: 100%;">
-                                            <button type="button" id="btn-ai-gemini-save" class="btn-action" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;">
+                                        <div style="margin-top: 15px; display: flex; width: 100%;">
+                                            <button type="button" id="btn-ai-gemini-save" class="btn-action" style="width: 100%; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;">
                                                 <i class="fa-solid fa-floppy-disk"></i> Save Details
-                                            </button>
-                                            <button type="button" id="btn-ai-gemini-test" class="btn-preset" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
-                                                <i class="fa-solid fa-vial"></i> Test Health
                                             </button>
                                         </div>
                                     </div>

@@ -9792,7 +9792,7 @@ function initAdminPanel() {
     const btnClearAllTranslations = document.getElementById("btn-admin-clear-all-translations");
     if (btnClearAllTranslations) {
         let trHoldInterval = null;
-        const trHoldDuration = 3000;
+        const trHoldDuration = 8000;
         let trElapsed = 0;
         let trIsHolding = false;
         const trOriginalHtml = `<i class="fa-solid fa-trash-can"></i> Clear All Mappings`;

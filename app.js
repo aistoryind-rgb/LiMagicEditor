@@ -12710,7 +12710,7 @@ function getPolicyMatchesContext(rawText) {
     const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
 
     const matchedPages = [];
-    const maxMatches = 2; // Keep top 2 most relevant pages to prevent bloating the token space
+    const maxMatches = 6; // Keep up to 6 most relevant pages to provide deep context
 
     for (let i = 0; i < POLICY_PAGES.length; i++) {
         const page = POLICY_PAGES[i];
@@ -12736,7 +12736,7 @@ function getPolicyMatchesContext(rawText) {
             matchedPages.push({
                 index: i + 1,
                 title: page.title,
-                text: page.content.replace(/<[^>]*>/g, " ").trim().substring(0, 1200),
+                text: page.content.replace(/<[^>]*>/g, " ").trim().substring(0, 2500),
                 score: matchScore
             });
         }
@@ -12744,7 +12744,15 @@ function getPolicyMatchesContext(rawText) {
 
     matchedPages.sort((a, b) => b.score - a.score);
 
-    if (matchedPages.length === 0) return "";
+    // If no direct matches, load Core General Rules (Page 1) and Prohibited Items (Page 3) as fallbacks
+    if (matchedPages.length === 0) {
+        if (POLICY_PAGES[0]) {
+            matchedPages.push({ index: 1, title: POLICY_PAGES[0].title, text: POLICY_PAGES[0].content.replace(/<[^>]*>/g, " ").trim().substring(0, 2500) });
+        }
+        if (POLICY_PAGES[2]) {
+            matchedPages.push({ index: 3, title: POLICY_PAGES[2].title, text: POLICY_PAGES[2].content.replace(/<[^>]*>/g, " ").trim().substring(0, 2500) });
+        }
+    }
 
     const result = matchedPages.slice(0, maxMatches).map(p => {
         return `--- POLICY MANUAL PAGE ${p.index}: ${p.title} ---\n${p.text}...`;
@@ -12765,13 +12773,51 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
     const policyContext = getPolicyMatchesContext(rawText);
     
     // Build the policy prompt context
-    const prompt = `You are a strict advertisement editor for LifeInvader.
-Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
-1. Always start with action word: Selling, Buying, Trading, Renting, Hiring, etc. Capitalize first letter.
-2. Format prices beautifully, e.g. "2k" or "2000" to "$2,000". If price is per item, use "each" or "respectively".
-3. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format.
-4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
-5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
+    const prompt = `You are a strict and professional advertisement editor for LifeInvader.
+Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
+
+### Core Formatting Rules:
+1. Always begin the ad with one of these exact action words: "Buying", "Selling", "Trading", "Selling or trading". The first letter must ALWAYS be capitalized.
+2. Pricing & Budget Labels:
+   - For Buying ads: Use the label "Budget: " (Capital B, followed by a colon). If no price is mentioned, always append "Budget: Negotiable." at the very end.
+   - For Selling / Trading / Selling or trading ads: Use the label "Price: " (Capital P, followed by a colon). If no price is mentioned, always append "Price: Negotiable." at the very end.
+   - If a specific price is explicitly mentioned in the raw ad, use that exact price (e.g., "$25.000") and do NOT add "Negotiable".
+3. Currency & Number Formatting:
+   - Always put a dollar sign ($) BEFORE the numerical value (e.g., "$5 Million", not "5 Million$").
+   - Capitalize the first letter of "Price", "Budget", and "Negotiable".
+   - Use a period (.) instead of a comma (,) as a thousands separator for prices (e.g., "$200.000", not "$200,000").
+   - NEVER use "k" or "K" for thousands. Convert it to full numerical digits:
+     - "$1k" -> "$1.000"
+     - "$1.7k each" -> "$1.700 each."
+     - "$1.450k" -> "$1.45 Million."
+   - NEVER use lowercase "m" for Millions. Use capital "Million" or "Million.":
+     - "$1m" -> "$1 Million"
+     - "$38m" -> "$38 Million"
+4. Punctuation Rules:
+   - Use a full stop/period (.) to end the sentence if it ends with a letter (e.g., "Price: Negotiable.").
+   - If the ad ends with a numerical value, do NOT add a period (.) at the very end of the ad (e.g., "Price: $200.000").
+   - Capitalize the first letter of brands, official locations, and proper names (First and Last name).
+5. Terminology Substitutions:
+   - "max config", "max tuning", "fully upgraded" -> "with full configuration"
+   - "nearly max", "part lvl3" or below -> "with partial configuration"
+   - "body upgrades", "body kit" -> "with visual upgrades"
+   - "turbo" -> "turbo kit"
+   - "drift tuning", "drift assistance" -> "drift kit"
+   - "luminous rims", "unique wheels" -> "luminous wheels"
+   - "Unique 6 rims" -> "luminous wheels of type 6"
+   - "level 1", "low level" -> "low quality"
+   - "level 2", "medium level" -> "medium quality"
+   - "level 3", "high level" -> "high quality"
+   - "level 4", "max level" -> "max quality"
+   - "crates", "cases" -> "containers"
+   - "spray cans", "spray balloons" -> "paint cans."
+   - "extras" -> "of type" (e.g. "selling mask extras 2" -> "Selling masks of type 2. Price: Negotiable.")
+   - "pumpkin", "cabbage", "pineapple", "mandarin" -> combine or use "fruits, vegetables or seeds"
+6. Play Dice and Play Poker Rules:
+   - If no Bet is specified: Use "Bet: Negotiable."
+   - The maximum allowed bet is "$10 Million". Any bet above $10 Million must be changed to "Bet: Negotiable."
+7. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format if present.
+
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 ${dbContext}
 ${policyContext}
@@ -12867,13 +12913,51 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
     }
 
     const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
-    const systemPrompt = `You are a strict advertisement editor for LifeInvader.
-Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
-1. Always start with action word: Selling, Buying, Trading, Renting, Hiring, etc. Capitalize first letter.
-2. Format prices beautifully, e.g. "2k" or "2000" to "$2,000". If price is per item, use "each" or "respectively".
-3. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format.
-4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
-5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
+    const systemPrompt = `You are a strict and professional advertisement editor for LifeInvader.
+Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
+
+### Core Formatting Rules:
+1. Always begin the ad with one of these exact action words: "Buying", "Selling", "Trading", "Selling or trading". The first letter must ALWAYS be capitalized.
+2. Pricing & Budget Labels:
+   - For Buying ads: Use the label "Budget: " (Capital B, followed by a colon). If no price is mentioned, always append "Budget: Negotiable." at the very end.
+   - For Selling / Trading / Selling or trading ads: Use the label "Price: " (Capital P, followed by a colon). If no price is mentioned, always append "Price: Negotiable." at the very end.
+   - If a specific price is explicitly mentioned in the raw ad, use that exact price (e.g., "$25.000") and do NOT add "Negotiable".
+3. Currency & Number Formatting:
+   - Always put a dollar sign ($) BEFORE the numerical value (e.g., "$5 Million", not "5 Million$").
+   - Capitalize the first letter of "Price", "Budget", and "Negotiable".
+   - Use a period (.) instead of a comma (,) as a thousands separator for prices (e.g., "$200.000", not "$200,000").
+   - NEVER use "k" or "K" for thousands. Convert it to full numerical digits:
+     - "$1k" -> "$1.000"
+     - "$1.7k each" -> "$1.700 each."
+     - "$1.450k" -> "$1.45 Million."
+   - NEVER use lowercase "m" for Millions. Use capital "Million" or "Million.":
+     - "$1m" -> "$1 Million"
+     - "$38m" -> "$38 Million"
+4. Punctuation Rules:
+   - Use a full stop/period (.) to end the sentence if it ends with a letter (e.g., "Price: Negotiable.").
+   - If the ad ends with a numerical value, do NOT add a period (.) at the very end of the ad (e.g., "Price: $200.000").
+   - Capitalize the first letter of brands, official locations, and proper names (First and Last name).
+5. Terminology Substitutions:
+   - "max config", "max tuning", "fully upgraded" -> "with full configuration"
+   - "nearly max", "part lvl3" or below -> "with partial configuration"
+   - "body upgrades", "body kit" -> "with visual upgrades"
+   - "turbo" -> "turbo kit"
+   - "drift tuning", "drift assistance" -> "drift kit"
+   - "luminous rims", "unique wheels" -> "luminous wheels"
+   - "Unique 6 rims" -> "luminous wheels of type 6"
+   - "level 1", "low level" -> "low quality"
+   - "level 2", "medium level" -> "medium quality"
+   - "level 3", "high level" -> "high quality"
+   - "level 4", "max level" -> "max quality"
+   - "crates", "cases" -> "containers"
+   - "spray cans", "spray balloons" -> "paint cans."
+   - "extras" -> "of type" (e.g. "selling mask extras 2" -> "Selling masks of type 2. Price: Negotiable.")
+   - "pumpkin", "cabbage", "pineapple", "mandarin" -> combine or use "fruits, vegetables or seeds"
+6. Play Dice and Play Poker Rules:
+   - If no Bet is specified: Use "Bet: Negotiable."
+   - The maximum allowed bet is "$10 Million". Any bet above $10 Million must be changed to "Bet: Negotiable."
+7. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format if present.
+
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied or how the suggestion was updated). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;

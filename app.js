@@ -9808,8 +9808,8 @@ function initAdminPanel() {
 
         const trStartHold = (e) => {
             if (btnClearAllTranslations.disabled || trIsHolding) return;
-            const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
-            if (isAssistant) return;
+            const isSuperAdmin = sessionStorage.getItem("li_admin_role") === "super";
+            if (!isSuperAdmin) return;
 
             trIsHolding = true;
             trElapsed = 0;
@@ -10428,11 +10428,12 @@ function renderCustomTranslations() {
     ) : entries;
 
     const isAuthorized = sessionStorage.getItem("li_admin_authenticated") === "true";
+    const isSuperAdmin = isAuthorized && sessionStorage.getItem("li_admin_role") === "super";
     
-    // Show/hide Clear All button
+    // Show/hide Clear All button (Super Admin only!)
     const btnClearAllTranslations = document.getElementById("btn-admin-clear-all-translations");
     if (btnClearAllTranslations) {
-        btnClearAllTranslations.style.display = isAuthorized ? "" : "none";
+        btnClearAllTranslations.style.display = isSuperAdmin ? "" : "none";
     }
 
     // Adjust table headers

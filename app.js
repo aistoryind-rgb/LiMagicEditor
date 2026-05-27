@@ -2557,12 +2557,49 @@ function initAdProcessing() {
         });
     }
 
-    // Wire Gemini Assist controls
+    // Wire Gemini Assist controls — Auto-AI toggle button
     const checkAutoApply = document.getElementById("check-ai-auto-apply");
+    const btnAutoToggle = document.getElementById("btn-ai-auto-toggle");
+    const toggleDot = document.getElementById("ai-auto-toggle-dot");
+    const toggleKnob = document.getElementById("ai-auto-toggle-knob");
+
+    const updateAutoAIToggleVisual = (isOn) => {
+        if (!btnAutoToggle || !toggleDot || !toggleKnob) return;
+        if (isOn) {
+            btnAutoToggle.style.background = "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05))";
+            btnAutoToggle.style.borderColor = "rgba(167,139,250,0.35)";
+            btnAutoToggle.style.color = "#a78bfa";
+            btnAutoToggle.style.boxShadow = "0 0 12px rgba(167,139,250,0.15)";
+            toggleDot.style.background = "rgba(167,139,250,0.5)";
+            toggleKnob.style.left = "8px";
+            toggleKnob.style.background = "#a78bfa";
+            toggleKnob.style.boxShadow = "0 0 4px rgba(167,139,250,0.6)";
+        } else {
+            btnAutoToggle.style.background = "rgba(255,255,255,0.03)";
+            btnAutoToggle.style.borderColor = "rgba(255,255,255,0.08)";
+            btnAutoToggle.style.color = "rgba(255,255,255,0.4)";
+            btnAutoToggle.style.boxShadow = "none";
+            toggleDot.style.background = "rgba(255,255,255,0.12)";
+            toggleKnob.style.left = "1.5px";
+            toggleKnob.style.background = "rgba(255,255,255,0.3)";
+            toggleKnob.style.boxShadow = "none";
+        }
+    };
+
     if (checkAutoApply) {
-        checkAutoApply.checked = localStorage.getItem("li_auto_ai_enabled") === "true";
-        checkAutoApply.addEventListener("change", () => {
+        const savedState = localStorage.getItem("li_auto_ai_enabled") === "true";
+        checkAutoApply.checked = savedState;
+        updateAutoAIToggleVisual(savedState);
+    }
+
+    if (btnAutoToggle && checkAutoApply) {
+        btnAutoToggle.addEventListener("click", () => {
+            checkAutoApply.checked = !checkAutoApply.checked;
             localStorage.setItem("li_auto_ai_enabled", checkAutoApply.checked);
+            updateAutoAIToggleVisual(checkAutoApply.checked);
+            if (typeof showCustomNotification === "function") {
+                showCustomNotification(checkAutoApply.checked ? "Auto-AI enabled — Gemini will auto-correct as you type." : "Auto-AI disabled.", "success");
+            }
         });
     }
 
@@ -12755,6 +12792,79 @@ function refreshBugTriageTabVisibility() {
     }
 }
 
+// ── API Usage Tracking System ──
+const GEMINI_DAILY_QUOTA = 1500; // Free-tier Gemini Flash daily limit (approximate)
+
+function getUsageData() {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const raw = localStorage.getItem("li_gemini_usage");
+    let data = null;
+    try { data = JSON.parse(raw); } catch (e) {}
+    if (!data || data.date !== today) {
+        // Reset for a new day
+        data = { date: today, count: 0 };
+        localStorage.setItem("li_gemini_usage", JSON.stringify(data));
+    }
+    return data;
+}
+
+function trackGeminiAPICall() {
+    const data = getUsageData();
+    data.count++;
+    localStorage.setItem("li_gemini_usage", JSON.stringify(data));
+    updateAPIUsageBar();
+}
+
+function updateAPIUsageBar() {
+    const data = getUsageData();
+    const count = data.count;
+    const pct = Math.min(Math.round((count / GEMINI_DAILY_QUOTA) * 100), 100);
+
+    const barFill = document.getElementById("ai-usage-bar-fill");
+    const countEl = document.getElementById("ai-usage-count");
+    const statusEl = document.getElementById("ai-usage-status");
+    const pctEl = document.getElementById("ai-usage-pct");
+
+    if (countEl) countEl.textContent = `${count.toLocaleString()} / ${GEMINI_DAILY_QUOTA.toLocaleString()} requests`;
+    if (pctEl) pctEl.textContent = `${pct}%`;
+
+    if (barFill) {
+        barFill.style.width = `${pct}%`;
+        if (pct < 50) {
+            barFill.style.background = "linear-gradient(90deg, #30d158, #34d399)";
+            barFill.style.boxShadow = "0 0 6px rgba(48, 209, 88, 0.3)";
+        } else if (pct < 80) {
+            barFill.style.background = "linear-gradient(90deg, #ff9f0a, #ffb340)";
+            barFill.style.boxShadow = "0 0 6px rgba(255, 159, 10, 0.3)";
+        } else {
+            barFill.style.background = "linear-gradient(90deg, #ff453a, #ff6961)";
+            barFill.style.boxShadow = "0 0 8px rgba(255, 69, 58, 0.4)";
+        }
+    }
+
+    if (statusEl) {
+        if (pct < 30) {
+            statusEl.textContent = "Plenty of quota remaining";
+            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
+        } else if (pct < 50) {
+            statusEl.textContent = "Healthy usage level";
+            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
+        } else if (pct < 70) {
+            statusEl.textContent = "Moderate — consider slowing down";
+            statusEl.style.color = "rgba(255, 159, 10, 0.8)";
+        } else if (pct < 85) {
+            statusEl.textContent = "⚠ High usage — prepare a backup key";
+            statusEl.style.color = "rgba(255, 159, 10, 0.9)";
+        } else if (pct < 95) {
+            statusEl.textContent = "⚠ Critical — switch keys soon!";
+            statusEl.style.color = "rgba(255, 69, 58, 0.9)";
+        } else {
+            statusEl.textContent = "🔴 Quota exhausted — switch API key now!";
+            statusEl.style.color = "#ff453a";
+        }
+    }
+}
+
 function updateAIGeminiStatusDisplay() {
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
     const statusText = document.getElementById("ai-gemini-status-text");
@@ -12768,6 +12878,8 @@ function updateAIGeminiStatusDisplay() {
         statusIndicator.style.background = "#ff453a"; // Red
         statusText.textContent = "Disconnected (No Key)";
     }
+    // Also refresh usage bar on status update
+    updateAPIUsageBar();
 }
 
 function initGeminiEngine() {
@@ -12849,6 +12961,7 @@ function initGeminiEngine() {
             return res.json();
         })
         .then(data => {
+            trackGeminiAPICall();
             if (btnTest) {
                 btnTest.disabled = false;
                 btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
@@ -13281,6 +13394,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
         return res.json();
     })
     .then(data => {
+        trackGeminiAPICall();
         const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         try {
             const parsed = JSON.parse(responseText.trim());
@@ -13368,6 +13482,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
         return res.json();
     })
     .then(data => {
+        trackGeminiAPICall();
         const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         try {
             const parsed = JSON.parse(responseText.trim());
@@ -13514,6 +13629,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
         return res.json();
     })
     .then(data => {
+        trackGeminiAPICall();
         const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         try {
             const parsed = JSON.parse(responseText.trim());

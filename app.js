@@ -12437,8 +12437,8 @@ function initGeminiEngine() {
         btnTest.disabled = true;
         btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
 
-        // Query Gemini 1.5 Flash using direct REST fetch
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyVal}`, {
+        // Query Gemini 2.5 Flash using direct REST fetch
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyVal}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -12492,7 +12492,7 @@ Target category: "${category}"
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyVal}`, {
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyVal}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

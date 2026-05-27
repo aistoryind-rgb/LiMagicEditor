@@ -13112,6 +13112,92 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
     });
 }
 
+function getGeminiBugTriageSuggestion(rawText, expectedText, category, screenshotBase64, callback) {
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    if (!keyVal) {
+        callback(null);
+        return;
+    }
+
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const dbContext = getDatabaseMatchesContext(rawText);
+    const policyContext = getPolicyMatchesContext(rawText);
+    const fullPolicyContext = getCompletePolicyContext();
+    
+    let imagePart = null;
+    if (screenshotBase64) {
+        let cleanBase64 = screenshotBase64;
+        let mimeType = "image/png";
+        if (screenshotBase64.includes(",")) {
+            mimeType = screenshotBase64.split(",")[0].split(":")[1].split(";")[0];
+            cleanBase64 = screenshotBase64.split(",")[1];
+        }
+        imagePart = {
+            inlineData: {
+                mimeType: mimeType,
+                data: cleanBase64
+            }
+        };
+    }
+
+    const promptText = `You are the chief automated editor and bug resolution system for LifeInvader.
+We have a bug report from a user claiming that their advertisement was falsely rejected or formatted incorrectly.
+
+Bug Report Details:
+- Raw Ad Input: "${rawText}"
+- Target/Correct Category: "${category}"
+${expectedText ? `- Expected Output (User's desired fix/claim): "${expectedText}"` : ""}
+
+Task:
+1. Examine the provided screenshot (if available) and the raw input text to determine the formatting error.
+2. Analyze the LifeInvader Official Policy Manual reference below to find the correct spelling, terminology, and syntax rules.
+3. Automatically generate the exact, fully corrected advertisement text.
+4. Explain the reason for the correction (e.g. "Spelled Annis Silvia correctly", "Formatted price Negotiable").
+
+=== POLICY MANUAL REFERENCE ===
+${fullPolicyContext}
+==============================
+
+${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
+
+Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
+
+    const parts = [{ text: promptText }];
+    if (imagePart) {
+        parts.push(imagePart);
+    }
+
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ parts: parts }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
+    })
+    .then(data => {
+        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        try {
+            const parsed = JSON.parse(responseText.trim());
+            if (parsed && parsed.text) {
+                callback(parsed);
+            } else {
+                callback(null);
+            }
+        } catch (e) {
+            callback({ text: responseText.trim(), reason: "AI bug resolution suggestion" });
+        }
+    })
+    .catch(err => {
+        console.error("Gemini Bug Triage Suggestion Error:", err);
+        callback(null);
+    });
+}
+
 function runGeminiCopilotTurn(report, category, userMessageText, callback) {
     const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (!keyVal) {
@@ -13371,6 +13457,42 @@ function renderTriageCards(reports, container) {
             }
             const isPassed = liveFixed.status === "passed";
             lastPreviewText = liveFixed.text;
+
+            if (report.aiProposal) {
+                card.style.border = "1px solid rgba(167, 139, 250, 0.4)";
+                card.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.08)";
+            } else {
+                card.style.border = "1px solid rgba(255, 255, 255, 0.06)";
+                card.style.boxShadow = "";
+            }
+
+            let aiProposedFixHtml = "";
+            if (report.aiProposal) {
+                const spellingListText = report.aiProposal.spellingList ? `<b>Generated Spelling Rules:</b> ${report.aiProposal.spellingList}` : "";
+                aiProposedFixHtml = `
+                    <!-- Gemini Auto-Triage Suggestion Banner -->
+                    <div class="ai-proposed-fix-banner" style="padding: 10px; border-radius: 8px; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-size: 11.5px; margin-top: 6px; text-align: left; box-shadow: inset 0 0 10px rgba(167, 139, 250, 0.05);">
+                        <div style="font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <i class="fa-solid fa-sparkles"></i> AI Proposed Fix (Pending Admin Review)
+                        </div>
+                        <div style="font-weight: 600; font-family: var(--font-mono, monospace); color: #c4b5fd;">"${report.aiProposal.text}"</div>
+                        <div style="font-size: 9.5px; opacity: 0.8; margin-top: 4px;"><b>AI Logic:</b> ${report.aiProposal.reason || "Auto-detected correction"}</div>
+                        ${spellingListText ? `<div style="font-size: 9.5px; opacity: 0.8; margin-top: 2px; font-family: var(--font-mono, monospace); color: #a78bfa;">${spellingListText}</div>` : ""}
+                        <div style="font-size: 9px; color: var(--text-muted); opacity: 0.7; margin-top: 6px; border-top: 1px dashed rgba(167, 139, 250, 0.15); padding-top: 6px; display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span><i class="fa-regular fa-paper-plane"></i> Submitted: <span>${report.timestamp || "Unknown"}</span></span>
+                            <span><i class="fa-solid fa-robot"></i> AI Proposed: <span>${report.aiProposal.timeFixed}</span></span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const confirmBtnStyle = report.aiProposal
+                ? "flex: 1; background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(167, 139, 250, 0.1)); border: 1px solid rgba(167, 139, 250, 0.45); color: #a78bfa; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px; box-shadow: 0 0 12px rgba(167,139,250,0.15);"
+                : "flex: 1; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.06)); border: 1px solid rgba(48,209,88,0.3); color: #30d158; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;";
+            
+            const confirmBtnText = report.aiProposal
+                ? `<i class="fa-solid fa-sparkles"></i> Confirm AI Fix`
+                : `<i class="fa-solid fa-square-check"></i> Confirm`;
             
             // Side-by-side dark boxes layout
             const diffHtml = `
@@ -13443,6 +13565,8 @@ function renderTriageCards(reports, container) {
                 <!-- Side-by-side Raw vs Fixed Output -->
                 ${diffHtml}
                 
+                ${aiProposedFixHtml}
+                
                 <!-- Manual Training Panel -->
                 <div class="manual-train-panel" style="display: ${report.manualPanelOpen ? "flex" : "none"}; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; flex-direction: column; gap: 10px; margin-top: 4px; transition: all 0.3s ease;">
                     <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-pen-to-square"></i> Manual Training Override</div>
@@ -13505,10 +13629,8 @@ function renderTriageCards(reports, container) {
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
                     <!-- Row 1: Resolution -->
                     <div style="display: flex; gap: 8px;">
-                        <button type="button" class="btn-triage-confirm" style="
-                            flex: 1; background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.06)); border: 1px solid rgba(48,209,88,0.3); color: #30d158; padding: 9px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;
-                        ">
-                            <i class="fa-solid fa-square-check"></i> Confirm
+                        <button type="button" class="btn-triage-confirm" style="${confirmBtnStyle}">
+                            ${confirmBtnText}
                         </button>
                         
                         <button type="button" class="btn-triage-ignore" style="
@@ -13884,74 +14006,52 @@ function renderTriageCards(reports, container) {
             }
         }
         
-        // Trigger Async Suggestion (Gemini or Fuzzy Fallback)
+        // Trigger Async Suggestion (Gemini Auto-Triage or Fuzzy Fallback)
         setTimeout(() => {
-            const geminiContainer = card.querySelector(".gemini-suggestion-container");
-            if (!geminiContainer) return;
-            
             const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
             if (localKey) {
-                getGeminiSparkSuggestion(report.rawInput, currentCategory, (suggestion) => {
+                getGeminiBugTriageSuggestion(report.rawInput, report.expectedOutput, currentCategory, report.screenshotBase64 || null, (suggestion) => {
                     if (suggestion && suggestion.text) {
-                        geminiContainer.style.display = "block";
-                        geminiContainer.innerHTML = `
-                            <div style="background: rgba(167, 139, 250, 0.05); border: 1px solid rgba(167, 139, 250, 0.25); border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
-                                <div style="flex: 1; text-align: left;">
-                                    <div style="font-size: 9px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                                        <i class="fa-solid fa-sparkles"></i> Gemini Spark Suggestion
-                                    </div>
-                                    <div style="font-size: 11.5px; color: rgba(255,255,255,0.9); margin-top: 4px; font-family: var(--font-mono, monospace); font-weight: 600;">
-                                        "${suggestion.text}"
-                                    </div>
-                                    ${suggestion.reason ? `<div style="font-size: 9.5px; color: var(--text-muted); margin-top: 2px;">Reason: ${suggestion.reason}</div>` : ""}
-                                </div>
-                                <button type="button" class="btn-preset btn-apply-gemini" style="padding: 6px 12px; font-size: 10.5px; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-weight: 700; border-radius: 4px; cursor: pointer; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin: 0; white-space: nowrap;">Apply</button>
-                            </div>
-                        `;
+                        const tempSpelling = {};
+                        learnFromSimilarExample(report.rawInput, suggestion.text, currentCategory, tempSpelling);
                         
-                        const applyBtn = geminiContainer.querySelector(".btn-apply-gemini");
-                        if (applyBtn) {
-                            applyBtn.addEventListener("click", () => {
-                                report.manualOverrideText = suggestion.text;
-                                report.trainedMethod = "Trained from Gemini Spark";
-                                updateCardBody();
-                                showCustomNotification("Gemini Spark suggestion applied!", "success");
-                            });
-                        }
+                        const spellingList = Object.entries(tempSpelling)
+                            .map(([wrong, right]) => `"${wrong}" → "${right}"`)
+                            .join(", ");
+
+                        report.aiProposal = {
+                            text: suggestion.text,
+                            reason: suggestion.reason || "Auto-detected correction",
+                            spellingList: spellingList,
+                            timeFixed: new Date().toLocaleTimeString()
+                        };
+
+                        // Auto-apply proposed suggestion to the card preview
+                        report.manualOverrideText = suggestion.text;
+                        report.trainedMethod = "Trained via Gemini Spark (Pending Review)";
+                        Object.assign(report.stagedSpelling, tempSpelling);
+
+                        updateCardBody();
                     }
                 });
             } else {
                 // Search local translations for similarity
                 const bestLocalMatch = findLocalFuzzyMatch(report.rawInput);
                 if (bestLocalMatch) {
-                    geminiContainer.style.display = "block";
-                    geminiContainer.innerHTML = `
-                        <div style="background: rgba(48, 209, 88, 0.05); border: 1px solid rgba(48, 209, 88, 0.25); border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
-                            <div style="flex: 1; text-align: left;">
-                                <div style="font-size: 9px; font-weight: 700; color: #30d158; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                                    <i class="fa-solid fa-clock-rotate-left"></i> Fuzzy History Match (${bestLocalMatch.score}% similarity)
-                                </div>
-                                <div style="font-size: 11.5px; color: rgba(255,255,255,0.9); margin-top: 4px; font-family: var(--font-mono, monospace); font-weight: 600;">
-                                    "${bestLocalMatch.text}"
-                                </div>
-                                <div style="font-size: 9.5px; color: var(--text-muted); margin-top: 2px; word-break: break-all;">Matched from trained: "${bestLocalMatch.rawMatched}"</div>
-                            </div>
-                            <button type="button" class="btn-preset btn-apply-local-fuzzy" style="padding: 6px 12px; font-size: 10.5px; background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.3); color: #30d158; font-weight: 700; border-radius: 4px; cursor: pointer; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin: 0; white-space: nowrap;">Apply</button>
-                        </div>
-                    `;
+                    report.aiProposal = {
+                        text: bestLocalMatch.text,
+                        reason: `Fuzzy history match (${bestLocalMatch.score}% similarity) matching trained raw: "${bestLocalMatch.rawMatched}"`,
+                        spellingList: "",
+                        timeFixed: new Date().toLocaleTimeString()
+                    };
+
+                    report.manualOverrideText = bestLocalMatch.text;
+                    report.trainedMethod = "Trained automatically (Fuzzy Match - Pending Review)";
                     
-                    const applyFuzzyBtn = geminiContainer.querySelector(".btn-apply-local-fuzzy");
-                    if (applyFuzzyBtn) {
-                        applyFuzzyBtn.addEventListener("click", () => {
-                            report.manualOverrideText = bestLocalMatch.text;
-                            report.trainedMethod = "Trained automatically (Fuzzy Match)";
-                            updateCardBody();
-                            showCustomNotification("History match suggestion applied!", "success");
-                        });
-                    }
+                    updateCardBody();
                 }
             }
-        }, 100);
+        }, 150);
 
         // Initial build
         updateCardBody();

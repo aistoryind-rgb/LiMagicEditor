@@ -1359,6 +1359,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initAdProcessing();
     initFloatingClipboard();
     initCustomData();
+    renderCustomTranslations();
     initAdminPanel();
     initPolicyBook();
     initPresetButtons();
@@ -10426,8 +10427,33 @@ function renderCustomTranslations() {
         raw.toLowerCase().includes(query) || corr.toLowerCase().includes(query)
     ) : entries;
 
+    const isAuthorized = sessionStorage.getItem("li_admin_authenticated") === "true";
+    
+    // Show/hide Clear All button
+    const btnClearAllTranslations = document.getElementById("btn-admin-clear-all-translations");
+    if (btnClearAllTranslations) {
+        btnClearAllTranslations.style.display = isAuthorized ? "" : "none";
+    }
+
+    // Adjust table headers
+    const thRaw = document.getElementById("th-translations-raw");
+    const thCorr = document.getElementById("th-translations-corr");
+    const thAction = document.getElementById("th-translations-action");
+    if (thRaw && thCorr && thAction) {
+        if (isAuthorized) {
+            thRaw.style.width = "45%";
+            thCorr.style.width = "45%";
+            thAction.style.display = "";
+        } else {
+            thRaw.style.width = "50%";
+            thCorr.style.width = "50%";
+            thAction.style.display = "none";
+        }
+    }
+
     if (filteredEntries.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 20px;">${query ? 'No matching trained ads found.' : 'No custom full ad translations trained yet.'}</td></tr>`;
+        const colspan = isAuthorized ? 3 : 2;
+        tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--text-secondary); padding: 20px;">${query ? 'No matching trained ads found.' : 'No custom full ad translations trained yet.'}</td></tr>`;
         return;
     }
 
@@ -10458,40 +10484,42 @@ function renderCustomTranslations() {
         tdCorr.textContent = corr;
         tr.appendChild(tdCorr);
 
-        const tdAction = document.createElement("td");
-        tdAction.style.textAlign = "center";
-        tdAction.style.verticalAlign = "top";
-        tdAction.style.padding = "10px";
-        
-        const btnDel = document.createElement("button");
-        btnDel.type = "button";
-        btnDel.className = "btn-preset";
-        btnDel.style.padding = "4px 8px";
-        btnDel.style.fontSize = "10px";
-        btnDel.style.background = "rgba(255, 59, 48, 0.1)";
-        btnDel.style.color = "var(--color-primary)";
-        btnDel.style.border = "1px solid rgba(255, 59, 48, 0.2)";
-        btnDel.innerHTML = `<i class="fa-solid fa-trash"></i>`;
-        
-        btnDel.addEventListener("click", () => {
-            showCustomConfirmDialog(
-                `Delete translation mapping for:\n\nOriginal: "${raw}"\n\nCorrected: "${corr}"?`,
-                () => {
-                    delete customTranslations[raw];
-                    localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
-                    saveCustomDataToBackend();
-                    renderCustomTranslations();
-                    if (typeof processAd === "function") processAd();
-                    showCustomNotification("Translation mapping deleted.", "success");
-                },
-                null,
-                "Delete Mapping",
-                true
-            );
-        });
-        
-        tdAction.appendChild(btnDel);
-        tr.appendChild(tdAction);
+        if (isAuthorized) {
+            const tdAction = document.createElement("td");
+            tdAction.style.textAlign = "center";
+            tdAction.style.verticalAlign = "top";
+            tdAction.style.padding = "10px";
+            
+            const btnDel = document.createElement("button");
+            btnDel.type = "button";
+            btnDel.className = "btn-preset";
+            btnDel.style.padding = "4px 8px";
+            btnDel.style.fontSize = "10px";
+            btnDel.style.background = "rgba(255, 59, 48, 0.1)";
+            btnDel.style.color = "var(--color-primary)";
+            btnDel.style.border = "1px solid rgba(255, 59, 48, 0.2)";
+            btnDel.innerHTML = `<i class="fa-solid fa-trash"></i>`;
+            
+            btnDel.addEventListener("click", () => {
+                showCustomConfirmDialog(
+                    `Delete translation mapping for:\n\nOriginal: "${raw}"\n\nCorrected: "${corr}"?`,
+                    () => {
+                        delete customTranslations[raw];
+                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                        saveCustomDataToBackend();
+                        renderCustomTranslations();
+                        if (typeof processAd === "function") processAd();
+                        showCustomNotification("Translation mapping deleted.", "success");
+                    },
+                    null,
+                    "Delete Mapping",
+                    true
+                );
+            });
+            
+            tdAction.appendChild(btnDel);
+            tr.appendChild(tdAction);
+        }
 
         tbody.appendChild(tr);
     }

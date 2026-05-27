@@ -366,6 +366,9 @@
                     <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
                         <i class="fa-solid fa-user-shield"></i> Admin Panel
                     </button>
+                    <button class="tab-btn" data-tab="tab-translations" id="tab-btn-translations">
+                        <i class="fa-solid fa-square-check"></i> Fixed Bug
+                    </button>
                     <button class="tab-btn" data-tab="tab-contact" id="tab-btn-contact">
                         <i class="fa-solid fa-envelope"></i> Get in Touch & Credits
                     </button>
@@ -555,9 +558,6 @@
                                 </button>
                                 <button type="button" class="admin-tab-btn" data-target="tab-triage">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> Bug Training Fix
-                                </button>
-                                <button type="button" class="admin-tab-btn" data-target="tab-translations">
-                                    <i class="fa-solid fa-square-check"></i> Fixed Bug
                                 </button>
                             </div>
 
@@ -810,40 +810,41 @@
                                 </div>
                             </div>
 
-                            <!-- Tab 8: Trained Full Ads -->
-                            <div id="tab-translations" class="admin-tab-content hide">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <h4 style="margin: 0; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Fixed Bug Mappings</h4>
-                                    <button type="button" id="btn-admin-clear-all-translations" class="btn-action glow-red" style="padding: 4px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; border-radius: 4px; width: auto; min-width: 160px;">
-                                        <i class="fa-solid fa-trash-can"></i> Clear All Mappings
-                                    </button>
-                                </div>
-                                <p class="section-desc">These are exact raw-to-corrected ad translation mappings created when you confirm manual corrections in triage. When an exact match is found, the correction is applied automatically.</p>
-                                
-                                <!-- Search Filter for Translations -->
-                                <div style="margin-top: 15px; margin-bottom: 15px; width: 100%; display: flex; gap: 10px; align-items: center;">
-                                    <div style="position: relative; flex: 1;">
-                                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 12px;"></i>
-                                        <input type="text" id="input-translations-search" placeholder="Search raw or corrected ads..." style="width: 100%; padding: 8px 10px 8px 30px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); color: var(--text-primary); font-size: 12px; font-family: var(--font-heading);">
-                                    </div>
-                                    <div id="translations-count-badge" class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border-color: rgba(255,255,255,0.1); font-size: 11px; padding: 6px 12px;">Total: 0</div>
-                                </div>
+                        </div>
+                    </div>
 
-                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
-                                    <table class="leaders-table" style="margin: 0; table-layout: fixed; width: 100%;">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 45%;">Raw Ad (Input)</th>
-                                                <th style="width: 45%;">Corrected Ad (Output)</th>
-                                                <th style="width: 10%; text-align: center;">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="admin-translations-list">
-                                            <!-- Dynamic list of custom translation mappings -->
-                                        </tbody>
-                                    </table>
-                                </div>
+                    <!-- Tab 8: Trained Full Ads -->
+                    <div class="tab-content" id="tab-translations">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h4 style="margin: 0; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Fixed Bug Mappings</h4>
+                            <button type="button" id="btn-admin-clear-all-translations" class="btn-action glow-red" style="padding: 4px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; border-radius: 4px; width: auto; min-width: 160px;">
+                                <i class="fa-solid fa-trash-can"></i> Clear All Mappings
+                            </button>
+                        </div>
+                        <p class="section-desc">These are exact raw-to-corrected ad translation mappings created when you confirm manual corrections in triage. When an exact match is found, the correction is applied automatically.</p>
+                        
+                        <!-- Search Filter for Translations -->
+                        <div style="margin-top: 15px; margin-bottom: 15px; width: 100%; display: flex; gap: 10px; align-items: center;">
+                            <div style="position: relative; flex: 1;">
+                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 12px;"></i>
+                                <input type="text" id="input-translations-search" placeholder="Search raw or corrected ads..." style="width: 100%; padding: 8px 10px 8px 30px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); color: var(--text-primary); font-size: 12px; font-family: var(--font-heading);">
                             </div>
+                            <div id="translations-count-badge" class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border-color: rgba(255,255,255,0.1); font-size: 11px; padding: 6px 12px;">Total: 0</div>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                            <table class="leaders-table" style="margin: 0; table-layout: fixed; width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th id="th-translations-raw" style="width: 45%;">Raw Ad (Input)</th>
+                                        <th id="th-translations-corr" style="width: 45%;">Corrected Ad (Output)</th>
+                                        <th id="th-translations-action" style="width: 10%; text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-translations-list">
+                                    <!-- Dynamic list of custom translation mappings -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

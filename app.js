@@ -2605,7 +2605,7 @@ function initAdProcessing() {
 
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
     if (btnGeminiAssist) {
-        btnGeminiAssist.addEventListener("click", () => {
+        setupHoldToTriggerButton(btnGeminiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
             triggerLiveGeminiAssist();
         });
     }
@@ -2643,11 +2643,11 @@ function triggerLiveGeminiAssist() {
     getGeminiSparkSuggestion(rawText, category, (suggestion) => {
         if (mainBtn) {
             mainBtn.disabled = false;
-            mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Gemini Assist`;
+            mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
         }
         if (pipBtn) {
             pipBtn.disabled = false;
-            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist`;
+            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
         }
 
         if (suggestion && suggestion.text) {
@@ -2693,8 +2693,8 @@ function runAutoAIEngine(rawText) {
     if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Auto-AI...`;
 
     getGeminiSparkSuggestion(rawText, category, (suggestion) => {
-        if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Gemini Assist`;
-        if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist`;
+        if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+        if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
 
         const latestRaw = document.getElementById("raw-ad").value.trim();
         if (latestRaw !== rawText) return; // User changed text, ignore stale result
@@ -7173,7 +7173,7 @@ function initFloatingClipboard() {
                             </div>
                             <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 6px;">
                                 <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1.2;"><i class="fa-solid fa-copy"></i> Copy</button>
-                                <button id="pip-btn-ai-assist" class="pip-uniform-btn" style="flex: 1; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist</button>
+                                <button id="pip-btn-ai-assist" class="pip-uniform-btn" style="flex: 1; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa; display: none;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Spark</button>
                                 <div id="pip-category-badge" class="pip-category-badge">—</div>
                                 <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Bug</button>
                             </div>
@@ -7965,10 +7965,11 @@ function initFloatingClipboard() {
 
             const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
             if (pipBtnAiAssist) {
-                pipBtnAiAssist.addEventListener("click", () => {
+                setupHoldToTriggerButton(pipBtnAiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
                     triggerLiveGeminiAssist();
                 });
             }
+            updateAIAssistButtonsVisibility();
 
             // Listen for changes in the main window to update PiP display
             const mainObserver = new MutationObserver(() => {
@@ -9339,6 +9340,7 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
 }
 
 function applyAdminRolePermissions() {
+    updateAIAssistButtonsVisibility();
     const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
     
     // Ensure backup tab button is visible
@@ -12882,6 +12884,105 @@ function updateAIGeminiStatusDisplay() {
     updateAPIUsageBar();
 }
 
+function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
+    if (!btn) return;
+    
+    let holdTimer = null;
+    let progressInterval = null;
+    let startTime = null;
+    let isTriggered = false;
+    const holdDuration = 2000; // 2 seconds
+    
+    const resetState = () => {
+        if (isTriggered) return;
+        
+        if (holdTimer) clearTimeout(holdTimer);
+        if (progressInterval) clearInterval(progressInterval);
+        holdTimer = null;
+        progressInterval = null;
+        startTime = null;
+        
+        btn.innerHTML = originalHtml;
+        btn.style.background = ""; 
+        btn.style.boxShadow = "";
+    };
+
+    const startHolding = (e) => {
+        if (e.type.startsWith("mouse") && e.button !== 0) return;
+        if (btn.disabled) return;
+        
+        e.preventDefault();
+        isTriggered = false;
+        startTime = Date.now();
+        btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
+        
+        const updateProgress = () => {
+            const elapsed = Date.now() - startTime;
+            const pct = Math.min((elapsed / holdDuration) * 100, 100);
+            const remainingSecs = Math.max(((holdDuration - elapsed) / 1000), 0).toFixed(1);
+            
+            btn.style.background = `linear-gradient(90deg, rgba(167, 139, 250, 0.4) ${pct}%, rgba(167, 139, 250, 0.15) ${pct}%)`;
+            btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #a78bfa;"></i> Hold ${remainingSecs}s`;
+            
+            if (pct >= 100) {
+                clearInterval(progressInterval);
+            }
+        };
+        
+        updateProgress();
+        progressInterval = setInterval(updateProgress, 50);
+        
+        holdTimer = setTimeout(() => {
+            isTriggered = true;
+            if (progressInterval) clearInterval(progressInterval);
+            progressInterval = null;
+            holdTimer = null;
+            
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Triggered!`;
+            btn.style.background = "rgba(48, 209, 88, 0.2)";
+            btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
+            
+            setTimeout(() => {
+                btn.style.background = "";
+                btn.style.boxShadow = "";
+                onTriggerComplete();
+                setTimeout(() => {
+                    isTriggered = false;
+                }, 1000);
+            }, 300);
+        }, holdDuration);
+    };
+    
+    btn.addEventListener("mousedown", startHolding);
+    btn.addEventListener("touchstart", startHolding, { passive: false });
+    
+    btn.addEventListener("mouseup", resetState);
+    btn.addEventListener("mouseleave", resetState);
+    btn.addEventListener("touchend", resetState);
+    btn.addEventListener("touchcancel", resetState);
+}
+
+function updateAIAssistButtonsVisibility() {
+    const isAdmin = sessionStorage.getItem("li_admin_authenticated") === "true";
+    const btnGeminiAssist = document.getElementById("btn-gemini-assist");
+    const btnAutoToggle = document.getElementById("btn-ai-auto-toggle");
+    
+    if (btnGeminiAssist) {
+        btnGeminiAssist.style.display = isAdmin ? "inline-flex" : "none";
+    }
+    if (btnAutoToggle) {
+        btnAutoToggle.style.display = isAdmin ? "inline-flex" : "none";
+    }
+
+    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
+        const pipBtnAiAssist = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
+        if (pipBtnAiAssist) {
+            pipBtnAiAssist.style.display = isAdmin ? "inline-flex" : "none";
+        }
+    }
+}
+
+
 function initGeminiEngine() {
     // ── Wire Admin Password Authentication Lock Portal button ──
     const unlockBtn = document.getElementById("btn-ai-unlock-login");
@@ -13151,6 +13252,7 @@ function initGeminiEngine() {
     }
     refreshAIAssistantTabVisibility();
     refreshBugTriageTabVisibility();
+    updateAIAssistButtonsVisibility();
 }
 
 function getDatabaseMatchesContext(rawText) {

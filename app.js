@@ -8008,6 +8008,7 @@ function initAccessGate() {
                         if (panelContent) panelContent.classList.remove("hide");
                         applyAdminRolePermissions();
                         renderCustomSpelling();
+                        renderCustomTranslations();
                         renderCustomTemplates();
                         refreshMainHistory();
                         loadAndRenderAccessRequests(null, getOrCreateClientUuid(), false);
@@ -8839,6 +8840,7 @@ function syncCustomDataFromBackend() {
             if (changed) {
                 if (sessionStorage.getItem("li_admin_authenticated") === "true") {
                     renderCustomSpelling();
+                    renderCustomTranslations();
                     renderCustomTemplates();
                 }
                 if (typeof processAd === "function") {
@@ -9260,6 +9262,7 @@ function initAdminPanel() {
         const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
         applyAdminRolePermissions();
         renderCustomSpelling();
+        renderCustomTranslations();
         renderCustomTemplates();
         refreshMainHistory();
         const storedPasscode = sessionStorage.getItem("li_admin_passcode");
@@ -9281,6 +9284,7 @@ function initAdminPanel() {
             if (panelContent) panelContent.classList.remove("hide");
             applyAdminRolePermissions();
             renderCustomSpelling();
+            renderCustomTranslations();
             renderCustomTemplates();
             refreshMainHistory();
             loadAndRenderAccessRequests(password, null, true);
@@ -9771,6 +9775,130 @@ function initAdminPanel() {
         btnClearAllSpelling.addEventListener("touchend", spCancelHold);
         btnClearAllSpelling.addEventListener("touchcancel", spCancelHold);
         btnClearAllSpelling.addEventListener("click", (e) => {
+            e.preventDefault();
+        });
+    }
+
+    // --- Search filter for translations list ---
+    const inputTransSearch = document.getElementById("input-translations-search");
+    if (inputTransSearch) {
+        inputTransSearch.addEventListener("input", () => {
+            renderCustomTranslations();
+        });
+    }
+
+    // --- Clear ALL Custom Translations (hold-to-confirm) ---
+    const btnClearAllTranslations = document.getElementById("btn-admin-clear-all-translations");
+    if (btnClearAllTranslations) {
+        let trHoldInterval = null;
+        const trHoldDuration = 3000;
+        let trElapsed = 0;
+        let trIsHolding = false;
+        const trOriginalHtml = `<i class="fa-solid fa-trash-can"></i> Clear All Mappings`;
+
+        const trUpdateProgress = (pct) => {
+            const remaining = ((trHoldDuration - trElapsed) / 1000).toFixed(1);
+            const progressBg = `linear-gradient(90deg, rgba(255, 59, 48, 0.45) ${pct}%, rgba(22, 22, 28, 0.9) ${pct}%)`;
+            btnClearAllTranslations.style.background = progressBg;
+            if (pct < 100) {
+                btnClearAllTranslations.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin"></i> Hold (${remaining}s)...`;
+            }
+        };
+
+        const trStartHold = (e) => {
+            if (btnClearAllTranslations.disabled || trIsHolding) return;
+            const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+            if (isAssistant) return;
+
+            trIsHolding = true;
+            trElapsed = 0;
+            e.preventDefault();
+
+            btnClearAllTranslations.style.transition = "none";
+            btnClearAllTranslations.style.transform = "scale(0.97)";
+            trUpdateProgress(0);
+
+            trHoldInterval = setInterval(() => {
+                trElapsed += 100;
+                const pct = Math.min((trElapsed / trHoldDuration) * 100, 100);
+                trUpdateProgress(pct);
+
+                if (trElapsed >= trHoldDuration) {
+                    clearInterval(trHoldInterval);
+                    trHoldInterval = null;
+                    trIsHolding = false;
+
+                    const entryCount = Object.keys(customTranslations).length;
+                    showCustomConfirmDialog(
+                        `Are you sure you want to clear ALL ${entryCount} trained ad translation mappings? This wipes the Custom_Translations database (local + Google Sheets). Auto-translation for previous ads will be removed. This cannot be undone.`,
+                        () => {
+                            customTranslations = {};
+                            localStorage.removeItem("li_custom_translations");
+                            saveCustomDataToBackend();
+                            renderCustomTranslations();
+                            if (typeof processAd === "function") processAd();
+
+                            btnClearAllTranslations.disabled = true;
+                            btnClearAllTranslations.style.transition = "background 0.3s ease";
+                            btnClearAllTranslations.style.background = "#30d158";
+                            btnClearAllTranslations.style.borderColor = "#30d158";
+                            btnClearAllTranslations.style.boxShadow = "0 4px 20px rgba(48, 209, 88, 0.5)";
+                            btnClearAllTranslations.innerHTML = `<i class="fa-solid fa-circle-check"></i> All Cleared`;
+                            showCustomNotification(`Wiped all ${entryCount} custom translation mappings.`, "success");
+
+                            setTimeout(() => {
+                                btnClearAllTranslations.disabled = false;
+                                btnClearAllTranslations.style.background = "";
+                                btnClearAllTranslations.style.borderColor = "";
+                                btnClearAllTranslations.style.boxShadow = "";
+                                btnClearAllTranslations.innerHTML = trOriginalHtml;
+                            }, 3000);
+                        },
+                        () => {
+                            trResetButton();
+                        },
+                        "Wipe All Translations",
+                        true
+                    );
+                }
+            }, 100);
+        };
+
+        const trCancelHold = () => {
+            if (!trIsHolding) return;
+            trIsHolding = false;
+            if (trHoldInterval) {
+                clearInterval(trHoldInterval);
+                trHoldInterval = null;
+            }
+            btnClearAllTranslations.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearAllTranslations.style.transform = "";
+            btnClearAllTranslations.style.background = "";
+            btnClearAllTranslations.innerHTML = trOriginalHtml;
+        };
+
+        const trResetButton = () => {
+            btnClearAllTranslations.disabled = false;
+            btnClearAllTranslations.style.transition = "transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease";
+            btnClearAllTranslations.style.transform = "";
+            btnClearAllTranslations.style.background = "";
+            btnClearAllTranslations.style.borderColor = "";
+            btnClearAllTranslations.style.boxShadow = "";
+            btnClearAllTranslations.innerHTML = trOriginalHtml;
+        };
+
+        // Desktop Events
+        btnClearAllTranslations.addEventListener("mousedown", trStartHold);
+        btnClearAllTranslations.addEventListener("mouseup", trCancelHold);
+        btnClearAllTranslations.addEventListener("mouseleave", trCancelHold);
+
+        // Mobile / Touch Events
+        btnClearAllTranslations.addEventListener("touchstart", trStartHold, { passive: false });
+        btnClearAllTranslations.addEventListener("touchend", trCancelHold);
+        btnClearAllTranslations.addEventListener("touchcancel", trCancelHold);
+
+        // Block accidental normal click behavior
+        btnClearAllTranslations.addEventListener("click", (e) => {
             e.preventDefault();
         });
     }
@@ -10274,6 +10402,97 @@ function renderCustomSpelling() {
         tdAction.appendChild(btnDel);
         tr.appendChild(tdAction);
         
+        tbody.appendChild(tr);
+    }
+}
+
+function renderCustomTranslations() {
+    const tbody = document.getElementById("admin-translations-list");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const searchInput = document.getElementById("input-translations-search");
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    const entries = Object.entries(customTranslations);
+    
+    // Update badge count
+    const badge = document.getElementById("translations-count-badge");
+    if (badge) {
+        badge.textContent = `Total: ${entries.length}`;
+    }
+
+    const filteredEntries = query ? entries.filter(([raw, corr]) => 
+        raw.toLowerCase().includes(query) || corr.toLowerCase().includes(query)
+    ) : entries;
+
+    if (filteredEntries.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 20px;">${query ? 'No matching trained ads found.' : 'No custom full ad translations trained yet.'}</td></tr>`;
+        return;
+    }
+
+    filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
+
+    for (const [raw, corr] of filteredEntries) {
+        const tr = document.createElement("tr");
+
+        const tdRaw = document.createElement("td");
+        tdRaw.style.wordBreak = "break-word";
+        tdRaw.style.whiteSpace = "normal";
+        tdRaw.style.fontSize = "11.5px";
+        tdRaw.style.lineHeight = "1.4";
+        tdRaw.style.padding = "10px";
+        tdRaw.style.verticalAlign = "top";
+        tdRaw.style.color = "rgba(255,255,255,0.7)";
+        tdRaw.textContent = raw;
+        tr.appendChild(tdRaw);
+
+        const tdCorr = document.createElement("td");
+        tdCorr.style.wordBreak = "break-word";
+        tdCorr.style.whiteSpace = "normal";
+        tdCorr.style.fontSize = "11.5px";
+        tdCorr.style.lineHeight = "1.4";
+        tdCorr.style.padding = "10px";
+        tdCorr.style.verticalAlign = "top";
+        tdCorr.style.color = "#30d158";
+        tdCorr.textContent = corr;
+        tr.appendChild(tdCorr);
+
+        const tdAction = document.createElement("td");
+        tdAction.style.textAlign = "center";
+        tdAction.style.verticalAlign = "top";
+        tdAction.style.padding = "10px";
+        
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn-preset";
+        btnDel.style.padding = "4px 8px";
+        btnDel.style.fontSize = "10px";
+        btnDel.style.background = "rgba(255, 59, 48, 0.1)";
+        btnDel.style.color = "var(--color-primary)";
+        btnDel.style.border = "1px solid rgba(255, 59, 48, 0.2)";
+        btnDel.innerHTML = `<i class="fa-solid fa-trash"></i>`;
+        
+        btnDel.addEventListener("click", () => {
+            showCustomConfirmDialog(
+                `Delete translation mapping for:\n\nOriginal: "${raw}"\n\nCorrected: "${corr}"?`,
+                () => {
+                    delete customTranslations[raw];
+                    localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                    saveCustomDataToBackend();
+                    renderCustomTranslations();
+                    if (typeof processAd === "function") processAd();
+                    showCustomNotification("Translation mapping deleted.", "success");
+                },
+                null,
+                "Delete Mapping",
+                true
+            );
+        });
+        
+        tdAction.appendChild(btnDel);
+        tr.appendChild(tdAction);
+
         tbody.appendChild(tr);
     }
 }
@@ -12198,6 +12417,9 @@ function renderTriageCards(reports, container) {
                         saveCustomDataToBackend();
                         if (typeof renderCustomSpelling === "function") {
                             renderCustomSpelling();
+                        }
+                        if (typeof renderCustomTranslations === "function") {
+                            renderCustomTranslations();
                         }
                         // Re-process the main ad editor immediately to reflect changes in real time
                         if (typeof processAd === "function") {

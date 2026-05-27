@@ -9402,7 +9402,7 @@ function applyAdminRolePermissions() {
             inputKey.disabled = false;
             inputKey.style.opacity = "";
             inputKey.style.cursor = "";
-            const storedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            const storedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
             if (inputKey.value === "••••••••••••••••••••••••••••••••") {
                 inputKey.value = storedKey;
             }
@@ -12589,7 +12589,7 @@ function refreshAIAssistantTabVisibility() {
             if (isAssistant) {
                 inputKey.value = "••••••••••••••••••••••••••••••••";
             } else {
-                inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+                inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
             }
         }
         if (customPromptTextarea) {
@@ -12623,7 +12623,7 @@ function updateAIGeminiStatusDisplay() {
     const statusText = document.getElementById("ai-gemini-status-text");
     if (!statusIndicator || !statusText) return;
 
-    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (savedKey) {
         statusIndicator.style.background = "#30d158"; // Green
         statusText.textContent = "Active (Connected)";
@@ -12713,7 +12713,7 @@ function initGeminiEngine() {
     btnTest.addEventListener("click", () => {
         let keyVal = inputKey.value.trim();
         if (keyVal === "••••••••••••••••••••••••••••••••") {
-            keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
         }
         if (!keyVal) {
             showCustomNotification("Please paste a Gemini API Key first.", "warning");
@@ -13006,7 +13006,7 @@ function getCompletePolicyContext() {
 }
 
 function getGeminiSparkSuggestion(rawText, category, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(null);
         return;
@@ -13113,7 +13113,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
 }
 
 function getGeminiBugTriageSuggestion(rawText, expectedText, category, screenshotBase64, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(null);
         return;
@@ -13199,7 +13199,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
 }
 
 function runGeminiCopilotTurn(report, category, userMessageText, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(false, null);
         return;
@@ -13790,7 +13790,7 @@ function renderTriageCards(reports, container) {
             // ── Train via Gemini Spark Button ──
             if (trainGeminiBtn) {
                 trainGeminiBtn.addEventListener("click", () => {
-                    const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+                    const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
                     if (!localKey) {
                         showCustomNotification("Please configure a Gemini API key in the AI Assistant tab first.", "warning");
                         return;
@@ -14008,7 +14008,7 @@ function renderTriageCards(reports, container) {
         
         // Trigger Async Suggestion (Gemini Auto-Triage or Fuzzy Fallback)
         setTimeout(() => {
-            const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
             if (localKey) {
                 getGeminiBugTriageSuggestion(report.rawInput, report.expectedOutput, currentCategory, report.screenshotBase64 || null, (suggestion) => {
                     if (suggestion && suggestion.text) {

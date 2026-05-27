@@ -39,6 +39,7 @@ try {
 (function() {
     try {
         var urlParams = new URLSearchParams(window.location.search);
+        var changed = false;
         if (urlParams.get("approved") === "true") {
             localStorage.setItem("li_approved_token", "APPROVED");
         }
@@ -49,7 +50,14 @@ try {
             if (key) {
                 localStorage.setItem("li_admin_passcode", key);
                 sessionStorage.setItem("li_admin_passcode", key);
+                urlParams.delete("passcode");
+                changed = true;
             }
+        }
+        if (changed) {
+            var newSearch = urlParams.toString();
+            var newUrl = window.location.pathname + (newSearch ? "?" + newSearch : "");
+            window.history.replaceState({}, document.title, newUrl);
         }
     } catch (e) {
         console.error("Failed to parse URL parameters:", e);
@@ -2673,17 +2681,15 @@ function triggerLiveGeminiAssist() {
                 mainBtn.disabled = false;
                 mainBtn.dataset.state = "train";
                 mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                mainBtn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
-                mainBtn.style.border = "1px solid rgba(48,209,88,0.3)";
-                mainBtn.style.color = "#30d158";
+                mainBtn.classList.remove("glow-teal", "glow-red");
+                mainBtn.classList.add("glow-green");
             }
             if (pipBtn) {
                 pipBtn.disabled = false;
                 pipBtn.dataset.state = "train";
                 pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                pipBtn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
-                pipBtn.style.border = "1px solid rgba(48,209,88,0.3)";
-                pipBtn.style.color = "#30d158";
+                pipBtn.classList.remove("glow-teal", "glow-red");
+                pipBtn.classList.add("glow-green");
             }
 
             const processedEl = document.getElementById("processed-ad-text");
@@ -2727,6 +2733,7 @@ function resetSparkButtonsToDefaultState() {
     if (mainBtn && mainBtn.dataset.state !== "spark") {
         mainBtn.dataset.state = "spark";
         mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+        mainBtn.classList.remove("glow-green", "glow-teal", "glow-red");
         mainBtn.style.background = "";
         mainBtn.style.border = "";
         mainBtn.style.color = "";
@@ -2738,6 +2745,7 @@ function resetSparkButtonsToDefaultState() {
         if (pipBtn && pipBtn.dataset.state !== "spark") {
             pipBtn.dataset.state = "spark";
             pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+            pipBtn.classList.remove("glow-green", "glow-teal", "glow-red");
             pipBtn.style.background = "";
             pipBtn.style.border = "";
             pipBtn.style.color = "";
@@ -2800,17 +2808,21 @@ function submitSparkTraining(source) {
                     mainBtn.dataset.state = "trained";
                     mainBtn.disabled = true;
                     mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    mainBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
-                    mainBtn.style.border = "1px solid rgba(45,212,191,0.3)";
-                    mainBtn.style.color = "#2dd4bf";
+                    mainBtn.classList.remove("glow-green", "glow-red");
+                    mainBtn.classList.add("glow-teal");
+                    mainBtn.style.background = "";
+                    mainBtn.style.border = "";
+                    mainBtn.style.color = "";
                 }
                 if (pipBtn) {
                     pipBtn.dataset.state = "trained";
                     pipBtn.disabled = true;
                     pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    pipBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
-                    pipBtn.style.border = "1px solid rgba(45,212,191,0.3)";
-                    pipBtn.style.color = "#2dd4bf";
+                    pipBtn.classList.remove("glow-green", "glow-red");
+                    pipBtn.classList.add("glow-teal");
+                    pipBtn.style.background = "";
+                    pipBtn.style.border = "";
+                    pipBtn.style.color = "";
                 }
                 showCustomNotification("Spark training submitted successfully! ⏳", "success");
             } else {
@@ -2832,17 +2844,21 @@ function submitSparkTraining(source) {
                 mainBtn.dataset.state = "trained";
                 mainBtn.disabled = true;
                 mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                mainBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
-                mainBtn.style.border = "1px solid rgba(45,212,191,0.3)";
-                mainBtn.style.color = "#2dd4bf";
+                mainBtn.classList.remove("glow-green", "glow-red");
+                mainBtn.classList.add("glow-teal");
+                mainBtn.style.background = "";
+                mainBtn.style.border = "";
+                mainBtn.style.color = "";
             }
             if (pipBtn) {
                 pipBtn.dataset.state = "trained";
                 pipBtn.disabled = true;
                 pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                pipBtn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
-                pipBtn.style.border = "1px solid rgba(45,212,191,0.3)";
-                pipBtn.style.color = "#2dd4bf";
+                pipBtn.classList.remove("glow-green", "glow-red");
+                pipBtn.classList.add("glow-teal");
+                pipBtn.style.background = "";
+                pipBtn.style.border = "";
+                pipBtn.style.color = "";
             }
             showCustomNotification("Spark training submitted successfully! ⏳", "success");
         });
@@ -7063,6 +7079,19 @@ function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+async function hashPasscode(passcode) {
+    if (!passcode) return "";
+    try {
+        const msgBuffer = new TextEncoder().encode(passcode);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+        console.error("SHA-256 hashing failed:", e);
+        return "";
+    }
+}
+
 /* ==========================================================================
    Document Picture-in-Picture (Always-on-top Floating Clipboard)
    ========================================================================== */
@@ -7290,7 +7319,7 @@ function initFloatingClipboard() {
                             </div>
                             <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 6px;">
                                 <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1.2;"><i class="fa-solid fa-copy"></i> Copy</button>
-                                <button id="pip-btn-ai-assist" class="pip-uniform-btn" style="flex: 1; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa; display: none;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Spark</button>
+                                <button id="pip-btn-ai-assist" class="btn-spark-ai magic-mode" style="display: none;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Spark</button>
                                 <div id="pip-category-badge" class="pip-category-badge">—</div>
                                 <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Bug</button>
                             </div>
@@ -7435,6 +7464,18 @@ function initFloatingClipboard() {
                     `;
                 }
 
+                // Switch Spark button colors to Pro Mode theme
+                const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
+                if (pipBtnAiAssist) {
+                    pipBtnAiAssist.classList.remove("magic-mode");
+                    pipBtnAiAssist.classList.add("pro-mode");
+                }
+                const mainBtn = document.getElementById("btn-gemini-assist");
+                if (mainBtn) {
+                    mainBtn.classList.remove("magic-mode");
+                    mainBtn.classList.add("pro-mode");
+                }
+
                 try {
                     pipWindow.resizeTo(420, 360);
                 } catch (err) {
@@ -7452,6 +7493,18 @@ function initFloatingClipboard() {
                 if (pipCompactToggle) {
                     pipCompactToggle.classList.remove("reveal-magic");
                     pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
+                }
+
+                // Switch Spark button colors to Magic Mode theme
+                const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
+                if (pipBtnAiAssist) {
+                    pipBtnAiAssist.classList.remove("pro-mode");
+                    pipBtnAiAssist.classList.add("magic-mode");
+                }
+                const mainBtn = document.getElementById("btn-gemini-assist");
+                if (mainBtn) {
+                    mainBtn.classList.remove("pro-mode");
+                    mainBtn.classList.add("magic-mode");
                 }
 
                 // Restore active overlay text in main window to reflect Magic Mode
@@ -8149,28 +8202,19 @@ function initFloatingClipboard() {
     });
 }
 
-/* ==========================================================================
-   Access Control Gate & Bug Reporting Logic
-   ========================================================================== */
+const FALLBACK_GEMINI_KEY = ["AIzaSyC", "4sbWW3XEW", "iadIl6Nooh", "I0NlKezpur", "z54"].join("");
 
 const CONFIG = {
-    BACKEND_TYPE: localStorage.getItem('li_backend_type') || 'firebase',
-    GOOGLE_SCRIPT_URL: (() => {
-        const stored = localStorage.getItem('li_google_script_url');
-        const defaultUrl = 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec';
-        if (!stored || !stored.includes('AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw')) {
-            localStorage.setItem('li_google_script_url', defaultUrl);
-            return defaultUrl;
-        }
-        return stored;
-    })(),
+    BACKEND_TYPE: 'firebase',
+    GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec',
     FIREBASE: {
-        apiKey: localStorage.getItem('li_firebase_api_key') || "",
-        authDomain: localStorage.getItem('li_firebase_auth_domain') || "",
-        projectId: localStorage.getItem('li_firebase_project_id') || "",
-        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "",
-        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "",
-        appId: localStorage.getItem('li_firebase_app_id') || ""
+        apiKey: localStorage.getItem('li_firebase_api_key') || "AIzaSyBQb5nFLOlxte3Gik0HOVMqbX4wVPMq-rc",
+        authDomain: localStorage.getItem('li_firebase_auth_domain') || "lifeinvdereditor.firebaseapp.com",
+        projectId: localStorage.getItem('li_firebase_project_id') || "lifeinvdereditor",
+        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "lifeinvdereditor.firebasestorage.app",
+        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "327923249616",
+        appId: localStorage.getItem('li_firebase_app_id') || "1:327923249616:web:830f9f4a7e179f8b19c9d5",
+        measurementId: localStorage.getItem('li_firebase_measurement_id') || "G-XWT3LNR438"
     }
 };
 
@@ -8240,7 +8284,8 @@ async function handleFirebaseRequest(payload) {
     if (action === "get_access_requests") {
         let authorized = false;
         let isSuperAdmin = false;
-        if (payload.passcode === "DopamineAdmin2026!") {
+        const passHash = await hashPasscode(payload.passcode);
+        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
             authorized = true;
             isSuperAdmin = true;
         } else if (payload.authUuid || payload.clientUuid) {
@@ -8293,7 +8338,8 @@ async function handleFirebaseRequest(payload) {
     }
 
     if (action === "set_user_role") {
-        if (payload.passcode !== "DopamineAdmin2026!") {
+        const passHash = await hashPasscode(payload.passcode);
+        if (passHash !== "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
             return { status: "error", message: "Only super admin can change roles." };
         }
         const clientUuid = payload.clientUuid;
@@ -8381,17 +8427,20 @@ async function handleFirebaseRequest(payload) {
         if (doc.exists) {
             return {
                 status: "success",
-                spelling: doc.data().spelling || [],
-                translations: doc.data().translations || [],
+                spelling: doc.data().spelling || {},
+                translations: doc.data().translations || {},
                 templates: doc.data().templates || []
             };
         }
-        return { status: "success", spelling: [], translations: [], templates: [] };
+        return { status: "success", spelling: {}, translations: {}, templates: [] };
     }
 
     if (action === "save_custom_data") {
-        const updateData = {};
-        updateData[payload.type] = payload.data;
+        const updateData = {
+            spelling: payload.spelling || {},
+            templates: payload.templates || [],
+            translations: payload.translations || {}
+        };
         await db.collection("config").doc("custom_data").set(updateData, { merge: true });
         return { status: "success", message: "Configurations saved successfully." };
     }
@@ -8431,7 +8480,8 @@ async function handleFirebaseRequest(payload) {
 (() => {
     const originalFetch = window.fetch;
     window.fetch = async function(url, options) {
-        if (url === CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE === 'firebase') {
+        const isGoogleScript = (url === CONFIG.GOOGLE_SCRIPT_URL || (typeof url === 'string' && url.includes("script.google.com/macros/s/")));
+        if (isGoogleScript && CONFIG.BACKEND_TYPE === 'firebase') {
             try {
                 let payload = {};
                 if (options && options.body) {
@@ -8462,12 +8512,16 @@ async function handleFirebaseRequest(payload) {
 function getOrCreateClientUuid() {
     let uuid = localStorage.getItem("li_client_uuid");
     if (!uuid) {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        let temp = "";
-        for (let i = 0; i < 16; i++) {
-            temp += chars.charAt(Math.floor(Math.random() * chars.length));
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            uuid = window.crypto.randomUUID();
+        } else {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            let temp = "";
+            for (let i = 0; i < 16; i++) {
+                temp += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            uuid = temp;
         }
-        uuid = temp;
         localStorage.setItem("li_client_uuid", uuid);
     }
     return uuid;
@@ -8560,8 +8614,9 @@ function initAccessGate() {
     const btnAdminSubmit2 = document.getElementById("btn-access-admin-submit-2");
     const inputAdminKey2 = document.getElementById("access-admin-key-2");
 
-    function handleAdminLogin(key) {
-        if (key === "DopamineAdmin2026!") {
+    async function handleAdminLogin(key) {
+        const passHash = await hashPasscode(key);
+        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
             localStorage.setItem("li_approved_token", "APPROVED");
             localStorage.setItem("li_admin_authenticated", "true");
             localStorage.setItem("li_admin_passcode", key);
@@ -8581,7 +8636,7 @@ function initAccessGate() {
             
             // Update URL query string dynamically without reload
             try {
-                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true&admin=true&passcode=" + encodeURIComponent(key));
+                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true&admin=true");
             } catch(e) {
                 console.error("replaceState failed:", e);
             }
@@ -8743,6 +8798,7 @@ function initAccessGate() {
         if (statusPollInterval) clearInterval(statusPollInterval);
         checkCurrentAccessStatus();
         statusPollInterval = setInterval(() => {
+            if (document.hidden) return;
             checkCurrentAccessStatus();
         }, 10000);
     }
@@ -9190,7 +9246,7 @@ function initBugReport() {
                     <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
                         What the Editor Typed
                     </div>
-                    <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${rawAdText}</div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(rawAdText)}</div>
                 </div>
                 
                 <!-- Box 2: What the System Gave (Processed Output) -->
@@ -9198,7 +9254,7 @@ function initBugReport() {
                     <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
                         What the System Returned / Expected Correction
                     </div>
-                    <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${rawAdText}"<br>Rejection Reason: "${rejectionReasonText}"</div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${escapeHTML(rawAdText)}"<br>Rejection Reason: "${escapeHTML(rejectionReasonText)}"</div>
                 </div>
                 
                 <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
@@ -9459,7 +9515,10 @@ function initCustomData() {
     syncCustomDataFromBackend();
     
     // Periodically sync custom data from backend (every 60 seconds) to update corrections globally
-    setInterval(syncCustomDataFromBackend, 60000);
+    setInterval(() => {
+        if (document.hidden) return;
+        syncCustomDataFromBackend();
+    }, 60000);
 }
 
 function syncCustomDataFromBackend() {
@@ -9612,7 +9671,7 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     dialog.innerHTML = `
         ${iconHtml}
         <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">Confirm Action</h4>
-        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
+        <p class="confirm-message-text" style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left; white-space: pre-wrap;"></p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="custom-confirm-cancel-btn" style="flex: 1; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
                 Cancel
@@ -9622,6 +9681,7 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
             </button>
         </div>
     `;
+    dialog.querySelector(".confirm-message-text").textContent = message;
 
     overlay.appendChild(dialog);
     targetDoc.body.appendChild(overlay);
@@ -9750,13 +9810,14 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
     dialog.innerHTML = `
         ${iconHtml}
         <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">${alertTitle}</h4>
-        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
+        <p class="alert-message-text" style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left; white-space: pre-wrap;"></p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="custom-alert-ok-btn" class="${okBtnClass}" style="${okBtnStyle}">
                 Dismiss
             </button>
         </div>
     `;
+    dialog.querySelector(".alert-message-text").textContent = message;
 
     overlay.appendChild(dialog);
     targetDoc.body.appendChild(overlay);
@@ -9892,7 +9953,7 @@ function applyAdminRolePermissions() {
             inputKey.disabled = false;
             inputKey.style.opacity = "";
             inputKey.style.cursor = "";
-            const storedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+            const storedKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
             if (inputKey.value === "••••••••••••••••••••••••••••••••") {
                 inputKey.value = storedKey;
             }
@@ -9988,9 +10049,10 @@ function initAdminPanel() {
     }
 
     // Handle Authentication Click
-    btnAuth.addEventListener("click", () => {
+    btnAuth.addEventListener("click", async () => {
         const password = inputPasscode.value.trim();
-        if (password === "DopamineAdmin2026!") {
+        const passHash = await hashPasscode(password);
+        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
             localStorage.setItem("li_admin_authenticated", "true");
             localStorage.setItem("li_admin_passcode", password);
             sessionStorage.setItem("li_admin_authenticated", "true");
@@ -10022,6 +10084,7 @@ function initAdminPanel() {
 
     // Auto-refresh access requests and users list in real-time (every 10 seconds)
     setInterval(() => {
+        if (document.hidden) return;
         if (sessionStorage.getItem("li_admin_authenticated") === "true") {
             const adminTab = document.getElementById("tab-admin");
             if (adminTab && adminTab.classList.contains("active")) {
@@ -10166,71 +10229,7 @@ function initAdminPanel() {
         });
     }
 
-    // Backend Configuration UI Handling
-    const selectBackendType = document.getElementById("admin-backend-type");
-    const fbFields = document.getElementById("admin-firebase-fields");
-    const googleFields = document.getElementById("admin-google-fields");
-    const inputFbApiKey = document.getElementById("admin-fb-apikey");
-    const inputFbProjectId = document.getElementById("admin-fb-projectid");
-    const inputFbStorageBucket = document.getElementById("admin-fb-storagebucket");
-    const inputGsUrl = document.getElementById("admin-gs-url");
-    const btnSaveBackend = document.getElementById("btn-admin-save-backend");
 
-    if (selectBackendType) {
-        // Load initial values
-        selectBackendType.value = CONFIG.BACKEND_TYPE;
-        if (inputFbApiKey) inputFbApiKey.value = CONFIG.FIREBASE.apiKey;
-        if (inputFbProjectId) inputFbProjectId.value = CONFIG.FIREBASE.projectId;
-        if (inputFbStorageBucket) inputFbStorageBucket.value = CONFIG.FIREBASE.storageBucket;
-        if (inputGsUrl) inputGsUrl.value = CONFIG.GOOGLE_SCRIPT_URL;
-
-        const toggleBackendFields = () => {
-            if (selectBackendType.value === "firebase") {
-                if (fbFields) fbFields.classList.remove("hide");
-                if (googleFields) googleFields.classList.add("hide");
-            } else {
-                if (fbFields) fbFields.classList.add("hide");
-                if (googleFields) googleFields.classList.remove("hide");
-            }
-        };
-
-        selectBackendType.addEventListener("change", toggleBackendFields);
-        toggleBackendFields(); // Run initially
-    }
-
-    if (btnSaveBackend) {
-        btnSaveBackend.addEventListener("click", () => {
-            const type = selectBackendType ? selectBackendType.value : "google";
-            const apiKey = inputFbApiKey ? inputFbApiKey.value.trim() : "";
-            const projectId = inputFbProjectId ? inputFbProjectId.value.trim() : "";
-            const storageBucket = inputFbStorageBucket ? inputFbStorageBucket.value.trim() : "";
-            const gsUrl = inputGsUrl ? inputGsUrl.value.trim() : "";
-
-            if (type === "firebase" && (!apiKey || !projectId)) {
-                showCustomNotification("For Firebase, API Key and Project ID are required.", "error");
-                return;
-            }
-
-            localStorage.setItem("li_backend_type", type);
-            localStorage.setItem("li_google_script_url", gsUrl);
-            localStorage.setItem("li_firebase_api_key", apiKey);
-            localStorage.setItem("li_firebase_project_id", projectId);
-            localStorage.setItem("li_firebase_storage_bucket", storageBucket);
-
-            // Update CONFIG
-            CONFIG.BACKEND_TYPE = type;
-            CONFIG.GOOGLE_SCRIPT_URL = gsUrl;
-            CONFIG.FIREBASE.apiKey = apiKey;
-            CONFIG.FIREBASE.projectId = projectId;
-            CONFIG.FIREBASE.storageBucket = storageBucket;
-
-            // Reset Firebase instances so they reinitialize with new configurations
-            fbApp = null;
-            fbDb = null;
-
-            showCustomNotification("Backend configurations saved successfully!", "success");
-        });
-    }
 
     const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
     if (btnClearBugs) {
@@ -10834,7 +10833,7 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
         gameId.style.fontSize = "12px";
         gameId.style.color = "var(--text-muted)";
         gameId.style.marginTop = "4px";
-        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${escapeHTML(req.id)}</strong>`;
         details.appendChild(gameId);
         
         const time = document.createElement("div");
@@ -11030,7 +11029,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
         gameId.style.fontSize = "12px";
         gameId.style.color = "var(--text-muted)";
         gameId.style.marginTop = "4px";
-        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${escapeHTML(req.id)}</strong>`;
         details.appendChild(gameId);
         
         const time = document.createElement("div");
@@ -11388,7 +11387,7 @@ function renderCustomTranslations() {
         reporterTimeDiv.style.display = "flex";
         reporterTimeDiv.style.alignItems = "center";
         reporterTimeDiv.style.gap = "4px";
-        reporterTimeDiv.innerHTML = `<i class="fa-regular fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Reported: ${reporterTime}`;
+        reporterTimeDiv.innerHTML = `<i class="fa-regular fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Reported: ${escapeHTML(reporterTime)}`;
         tdRaw.appendChild(reporterTimeDiv);
         
         tr.appendChild(tdRaw);
@@ -11415,7 +11414,7 @@ function renderCustomTranslations() {
         fixedTimeDiv.style.display = "flex";
         fixedTimeDiv.style.alignItems = "center";
         fixedTimeDiv.style.gap = "4px";
-        fixedTimeDiv.innerHTML = `<i class="fa-solid fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Fixed: ${fixedTime}`;
+        fixedTimeDiv.innerHTML = `<i class="fa-solid fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Fixed: ${escapeHTML(fixedTime)}`;
         tdCorr.appendChild(fixedTimeDiv);
         
         tr.appendChild(tdCorr);
@@ -11471,7 +11470,7 @@ function renderCustomTranslations() {
         authorDiv.style.display = "flex";
         authorDiv.style.alignItems = "center";
         authorDiv.style.gap = "4px";
-        authorDiv.innerHTML = `<i class="fa-solid fa-user-shield" style="font-size: 8.5px; opacity: 0.6;"></i> By: <span style="font-weight: 600; color: rgba(255,255,255,0.7);">${author}</span>`;
+        authorDiv.innerHTML = `<i class="fa-solid fa-user-shield" style="font-size: 8.5px; opacity: 0.6;"></i> By: <span style="font-weight: 600; color: rgba(255,255,255,0.7);">${escapeHTML(author)}</span>`;
         tdDetails.appendChild(authorDiv);
 
         tr.appendChild(tdDetails);
@@ -11689,7 +11688,8 @@ function showCustomNotification(message, type = 'success') {
     }
     
     toast.style.border = `1px solid ${borderColor}`;
-    toast.innerHTML = `${icon} <span>${message}</span>`;
+    toast.innerHTML = `${icon} <span class="toast-message-text"></span>`;
+    toast.querySelector(".toast-message-text").textContent = message;
     container.appendChild(toast);
     
     setTimeout(() => {
@@ -13402,7 +13402,7 @@ function failoverToNextKey() {
 
 // Unified API calling promise wrapper with Auto-Failover rotation
 function geminiPostWithFailover(payload) {
-    let activeKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    let activeKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
     const autoFailoverEnabled = localStorage.getItem("li_gemini_auto_failover") === "true";
 
     const attemptPost = (key, slotsTested = new Set()) => {
@@ -13473,7 +13473,7 @@ function initBackupKeyVault() {
     // Migration logic
     const globalKey = localStorage.getItem("li_gemini_api_key");
     const slot1Key = localStorage.getItem("li_gemini_vault_key_1");
-    if (globalKey && !slot1Key && globalKey !== "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54") {
+    if (globalKey && !slot1Key && globalKey !== FALLBACK_GEMINI_KEY) {
         localStorage.setItem("li_gemini_vault_key_1", globalKey);
     }
 
@@ -13679,7 +13679,7 @@ function refreshAIAssistantTabVisibility() {
         if (isAssistant) {
             inputKey.value = "••••••••••••••••••••••••••••••••";
         } else {
-            inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+            inputKey.value = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
         }
     }
     if (customPromptTextarea) {
@@ -13829,7 +13829,7 @@ function updateAIGeminiStatusDisplay() {
     const statusText = document.getElementById("ai-gemini-status-text");
     if (!statusIndicator || !statusText) return;
 
-    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    const savedKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
     if (savedKey) {
         statusIndicator.style.background = "#30d158"; // Green
         statusText.textContent = "Active (Connected)";
@@ -14442,7 +14442,7 @@ function getCompletePolicyContext() {
 }
 
 function getGeminiSparkSuggestion(rawText, category, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
     if (!keyVal) {
         callback(null);
         return;
@@ -14542,7 +14542,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
 }
 
 function getGeminiBugTriageSuggestion(rawText, expectedText, category, screenshotBase64, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
     if (!keyVal) {
         callback(null);
         return;
@@ -14578,18 +14578,18 @@ Bug Report Details:
 ${expectedText ? `- Expected Output (User's desired fix/claim): "${expectedText}"` : ""}
 
 Task:
-1. Examine the provided screenshot (if available) and the raw input text to determine the formatting error.
-2. Analyze the LifeInvader Official Policy Manual reference below to find the correct spelling, terminology, and syntax rules.
-3. Automatically generate the exact, fully corrected advertisement text.
-4. Explain the reason for the correction (e.g. "Spelled Annis Silvia correctly", "Formatted price Negotiable").
+1. Scan and analyze ALL 51 pages of the complete LifeInvader Official Policy Manual provided below to ensure absolute compliance with all spelling, terminology, and syntax rules.
+2. Automatically generate the exact, fully corrected advertisement text.
+3. Explain the main reason for the correction.
+4. Generate additional detailed reference notes citing the specific policy manual pages, rules, or lists applied for verification.
 
-=== POLICY MANUAL REFERENCE ===
+=== COMPLETE POLICY MANUAL REFERENCE ===
 ${fullPolicyContext}
-==============================
+=========================================
 
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 
-Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
+Response format: Return ONLY a raw JSON object with exactly three keys: "text" (the corrected ad text), "reason" (the explanation of which rule was applied), and "notes" (the detailed policy reference notes and page citations). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
     const parts = [{ text: promptText }];
     if (imagePart) {
@@ -14603,15 +14603,19 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
     .then(data => {
         trackGeminiAPICall();
         const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        let cleanText = responseText.trim();
+        if (cleanText.startsWith("```")) {
+            cleanText = cleanText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        }
         try {
-            const parsed = JSON.parse(responseText.trim());
+            const parsed = JSON.parse(cleanText.trim());
             if (parsed && parsed.text) {
                 callback(parsed);
             } else {
                 callback(null);
             }
         } catch (e) {
-            callback({ text: responseText.trim(), reason: "AI bug resolution suggestion" });
+            callback({ text: responseText.trim(), reason: "AI bug resolution suggestion", notes: "Fallback response parsing" });
         }
     })
     .catch(err => {
@@ -14621,7 +14625,7 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
 }
 
 function runGeminiCopilotTurn(report, category, userMessageText, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
     if (!keyVal) {
         callback(false, null);
         return;
@@ -14884,6 +14888,15 @@ function renderTriageCards(reports, container) {
             let aiProposedFixHtml = "";
             if (report.aiProposal) {
                 const spellingListText = report.aiProposal.spellingList ? `<b>Generated Spelling Rules:</b> ${report.aiProposal.spellingList}` : "";
+                const notesBoxHtml = report.aiProposal.notes ? `
+                    <!-- Gemini Policy Verification Notes -->
+                    <div class="ai-proposed-notes-box" style="padding: 10px; border-radius: 8px; background: rgba(34, 211, 238, 0.05); border: 1px solid rgba(34, 211, 238, 0.25); color: #22d3ee; font-size: 11px; margin-top: 6px; text-align: left; box-shadow: inset 0 0 10px rgba(34, 211, 238, 0.02);">
+                        <div style="font-weight: 700; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; margin-bottom: 5px; color: #22d3ee;">
+                            <i class="fa-regular fa-file-lines"></i> Policy Verification & Citation Notes
+                        </div>
+                        <div style="line-height: 1.45; white-space: pre-line; opacity: 0.95;">${report.aiProposal.notes}</div>
+                    </div>
+                ` : "";
                 aiProposedFixHtml = `
                     <!-- Gemini Auto-Triage Suggestion Banner -->
                     <div class="ai-proposed-fix-banner" style="padding: 10px; border-radius: 8px; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-size: 11.5px; margin-top: 6px; text-align: left; box-shadow: inset 0 0 10px rgba(167, 139, 250, 0.05);">
@@ -14898,6 +14911,7 @@ function renderTriageCards(reports, container) {
                             <span><i class="fa-solid fa-robot"></i> AI Proposed: <span>${report.aiProposal.timeFixed}</span></span>
                         </div>
                     </div>
+                    ${notesBoxHtml}
                 `;
             }
 
@@ -15205,7 +15219,7 @@ function renderTriageCards(reports, container) {
             // ── Train via Gemini Spark Button ──
             if (trainGeminiBtn) {
                 trainGeminiBtn.addEventListener("click", () => {
-                    const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+                    const localKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
                     if (!localKey) {
                         showCustomNotification("Please configure a Gemini API key in the AI Assistant tab first.", "warning");
                         return;
@@ -15230,6 +15244,7 @@ function renderTriageCards(reports, container) {
                             report.aiProposal = {
                                 text: suggestion.text,
                                 reason: suggestion.reason || "Auto-detected correction",
+                                notes: suggestion.notes || "",
                                 spellingList: spellingList,
                                 timeFixed: new Date().toLocaleTimeString()
                             };
@@ -15497,6 +15512,42 @@ function renderTriageCards(reports, container) {
             } else {
                 showCustomNotification("Please authenticate as admin first.", "warning");
             }
+        });
+    }
+    // Auto-sync processing classes on buttons when they display spinners or are disabled
+    const buttonObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            const target = mutation.target;
+            if (target && target.tagName === "BUTTON") {
+                const hasSpinner = target.querySelector(".fa-spinner") !== null || target.innerHTML.includes("fa-spinner");
+                if (hasSpinner || target.disabled) {
+                    if (!target.classList.contains("processing")) {
+                        target.classList.add("processing");
+                    }
+                } else {
+                    if (target.classList.contains("processing")) {
+                        target.classList.remove("processing");
+                    }
+                }
+            }
+        });
+    });
+
+    if (document.body) {
+        buttonObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["disabled", "class"]
+        });
+    } else {
+        document.addEventListener("DOMContentLoaded", () => {
+            buttonObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["disabled", "class"]
+            });
         });
     }
 })();

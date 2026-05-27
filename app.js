@@ -2556,6 +2556,135 @@ function initAdProcessing() {
             }
         });
     }
+
+    // Wire Gemini Assist controls
+    const checkAutoApply = document.getElementById("check-ai-auto-apply");
+    if (checkAutoApply) {
+        checkAutoApply.checked = localStorage.getItem("li_auto_ai_enabled") === "true";
+        checkAutoApply.addEventListener("change", () => {
+            localStorage.setItem("li_auto_ai_enabled", checkAutoApply.checked);
+        });
+    }
+
+    const btnGeminiAssist = document.getElementById("btn-gemini-assist");
+    if (btnGeminiAssist) {
+        btnGeminiAssist.addEventListener("click", () => {
+            triggerLiveGeminiAssist();
+        });
+    }
+}
+
+let autoAIDebounceTimeout = null;
+
+function triggerLiveGeminiAssist() {
+    const rawInputEl = document.getElementById("raw-ad");
+    const categoryEl = document.getElementById("category-override");
+    const mainBtn = document.getElementById("btn-gemini-assist");
+    
+    let pipBtn = null;
+    if (typeof pipWindow !== "undefined" && pipWindow && !pipWindow.closed) {
+        pipBtn = pipWindow.document.getElementById("pip-btn-ai-assist");
+    }
+
+    const rawText = rawInputEl ? rawInputEl.value.trim() : "";
+    if (!rawText) {
+        showCustomNotification("Please enter raw ad text first.", "warning");
+        return;
+    }
+
+    const category = categoryEl ? categoryEl.value : "auto";
+
+    if (mainBtn) {
+        mainBtn.disabled = true;
+        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+    }
+    if (pipBtn) {
+        pipBtn.disabled = true;
+        pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+    }
+
+    getGeminiSparkSuggestion(rawText, category, (suggestion) => {
+        if (mainBtn) {
+            mainBtn.disabled = false;
+            mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Gemini Assist`;
+        }
+        if (pipBtn) {
+            pipBtn.disabled = false;
+            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist`;
+        }
+
+        if (suggestion && suggestion.text) {
+            const processedEl = document.getElementById("processed-ad-text");
+            if (processedEl) {
+                processedEl.textContent = suggestion.text;
+                processedEl.classList.remove("placeholder");
+                processedEl.dispatchEvent(new Event("input"));
+                
+                const btnCopy = document.getElementById("btn-copy-ad");
+                if (btnCopy) btnCopy.disabled = false;
+
+                const banner = document.getElementById("ad-status-banner");
+                if (banner) {
+                    banner.setAttribute("data-status", "passed");
+                    banner.querySelector(".status-title").textContent = "AI Spark Corrected";
+                    banner.querySelector(".status-icon").innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i>`;
+                }
+
+                if (typeof updatePipDisplay === "function") {
+                    updatePipDisplay();
+                }
+
+                showCustomNotification("Gemini Spark correction applied!", "success");
+            }
+        } else {
+            showCustomNotification("Failed to retrieve AI suggestion. Please check API Key.", "error");
+        }
+    });
+}
+
+function runAutoAIEngine(rawText) {
+    const categoryEl = document.getElementById("category-override");
+    const category = categoryEl ? categoryEl.value : "auto";
+    const mainBtn = document.getElementById("btn-gemini-assist");
+    
+    let pipBtn = null;
+    if (typeof pipWindow !== "undefined" && pipWindow && !pipWindow.closed) {
+        pipBtn = pipWindow.document.getElementById("pip-btn-ai-assist");
+    }
+
+    if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Auto-AI...`;
+    if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Auto-AI...`;
+
+    getGeminiSparkSuggestion(rawText, category, (suggestion) => {
+        if (mainBtn) mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Gemini Assist`;
+        if (pipBtn) pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist`;
+
+        const latestRaw = document.getElementById("raw-ad").value.trim();
+        if (latestRaw !== rawText) return; // User changed text, ignore stale result
+
+        if (suggestion && suggestion.text) {
+            const processedEl = document.getElementById("processed-ad-text");
+            if (processedEl) {
+                processedEl.textContent = suggestion.text;
+                processedEl.classList.remove("placeholder");
+                processedEl.dispatchEvent(new Event("input"));
+                
+                const btnCopy = document.getElementById("btn-copy-ad");
+                if (btnCopy) btnCopy.disabled = false;
+
+                const banner = document.getElementById("ad-status-banner");
+                if (banner) {
+                    banner.setAttribute("data-status", "passed");
+                    banner.querySelector(".status-title").textContent = "Auto-AI Applied";
+                    banner.querySelector(".status-icon").innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i>`;
+                }
+
+                if (typeof updatePipDisplay === "function") {
+                    updatePipDisplay();
+                }
+            }
+        }
+    });
 }
 
 function processAd() {
@@ -2651,6 +2780,18 @@ function processAd() {
     
     // Update HTML UI elements
     updateUI(context);
+
+    // Auto-AI check
+    const checkAutoApply = document.getElementById("check-ai-auto-apply");
+    if (checkAutoApply && checkAutoApply.checked) {
+        if (autoAIDebounceTimeout) clearTimeout(autoAIDebounceTimeout);
+        autoAIDebounceTimeout = setTimeout(() => {
+            const currentRaw = document.getElementById("raw-ad").value.trim();
+            if (currentRaw) {
+                runAutoAIEngine(currentRaw);
+            }
+        }, 500);
+    }
 }
 
 const OFFICIAL_TEMPLATES = [
@@ -6627,6 +6768,11 @@ function updateUI(ctx) {
     if (btnSubmitBugInline) {
         btnSubmitBugInline.classList.remove("hide");
     }
+
+    const btnGeminiAssist = document.getElementById("btn-gemini-assist");
+    if (btnGeminiAssist) {
+        btnGeminiAssist.disabled = !ctx.raw || !ctx.raw.trim();
+    }
     
     // Clear logs
     logsList.innerHTML = "";
@@ -6988,10 +7134,11 @@ function initFloatingClipboard() {
                                     <div id="pip-processed-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
                                 </div>
                             </div>
-                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px;">
-                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1;"><i class="fa-solid fa-copy"></i> Copy</button>
+                            <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 6px;">
+                                <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1.2;"><i class="fa-solid fa-copy"></i> Copy</button>
+                                <button id="pip-btn-ai-assist" class="pip-uniform-btn" style="flex: 1; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist</button>
                                 <div id="pip-category-badge" class="pip-category-badge">—</div>
-                                <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Submit Bug</button>
+                                <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Bug</button>
                             </div>
                         </div>
                         
@@ -7303,6 +7450,13 @@ function initFloatingClipboard() {
 
                 // Copy Button Disable State
                 pipCopy.disabled = document.getElementById("btn-copy-ad").disabled;
+
+                // AI Assist Button Disable State
+                const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
+                const mainBtnGeminiAssist = document.getElementById("btn-gemini-assist");
+                if (pipBtnAiAssist && mainBtnGeminiAssist) {
+                    pipBtnAiAssist.disabled = mainBtnGeminiAssist.disabled;
+                }
 
                 // Action Toggle Buttons State
                 const mainToggleSell = document.getElementById("btn-toggle-sell");
@@ -7772,6 +7926,13 @@ function initFloatingClipboard() {
                 pipBtnRefreshHistory.addEventListener("click", loadPipHistory);
             }
 
+            const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
+            if (pipBtnAiAssist) {
+                pipBtnAiAssist.addEventListener("click", () => {
+                    triggerLiveGeminiAssist();
+                });
+            }
+
             // Listen for changes in the main window to update PiP display
             const mainObserver = new MutationObserver(() => {
                 if (pipRaw.value !== mainRaw.value) {
@@ -7790,6 +7951,7 @@ function initFloatingClipboard() {
             mainObserver.observe(document.getElementById("btn-toggle-sell"), { attributes: true });
             mainObserver.observe(document.getElementById("btn-toggle-buy"), { attributes: true });
             mainObserver.observe(document.getElementById("btn-submit-bug-inline"), { attributes: true });
+            mainObserver.observe(document.getElementById("btn-gemini-assist"), { attributes: true });
 
             // Handle PiP Window closing
             pipWindow.addEventListener("unload", () => {
@@ -9195,6 +9357,20 @@ function applyAdminRolePermissions() {
             backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
         }
 
+        // Hide Gemini API key from assistant admins
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
+        if (inputKey) {
+            inputKey.value = "••••••••••••••••••••••••••••••••";
+            inputKey.type = "password";
+            inputKey.disabled = true;
+            inputKey.style.opacity = "0.5";
+            inputKey.style.cursor = "not-allowed";
+        }
+        if (btnToggleVisibility) {
+            btnToggleVisibility.style.display = "none";
+        }
+
     } else {
         // Super admin - remove banner if exists
         if (lockBanner) {
@@ -9217,6 +9393,22 @@ function applyAdminRolePermissions() {
         const backupTextarea = document.getElementById("admin-backup-textarea");
         if (backupTextarea) {
             backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
+        }
+
+        // Restore access to Gemini API key for super admins
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
+        if (inputKey) {
+            inputKey.disabled = false;
+            inputKey.style.opacity = "";
+            inputKey.style.cursor = "";
+            const storedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            if (inputKey.value === "••••••••••••••••••••••••••••••••") {
+                inputKey.value = storedKey;
+            }
+        }
+        if (btnToggleVisibility) {
+            btnToggleVisibility.style.display = "";
         }
     }
 }
@@ -12392,8 +12584,13 @@ function refreshAIAssistantTabVisibility() {
         // Load settings inputs
         const inputKey = document.getElementById("input-ai-gemini-key");
         const customPromptTextarea = document.getElementById("ai-custom-prompt");
+        const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
         if (inputKey) {
-            inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            if (isAssistant) {
+                inputKey.value = "••••••••••••••••••••••••••••••••";
+            } else {
+                inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+            }
         }
         if (customPromptTextarea) {
             customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
@@ -12487,10 +12684,18 @@ function initGeminiEngine() {
 
     // Save button listener
     btnSave.addEventListener("click", () => {
-        const keyVal = inputKey.value.trim();
+        let keyVal = inputKey.value.trim();
         const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
         
-        if (!keyVal) {
+        if (keyVal === "••••••••••••••••••••••••••••••••") {
+            // Skip overwriting the real key with masked placeholder dots
+            const actualStoredKey = localStorage.getItem("li_gemini_api_key");
+            if (actualStoredKey) {
+                updateStatusDisplay("active", "Active (Key Saved)");
+            } else {
+                updateStatusDisplay("disconnected", "Disconnected (No Key)");
+            }
+        } else if (!keyVal) {
             localStorage.removeItem("li_gemini_api_key");
             updateStatusDisplay("disconnected", "Disconnected (No Key)");
         } else {
@@ -12506,7 +12711,10 @@ function initGeminiEngine() {
 
     // Test button listener
     btnTest.addEventListener("click", () => {
-        const keyVal = inputKey.value.trim();
+        let keyVal = inputKey.value.trim();
+        if (keyVal === "••••••••••••••••••••••••••••••••") {
+            keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+        }
         if (!keyVal) {
             showCustomNotification("Please paste a Gemini API Key first.", "warning");
             return;

@@ -12405,7 +12405,7 @@ function initGeminiEngine() {
     };
 
     // Load key from localStorage
-    const savedKey = localStorage.getItem("li_gemini_api_key");
+    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (savedKey) {
         inputKey.value = savedKey;
         updateStatusDisplay("active", "Active (Key Saved)");
@@ -12472,7 +12472,7 @@ function initGeminiEngine() {
 }
 
 function getGeminiSparkSuggestion(rawText, category, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key");
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (!keyVal) {
         callback(null);
         return;
@@ -12917,7 +12917,7 @@ function renderTriageCards(reports, container) {
             const geminiContainer = card.querySelector(".gemini-suggestion-container");
             if (!geminiContainer) return;
             
-            const localKey = localStorage.getItem("li_gemini_api_key");
+            const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
             if (localKey) {
                 getGeminiSparkSuggestion(report.rawInput, currentCategory, (suggestion) => {
                     if (suggestion && suggestion.text) {

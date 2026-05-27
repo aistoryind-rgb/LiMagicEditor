@@ -12682,7 +12682,85 @@ function initGeminiEngine() {
         }
     };
 
-    // Save button listener
+    // ── Shared live API health check function ──
+    const runLiveHealthCheck = (keyVal, opts = {}) => {
+        const { silent = false, onResult = null } = opts;
+        updateStatusDisplay("testing", "Testing connection...");
+        if (btnTest) {
+            btnTest.disabled = true;
+            btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
+        }
+
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Hello! Reply with a single word 'Connected!' if you can read this." }] }]
+            })
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(errBody => {
+                    const errMsg = errBody?.error?.message || `HTTP Error ${res.status}`;
+                    const errCode = errBody?.error?.code || res.status;
+                    throw { code: errCode, message: errMsg };
+                }).catch(parseErr => {
+                    if (parseErr.code) throw parseErr;
+                    throw { code: res.status, message: `HTTP Error ${res.status}` };
+                });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (btnTest) {
+                btnTest.disabled = false;
+                btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
+            }
+            const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            if (responseText) {
+                updateStatusDisplay("active", "Active (Connected ✓)");
+                if (!silent) {
+                    showCustomConfirmDialog("Gemini connection test successful! Spark AI Engine is fully active and responding.", null, null, "OK", false);
+                }
+                if (onResult) onResult(true);
+            } else {
+                updateStatusDisplay("disconnected", "Connection Failed (Empty Response)");
+                if (!silent) {
+                    showCustomConfirmDialog(`Key accepted but received an empty response. The model may be temporarily unavailable.`, null, null, "Close", true);
+                }
+                if (onResult) onResult(false);
+            }
+        })
+        .catch(err => {
+            if (btnTest) {
+                btnTest.disabled = false;
+                btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
+            }
+            const code = err.code || 0;
+            let diagMsg = "";
+            let statusMsg = "";
+            if (code === 429) {
+                statusMsg = "Rate Limited (Quota Exceeded)";
+                diagMsg = `Rate limit reached (HTTP 429). Your free-tier daily quota for this model has been exhausted. Wait a few minutes or switch to a different API key.\n\nDetails: ${err.message}`;
+            } else if (code === 403) {
+                statusMsg = "Forbidden (Invalid Key)";
+                diagMsg = `The API key was rejected (HTTP 403). This key may be invalid, disabled, or does not have access to the Gemini API. Please generate a new key from Google AI Studio.`;
+            } else if (code === 400) {
+                statusMsg = "Bad Request (API Error)";
+                diagMsg = `The API returned a Bad Request (HTTP 400). The key format may be incorrect.\n\nDetails: ${err.message}`;
+            } else {
+                statusMsg = "Connection Failed (Error)";
+                diagMsg = `Test failed: ${err.message || err}. Please double-check your API key and internet connection.`;
+            }
+            updateStatusDisplay("disconnected", statusMsg);
+            if (!silent) {
+                showCustomConfirmDialog(diagMsg, null, null, "Close", true);
+            }
+            if (onResult) onResult(false);
+        });
+    };
+
+    // Save button listener — saves key and auto-tests it
     btnSave.addEventListener("click", () => {
         let keyVal = inputKey.value.trim();
         const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
@@ -12691,7 +12769,11 @@ function initGeminiEngine() {
             // Skip overwriting the real key with masked placeholder dots
             const actualStoredKey = localStorage.getItem("li_gemini_api_key");
             if (actualStoredKey) {
-                updateStatusDisplay("active", "Active (Key Saved)");
+                // Auto-test the stored key silently
+                if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
+                showCustomNotification("Settings saved. Testing key...", "success");
+                runLiveHealthCheck(actualStoredKey, { silent: true });
+                return;
             } else {
                 updateStatusDisplay("disconnected", "Disconnected (No Key)");
             }
@@ -12700,16 +12782,20 @@ function initGeminiEngine() {
             updateStatusDisplay("disconnected", "Disconnected (No Key)");
         } else {
             localStorage.setItem("li_gemini_api_key", keyVal);
-            updateStatusDisplay("active", "Active (Key Saved)");
+            if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
+            showCustomNotification("Key saved! Running live connection test...", "success");
+            // Auto-test the newly entered key
+            runLiveHealthCheck(keyVal, { silent: false });
+            return;
         }
 
         if (customPromptTextarea) {
             localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
         }
-        showCustomNotification("Gemini Spark settings saved successfully!", "success");
+        showCustomNotification("Gemini Spark settings saved.", "success");
     });
 
-    // Test button listener
+    // Test button listener — runs a standalone diagnostic
     btnTest.addEventListener("click", () => {
         let keyVal = inputKey.value.trim();
         if (keyVal === "••••••••••••••••••••••••••••••••") {
@@ -12719,42 +12805,7 @@ function initGeminiEngine() {
             showCustomNotification("Please paste a Gemini API Key first.", "warning");
             return;
         }
-
-        updateStatusDisplay("testing", "Testing connection...");
-        btnTest.disabled = true;
-        btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
-
-        // Query Gemini 2.5 Flash using direct REST fetch
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: "Hello! Reply with a single word 'Connected!' if you can read this." }] }]
-            })
-        })
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-            return res.json();
-        })
-        .then(data => {
-            btnTest.disabled = false;
-            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
-            
-            const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            if (responseText.toLowerCase().includes("connect")) {
-                updateStatusDisplay("active", "Active (Connected Successfully)");
-                showCustomConfirmDialog("Gemini connection test successful! Spark AI Engine is fully active.", null, null, "OK", false);
-            } else {
-                updateStatusDisplay("disconnected", "Connection Failed (Unexpected Response)");
-                showCustomConfirmDialog(`Connection failed. Response was: ${responseText}`, null, null, "Close", true);
-            }
-        })
-        .catch(err => {
-            btnTest.disabled = false;
-            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
-            updateStatusDisplay("disconnected", "Connection Failed (Error)");
-            showCustomConfirmDialog(`Test failed: ${err.message}. Please double-check your API key and internet connection.`, null, null, "Close", true);
-        });
+        runLiveHealthCheck(keyVal, { silent: false });
     });
 
     // ── Sandbox Playground controls ──

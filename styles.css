@@ -1185,7 +1185,7 @@ textarea:focus, input:focus, select:focus {
 }
 
 .policy-book-card {
-    height: 680px !important; /* Increased height to make use of canvas area */
+    height: auto !important;
     display: flex;
     flex-direction: column;
 }

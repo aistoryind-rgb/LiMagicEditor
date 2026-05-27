@@ -12552,10 +12552,10 @@ function initGeminiEngine() {
     // ── Sandbox Playground controls ──
     const sandboxRaw = document.getElementById("ai-sandbox-raw");
     const sandboxCategory = document.getElementById("ai-sandbox-category");
-    const sandboxOutputContainer = document.getElementById("ai-sandbox-output-container");
     const sandboxOutputText = document.getElementById("ai-sandbox-output-text");
     const sandboxOutputReason = document.getElementById("ai-sandbox-output-reason");
     const btnSandboxTest = document.getElementById("btn-ai-sandbox-test");
+    const btnSandboxCopy = document.getElementById("btn-ai-sandbox-copy");
     const btnSandboxTrain = document.getElementById("btn-ai-sandbox-train");
 
     if (btnSandboxTest && btnSandboxTrain) {
@@ -12569,16 +12569,20 @@ function initGeminiEngine() {
             const categoryVal = sandboxCategory ? sandboxCategory.value : "auto";
             btnSandboxTest.disabled = true;
             btnSandboxTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
-            if (sandboxOutputContainer) sandboxOutputContainer.style.display = "none";
+            if (sandboxOutputReason) sandboxOutputReason.style.display = "none";
+            if (sandboxOutputText) sandboxOutputText.value = "";
 
             getGeminiSparkSuggestion(rawTextVal, categoryVal, (suggestion) => {
                 btnSandboxTest.disabled = false;
                 btnSandboxTest.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Test AI Output`;
 
                 if (suggestion && suggestion.text) {
-                    if (sandboxOutputContainer) sandboxOutputContainer.style.display = "block";
-                    if (sandboxOutputText) sandboxOutputText.textContent = suggestion.text;
-                    if (sandboxOutputReason) sandboxOutputReason.textContent = suggestion.reason || "Corrected successfully.";
+                    if (sandboxOutputText) sandboxOutputText.value = suggestion.text;
+                    if (sandboxOutputReason) {
+                        sandboxOutputReason.style.display = "block";
+                        sandboxOutputReason.textContent = suggestion.reason || "Corrected successfully.";
+                    }
+                    if (btnSandboxCopy) btnSandboxCopy.disabled = false;
                     btnSandboxTrain.disabled = false;
                     showCustomNotification("AI suggestion generated!", "success");
                 } else {
@@ -12587,9 +12591,25 @@ function initGeminiEngine() {
             });
         });
 
+        if (btnSandboxCopy) {
+            btnSandboxCopy.addEventListener("click", () => {
+                const textToCopy = sandboxOutputText ? sandboxOutputText.value.trim() : "";
+                if (!textToCopy) return;
+
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        showCustomNotification("Corrected ad copied to clipboard!", "success");
+                    })
+                    .catch(err => {
+                        console.error("Clipboard copy failed:", err);
+                        showCustomNotification("Failed to copy to clipboard.", "error");
+                    });
+            });
+        }
+
         btnSandboxTrain.addEventListener("click", () => {
             const rawTextVal = sandboxRaw ? sandboxRaw.value.trim() : "";
-            const fixedTextVal = sandboxOutputText ? sandboxOutputText.textContent.trim() : "";
+            const fixedTextVal = sandboxOutputText ? sandboxOutputText.value.trim() : "";
             const categoryVal = sandboxCategory ? sandboxCategory.value : "auto";
 
             if (!rawTextVal || !fixedTextVal) return;

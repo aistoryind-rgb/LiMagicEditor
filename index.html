@@ -883,21 +883,24 @@
                                         </div>
                                     </div>
 
-                                    <!-- AI Output Box -->
-                                    <div id="ai-sandbox-output-container" style="display: none; background: rgba(167, 139, 250, 0.04); border: 1px solid rgba(167, 139, 250, 0.15); padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-                                        <div style="font-size: 9px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                                            <i class="fa-solid fa-sparkles"></i> AI Predicted Correction
+                                    <!-- AI Output Box (Editable Textarea) -->
+                                    <div style="margin-bottom: 12px;">
+                                        <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-sparkles" style="color: #a78bfa;"></i> AI Corrected Output (Editable)
                                         </div>
-                                        <div id="ai-sandbox-output-text" style="font-size: 12px; font-weight: 600; color: #30d158; margin-top: 6px; font-family: var(--font-mono, monospace);"></div>
-                                        <div id="ai-sandbox-output-reason" style="font-size: 10px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;"></div>
+                                        <textarea id="ai-sandbox-output-text" placeholder="AI corrected suggestion will appear here... (You can edit or overwrite this directly)" rows="3" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; color: #30d158; font-size: 12px; resize: none; outline: none; font-family: var(--font-mono, monospace); font-weight: 600;"></textarea>
                                     </div>
+                                    <div id="ai-sandbox-output-reason" style="font-size: 10.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4; display: none; background: rgba(167, 139, 250, 0.03); border: 1px solid rgba(167, 139, 250, 0.1); padding: 8px 12px; border-radius: 6px;"></div>
                                 </div>
                                 
-                                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                    <button type="button" id="btn-ai-sandbox-test" class="btn-preset" style="flex: 1.2; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;">
+                                <div style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                                    <button type="button" id="btn-ai-sandbox-test" class="btn-preset" style="flex: 1.2; min-width: 120px; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa;">
                                         <i class="fa-solid fa-wand-magic-sparkles"></i> Test AI Output
                                     </button>
-                                    <button type="button" id="btn-ai-sandbox-train" class="btn-action glow-green" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;" disabled>
+                                    <button type="button" id="btn-ai-sandbox-copy" class="btn-preset" style="flex: 0.9; min-width: 100px; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);" disabled>
+                                        <i class="fa-solid fa-copy"></i> Copy Output
+                                    </button>
+                                    <button type="button" id="btn-ai-sandbox-train" class="btn-action glow-green" style="flex: 1; min-width: 110px; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;" disabled>
                                         <i class="fa-solid fa-plus"></i> Train Output
                                     </button>
                                 </div>
@@ -1031,7 +1034,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- Application Script -->
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
     <script>
         // Proactively unregister any previously registered Service Workers to ensure it behaves purely as a simple website
         if ('serviceWorker' in navigator) {

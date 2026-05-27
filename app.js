@@ -1409,6 +1409,9 @@ function initTabs() {
             btn.classList.add("active");
             const tabId = btn.getAttribute("data-tab");
             document.getElementById(tabId).classList.add("active");
+            if (tabId === "tab-ai-assistant") {
+                refreshAIAssistantTabVisibility();
+            }
         });
     });
 
@@ -9300,6 +9303,7 @@ function initAdminPanel() {
             renderCustomTemplates();
             refreshMainHistory();
             loadAndRenderAccessRequests(password, null, true);
+            refreshAIAssistantTabVisibility();
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -12370,13 +12374,70 @@ function resolveBugReport(report, card, isIgnore = false) {
 
 // --- Gemini Spark AI Engine & Fuzzy Suggestion Fallback Helpers ---
 
+// --- AI Assistant Tab Visibility Helper ---
+function refreshAIAssistantTabVisibility() {
+    const lockScreen = document.getElementById("ai-assistant-lock-screen");
+    const dashboardContent = document.getElementById("ai-assistant-dashboard-content");
+    if (!lockScreen || !dashboardContent) return;
+
+    const isAuth = sessionStorage.getItem("li_admin_authenticated") === "true";
+    if (isAuth) {
+        lockScreen.classList.add("hide");
+        dashboardContent.classList.remove("hide");
+        
+        // Load settings inputs
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const customPromptTextarea = document.getElementById("ai-custom-prompt");
+        if (inputKey) {
+            inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+        }
+        if (customPromptTextarea) {
+            customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
+        }
+        updateAIGeminiStatusDisplay();
+    } else {
+        lockScreen.classList.remove("hide");
+        dashboardContent.classList.add("hide");
+    }
+}
+
+function updateAIGeminiStatusDisplay() {
+    const statusIndicator = document.getElementById("ai-gemini-status-indicator");
+    const statusText = document.getElementById("ai-gemini-status-text");
+    if (!statusIndicator || !statusText) return;
+
+    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    if (savedKey) {
+        statusIndicator.style.background = "#30d158"; // Green
+        statusText.textContent = "Active (Connected)";
+    } else {
+        statusIndicator.style.background = "#ff453a"; // Red
+        statusText.textContent = "Disconnected (No Key)";
+    }
+}
+
 function initGeminiEngine() {
-    const inputKey = document.getElementById("input-gemini-key");
-    const btnToggleVisibility = document.getElementById("btn-toggle-gemini-key-visibility");
-    const btnSave = document.getElementById("btn-gemini-save");
-    const btnTest = document.getElementById("btn-gemini-test");
-    const statusIndicator = document.getElementById("gemini-status-indicator");
-    const statusText = document.getElementById("gemini-status-text");
+    // ── Wire Admin Password Authentication Lock Portal button ──
+    const unlockBtn = document.getElementById("btn-ai-unlock-login");
+    if (unlockBtn) {
+        unlockBtn.addEventListener("click", () => {
+            const adminTabBtn = document.getElementById("tab-btn-admin");
+            if (adminTabBtn) {
+                adminTabBtn.click();
+                const passInput = document.getElementById("admin-passcode");
+                if (passInput) passInput.focus();
+            }
+        });
+    }
+
+    // ── settings panel controls ──
+    const inputKey = document.getElementById("input-ai-gemini-key");
+    const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
+    const btnSave = document.getElementById("btn-ai-gemini-save");
+    const btnTest = document.getElementById("btn-ai-gemini-test");
+    const statusIndicator = document.getElementById("ai-gemini-status-indicator");
+    const statusText = document.getElementById("ai-gemini-status-text");
+    const customPromptTextarea = document.getElementById("ai-custom-prompt");
 
     if (!inputKey || !btnSave || !btnTest) return;
 
@@ -12404,25 +12465,23 @@ function initGeminiEngine() {
         }
     };
 
-    // Load key from localStorage
-    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
-    if (savedKey) {
-        inputKey.value = savedKey;
-        updateStatusDisplay("active", "Active (Key Saved)");
-    }
-
     // Save button listener
     btnSave.addEventListener("click", () => {
         const keyVal = inputKey.value.trim();
+        const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
+        
         if (!keyVal) {
             localStorage.removeItem("li_gemini_api_key");
             updateStatusDisplay("disconnected", "Disconnected (No Key)");
-            showCustomNotification("Gemini API Key removed.", "info");
         } else {
             localStorage.setItem("li_gemini_api_key", keyVal);
             updateStatusDisplay("active", "Active (Key Saved)");
-            showCustomNotification("Gemini API Key saved successfully!", "success");
         }
+
+        if (customPromptTextarea) {
+            localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
+        }
+        showCustomNotification("Gemini Spark settings saved successfully!", "success");
     });
 
     // Test button listener
@@ -12451,7 +12510,7 @@ function initGeminiEngine() {
         })
         .then(data => {
             btnTest.disabled = false;
-            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Connection`;
+            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
             
             const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
             if (responseText.toLowerCase().includes("connect")) {
@@ -12464,11 +12523,84 @@ function initGeminiEngine() {
         })
         .catch(err => {
             btnTest.disabled = false;
-            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Connection`;
+            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
             updateStatusDisplay("disconnected", "Connection Failed (Error)");
             showCustomConfirmDialog(`Test failed: ${err.message}. Please double-check your API key and internet connection.`, null, null, "Close", true);
         });
     });
+
+    // ── Sandbox Playground controls ──
+    const sandboxRaw = document.getElementById("ai-sandbox-raw");
+    const sandboxCategory = document.getElementById("ai-sandbox-category");
+    const sandboxOutputContainer = document.getElementById("ai-sandbox-output-container");
+    const sandboxOutputText = document.getElementById("ai-sandbox-output-text");
+    const sandboxOutputReason = document.getElementById("ai-sandbox-output-reason");
+    const btnSandboxTest = document.getElementById("btn-ai-sandbox-test");
+    const btnSandboxTrain = document.getElementById("btn-ai-sandbox-train");
+
+    if (btnSandboxTest && btnSandboxTrain) {
+        btnSandboxTest.addEventListener("click", () => {
+            const rawTextVal = sandboxRaw ? sandboxRaw.value.trim() : "";
+            if (!rawTextVal) {
+                showCustomNotification("Please enter raw ad text to test.", "warning");
+                return;
+            }
+
+            const categoryVal = sandboxCategory ? sandboxCategory.value : "auto";
+            btnSandboxTest.disabled = true;
+            btnSandboxTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+            if (sandboxOutputContainer) sandboxOutputContainer.style.display = "none";
+
+            getGeminiSparkSuggestion(rawTextVal, categoryVal, (suggestion) => {
+                btnSandboxTest.disabled = false;
+                btnSandboxTest.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Test AI Output`;
+
+                if (suggestion && suggestion.text) {
+                    if (sandboxOutputContainer) sandboxOutputContainer.style.display = "block";
+                    if (sandboxOutputText) sandboxOutputText.textContent = suggestion.text;
+                    if (sandboxOutputReason) sandboxOutputReason.textContent = suggestion.reason || "Corrected successfully.";
+                    btnSandboxTrain.disabled = false;
+                    showCustomNotification("AI suggestion generated!", "success");
+                } else {
+                    showCustomNotification("Gemini Spark failed to predict a correction. Try adding custom prompt directives.", "error");
+                }
+            });
+        });
+
+        btnSandboxTrain.addEventListener("click", () => {
+            const rawTextVal = sandboxRaw ? sandboxRaw.value.trim() : "";
+            const fixedTextVal = sandboxOutputText ? sandboxOutputText.textContent.trim() : "";
+            const categoryVal = sandboxCategory ? sandboxCategory.value : "auto";
+
+            if (!rawTextVal || !fixedTextVal) return;
+
+            showCustomConfirmDialog(
+                `Train translation mapping for:\n\nOriginal: "${rawTextVal}"\n\nCorrected: "${fixedTextVal}"?`,
+                () => {
+                    const trimmedRaw = rawTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
+                    const details = {
+                        text: fixedTextVal,
+                        author: getActiveEditorName(),
+                        method: "Trained via AI Sandbox",
+                        timestamp: new Date().toLocaleString(),
+                        reporterTime: "N/A (Sandbox)",
+                        category: categoryVal
+                    };
+                    customTranslations[trimmedRaw] = JSON.stringify(details);
+                    localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                    
+                    if (typeof saveCustomDataToBackend === "function") {
+                        saveCustomDataToBackend();
+                    }
+                    renderCustomTranslations();
+                    
+                    showCustomNotification("Translation mapping trained successfully!", "success");
+                    btnSandboxTrain.disabled = true;
+                }
+            );
+        });
+    }
+    refreshAIAssistantTabVisibility();
 }
 
 function getGeminiSparkSuggestion(rawText, category, callback) {
@@ -12478,6 +12610,7 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
         return;
     }
 
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     // Build the policy prompt context
     const prompt = `You are a strict advertisement editor for LifeInvader.
 Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
@@ -12486,6 +12619,7 @@ Your task is to correct a user's raw advertisement input text according to our s
 3. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format.
 4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
 5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
+${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 
 Translate this raw ad input: "${rawText}"
 Target category: "${category}"
@@ -12521,6 +12655,105 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
     .catch(err => {
         console.error("Gemini Suggestion Error:", err);
         callback(null);
+    });
+}
+
+function runGeminiCopilotTurn(report, category, userMessageText, callback) {
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+    if (!keyVal) {
+        callback(false, null);
+        return;
+    }
+
+    if (!report.geminiChatHistory) {
+        report.geminiChatHistory = [];
+    }
+
+    // If user message is provided, push it to history
+    if (userMessageText) {
+        const parts = [{ text: userMessageText }];
+        let attachmentUrl = null;
+        if (report.pendingAttachment) {
+            parts.push({
+                inlineData: {
+                    mimeType: report.pendingAttachment.mimeType,
+                    data: report.pendingAttachment.data
+                }
+            });
+            attachmentUrl = report.pendingAttachment.dataUrl;
+            report.pendingAttachment = null; // Clear pending attachment
+        }
+
+        const msgObj = {
+            role: "user",
+            parts: parts
+        };
+        if (attachmentUrl) {
+            msgObj.attachmentUrl = attachmentUrl;
+        }
+        report.geminiChatHistory.push(msgObj);
+    } else {
+        // First turn - push initial prompt
+        report.geminiChatHistory = [];
+        report.geminiChatHistory.push({
+            role: "user",
+            parts: [{ text: `Raw Ad Input: "${report.rawInput}"\nCategoryContext: "${category}"` }]
+        });
+    }
+
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const systemPrompt = `You are a strict advertisement editor for LifeInvader.
+Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
+1. Always start with action word: Selling, Buying, Trading, Renting, Hiring, etc. Capitalize first letter.
+2. Format prices beautifully, e.g. "2k" or "2000" to "$2,000". If price is per item, use "each" or "respectively".
+3. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format.
+4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
+5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
+${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
+
+Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied or how the suggestion was updated). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
+
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: report.geminiChatHistory,
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
+    })
+    .then(data => {
+        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        try {
+            const parsed = JSON.parse(responseText.trim());
+            if (parsed && parsed.text) {
+                // Save model response to history
+                report.geminiChatHistory.push({
+                    role: "model",
+                    parts: [{ text: responseText.trim() }]
+                });
+                callback(true, parsed);
+            } else {
+                callback(false, null);
+            }
+        } catch (e) {
+            // Fallback
+            report.geminiChatHistory.push({
+                role: "model",
+                parts: [{ text: JSON.stringify({ text: responseText.trim(), reason: "Refined suggestion" }) }]
+            });
+            callback(true, { text: responseText.trim(), reason: "Refined suggestion" });
+        }
+    })
+    .catch(err => {
+        console.error("Gemini Copilot Error:", err);
+        callback(false, null);
     });
 }
 
@@ -12655,6 +12888,36 @@ function renderTriageCards(reports, container) {
                 `<option value="${cat}" ${cat === currentCategory ? "selected" : ""}>${cat}</option>`
             ).join("");
 
+            let chatTurnsHtml = "";
+            if (report.geminiChatHistory && report.geminiChatHistory.length > 0) {
+                chatTurnsHtml = report.geminiChatHistory.map((msg, idx) => {
+                    if (idx === 0) return ""; // Skip initial prompt turn
+                    const isModel = msg.role === "model";
+                    let dispText = "";
+                    if (isModel) {
+                        try {
+                            const parsed = JSON.parse(msg.parts[0].text.trim());
+                            dispText = `✨ <b>AI suggestion:</b> "${parsed.text}"<br><span style="opacity:0.65;font-size:10px;">Reason: ${parsed.reason}</span>`;
+                        } catch (e) {
+                            dispText = msg.parts[0].text;
+                        }
+                    } else {
+                        dispText = `<b>You:</b> ${msg.parts[0].text}`;
+                    }
+                    const attachHtml = msg.attachmentUrl ? `
+                        <div style="margin-bottom: 6px; border-radius: 4px; overflow: hidden; max-width: 150px; max-height: 100px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="window.open('${msg.attachmentUrl}', '_blank')">
+                            <img src="${msg.attachmentUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                        </div>
+                    ` : "";
+                    return `
+                        <div style="padding: 6px 8px; border-radius: 6px; background: ${isModel ? "rgba(167,139,250,0.06)" : "rgba(255,255,255,0.03)"}; border: 1px solid ${isModel ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)"}; align-self: ${isModel ? "flex-start" : "flex-end"}; color: ${isModel ? "var(--text-primary)" : "var(--text-secondary)"}; max-width: 90%; word-break: break-word; font-family: var(--font-heading);">
+                            ${attachHtml}
+                            ${dispText}
+                        </div>
+                    `;
+                }).join("");
+            }
+
             card.innerHTML = `
                 <!-- Header -->
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -12693,8 +12956,38 @@ function renderTriageCards(reports, container) {
                     </div>
                 </div>
                 
-                <!-- Gemini Suggestion Container -->
-                <div class="gemini-suggestion-container" style="display: none; margin-top: 8px;"></div>
+                <!-- Gemini Copilot Console -->
+                <div class="gemini-copilot-console" style="${report.copilotOpen ? "display: flex;" : "display: none;"} margin-top: 12px; background: rgba(167, 139, 250, 0.04); border: 1px solid rgba(167, 139, 250, 0.18); border-radius: 8px; padding: 12px; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed rgba(167, 139, 250, 0.15); padding-bottom: 6px;">
+                        <span style="font-size: 10.5px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-brain-circuit"></i> Spark AI Copilot
+                        </span>
+                        <button type="button" class="btn-gemini-copilot-close" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="gemini-copilot-chat-history" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 11px; padding-right: 4px;">
+                        ${chatTurnsHtml}
+                    </div>
+                    <!-- Image Preview Bar (initially hidden or shown if pendingAttachment) -->
+                    <div class="gemini-copilot-image-preview-bar" style="${report.pendingAttachment ? "display: flex;" : "display: none;"} align-items: center; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 6px 10px; border-radius: 6px; margin-top: 4px;">
+                        <div style="position: relative; width: 40px; height: 40px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                            <img class="img-gemini-copilot-preview" src="${report.pendingAttachment ? report.pendingAttachment.dataUrl : ""}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <span style="font-size: 10.5px; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="txt-gemini-copilot-filename">attached_screenshot.png</span>
+                        <button type="button" class="btn-gemini-copilot-clear-preview" style="background: none; border: none; color: #ff453a; cursor: pointer; font-size: 11px;"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; position: relative;">
+                        <!-- Hidden file input -->
+                        <input type="file" class="input-gemini-copilot-file" accept="image/*" style="display: none;">
+                        
+                        <!-- Attachment button -->
+                        <button type="button" class="btn-gemini-copilot-attach" style="padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); color: ${report.pendingAttachment ? "#30d158" : "var(--text-muted)"}; border-color: ${report.pendingAttachment ? "rgba(48, 209, 88, 0.4)" : "rgba(255,255,255,0.06)"}; font-size: 11px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Attach screenshot"><i class="fa-solid fa-paperclip"></i></button>
+
+                        <input type="text" class="input-gemini-copilot-chat" placeholder="Tell Gemini how to fix... (e.g. 'make price $10k')" style="flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(167,139,250,0.25); background: rgba(0,0,0,0.3); color: var(--text-primary); font-size: 11.5px; outline: none; font-family: var(--font-heading);">
+                        
+                        <button type="button" class="btn-gemini-copilot-chat-send" style="padding: 6px 10px; border-radius: 6px; background: rgba(167, 139, 250, 0.2); border: 1px solid rgba(167, 139, 250, 0.4); color: #a78bfa; font-size: 11px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
                 
                 <!-- Action Buttons -->
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
@@ -12733,6 +13026,13 @@ function renderTriageCards(reports, container) {
                             <i class="fa-solid fa-box"></i> Train Items
                         </button>
                     </div>
+
+                    <!-- Row 2b: AI Training Engine -->
+                    <button type="button" class="btn-triage-train-gemini" style="
+                        width: 100%; background: linear-gradient(135deg, rgba(167, 139, 250, 0.12), rgba(167, 139, 250, 0.04)); border: 1px solid rgba(167, 139, 250, 0.25); color: #a78bfa; padding: 8px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;
+                    ">
+                        <i class="fa-solid fa-sparkles"></i> Train via Gemini Spark
+                    </button>
                     
                     <!-- Row 3: Advanced Overrides -->
                     <button type="button" class="btn-triage-manual-toggle" style="
@@ -12748,6 +13048,7 @@ function renderTriageCards(reports, container) {
             const trainPolicyBtn = card.querySelector(".btn-triage-train-policy");
             const trainVehiclesClothingBtn = card.querySelector(".btn-triage-train-vehicles-clothing");
             const trainItemsBtn = card.querySelector(".btn-triage-train-items");
+            const trainGeminiBtn = card.querySelector(".btn-triage-train-gemini");
             const manualToggleBtn = card.querySelector(".btn-triage-manual-toggle");
             const manualPanel = card.querySelector(".manual-train-panel");
             const manualTrainApplyBtn = card.querySelector(".btn-manual-train-apply");
@@ -12848,6 +13149,165 @@ function renderTriageCards(reports, container) {
                         updateCardBody();
                     } else {
                         showCustomNotification("No matching items found in database.", "warning");
+                    }
+                });
+            }
+            
+            // ── Train via Gemini Spark Button ──
+            if (trainGeminiBtn) {
+                trainGeminiBtn.addEventListener("click", () => {
+                    const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
+                    if (!localKey) {
+                        showCustomNotification("Please configure a Gemini API key in the AI Assistant tab first.", "warning");
+                        return;
+                    }
+
+                    trainGeminiBtn.disabled = true;
+                    const origHtml = trainGeminiBtn.innerHTML;
+                    trainGeminiBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Querying AI Spark...`;
+
+                    // Initialize chat history if not present
+                    if (!report.geminiChatHistory || report.geminiChatHistory.length === 0) {
+                        report.geminiChatHistory = [];
+                    }
+
+                    runGeminiCopilotTurn(report, currentCategory, null, (success, suggestion) => {
+                        trainGeminiBtn.disabled = false;
+                        trainGeminiBtn.innerHTML = origHtml;
+
+                        if (success && suggestion) {
+                            report.manualOverrideText = suggestion.text;
+                            report.trainedMethod = "Trained from Gemini Spark";
+                            report.manualPanelOpen = false;
+                            report.copilotOpen = true;
+                            updateCardBody();
+                            showCustomNotification(`AI suggestion loaded: "${suggestion.text}" (Review and click Confirm to save)`, "success");
+                        } else {
+                            showCustomNotification("Gemini Spark failed to predict a correction. Try again or use other engines.", "error");
+                        }
+                    });
+                });
+            }
+
+            // ── Gemini Copilot Interactive Chat Console Elements & Wireup ──
+            const copilotCloseBtn = card.querySelector(".btn-gemini-copilot-close");
+            const copilotChatInput = card.querySelector(".input-gemini-copilot-chat");
+            const copilotChatSendBtn = card.querySelector(".btn-gemini-copilot-chat-send");
+            const copilotChatHistory = card.querySelector(".gemini-copilot-chat-history");
+
+            if (copilotCloseBtn) {
+                copilotCloseBtn.addEventListener("click", () => {
+                    report.copilotOpen = false;
+                    updateCardBody();
+                });
+            }
+
+            const sendChatTurn = () => {
+                if (!copilotChatInput) return;
+                const userMsg = copilotChatInput.value.trim();
+                if (!userMsg) return;
+
+                copilotChatInput.value = "";
+                copilotChatInput.disabled = true;
+                if (copilotChatSendBtn) {
+                    copilotChatSendBtn.disabled = true;
+                    copilotChatSendBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                }
+
+                // Append user message immediately to the UI to feel extremely responsive
+                const userDiv = document.createElement("div");
+                userDiv.style.cssText = "padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04); align-self: flex-end; color: var(--text-secondary); max-width: 90%; word-break: break-word; font-family: var(--font-heading);";
+                userDiv.innerHTML = `<b>You:</b> ${userMsg}`;
+                if (copilotChatHistory) {
+                    copilotChatHistory.appendChild(userDiv);
+                    copilotChatHistory.scrollTop = copilotChatHistory.scrollHeight;
+                }
+
+                runGeminiCopilotTurn(report, currentCategory, userMsg, (success, suggestion) => {
+                    if (copilotChatInput) copilotChatInput.disabled = false;
+                    if (copilotChatSendBtn) {
+                        copilotChatSendBtn.disabled = false;
+                        copilotChatSendBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
+                    }
+
+                    if (success && suggestion) {
+                        report.manualOverrideText = suggestion.text;
+                        report.trainedMethod = "Trained from Gemini Spark";
+                        
+                        // Re-render whole card to sync preview, diff, and new chat turns
+                        updateCardBody();
+                        
+                        // Scroll history to bottom
+                        setTimeout(() => {
+                            const newHistory = card.querySelector(".gemini-copilot-chat-history");
+                            if (newHistory) newHistory.scrollTop = newHistory.scrollHeight;
+                        }, 50);
+                    } else {
+                        showCustomNotification("Gemini Copilot failed to reply. Please check internet connection.", "error");
+                    }
+                });
+            };
+
+            if (copilotChatSendBtn) {
+                copilotChatSendBtn.addEventListener("click", sendChatTurn);
+            }
+
+            if (copilotChatInput) {
+                copilotChatInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        sendChatTurn();
+                    }
+                });
+            }
+
+            // ── Screenshot Attachment & Preview Bindings ──
+            const copilotFileInput = card.querySelector(".input-gemini-copilot-file");
+            const copilotAttachBtn = card.querySelector(".btn-gemini-copilot-attach");
+            const copilotPreviewBar = card.querySelector(".gemini-copilot-image-preview-bar");
+            const copilotPreviewImg = card.querySelector(".img-gemini-copilot-preview");
+            const copilotFilenameSpan = card.querySelector(".txt-gemini-copilot-filename");
+            const copilotClearPreviewBtn = card.querySelector(".btn-gemini-copilot-clear-preview");
+
+            if (copilotAttachBtn && copilotFileInput) {
+                copilotAttachBtn.addEventListener("click", () => {
+                    copilotFileInput.click();
+                });
+
+                copilotFileInput.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const dataUrl = event.target.result;
+                            const base64Data = dataUrl.split(",")[1];
+                            const mimeType = dataUrl.split(",")[0].split(":")[1].split(";")[0];
+                            
+                            report.pendingAttachment = {
+                                mimeType,
+                                data: base64Data,
+                                dataUrl
+                            };
+                            
+                            if (copilotPreviewImg) copilotPreviewImg.src = dataUrl;
+                            if (copilotFilenameSpan) copilotFilenameSpan.textContent = file.name;
+                            if (copilotPreviewBar) copilotPreviewBar.style.display = "flex";
+                            
+                            copilotAttachBtn.style.color = "#30d158";
+                            copilotAttachBtn.style.borderColor = "rgba(48, 209, 88, 0.4)";
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            if (copilotClearPreviewBtn) {
+                copilotClearPreviewBtn.addEventListener("click", () => {
+                    report.pendingAttachment = null;
+                    if (copilotFileInput) copilotFileInput.value = "";
+                    if (copilotPreviewBar) copilotPreviewBar.style.display = "none";
+                    if (copilotAttachBtn) {
+                        copilotAttachBtn.style.color = "var(--text-muted)";
+                        copilotAttachBtn.style.borderColor = "rgba(255, 255, 255, 0.06)";
                     }
                 });
             }

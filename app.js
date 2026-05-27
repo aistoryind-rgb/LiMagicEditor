@@ -12679,6 +12679,59 @@ function getDatabaseMatchesContext(rawText) {
     return `\nLOCAL SYSTEM DATABASE MATCHES FOUND:\n${resultList.slice(0, 15).join("\n")}\n(IMPORTANT: If the user refers to any matching product or item, you MUST correct it to use the exact spelling from the list of official database matches above)\n`;
 }
 
+function getPolicyMatchesContext(rawText) {
+    if (typeof POLICY_PAGES === "undefined" || !Array.isArray(POLICY_PAGES)) return "";
+
+    const rawClean = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+    const rawTokens = rawClean.split(/\s+/).filter(word => word.length >= 4);
+    if (rawTokens.length === 0) return "";
+
+    const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
+
+    const matchedPages = [];
+    const maxMatches = 2; // Keep top 2 most relevant pages to prevent bloating the token space
+
+    for (let i = 0; i < POLICY_PAGES.length; i++) {
+        const page = POLICY_PAGES[i];
+        const plainText = page.content
+            .replace(/<[^>]*>/g, " ")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&nbsp;/g, " ")
+            .toLowerCase();
+
+        let matchScore = 0;
+        for (const token of rawTokens) {
+            if (stopwords.has(token)) continue;
+            if (plainText.includes(token)) {
+                matchScore++;
+            }
+        }
+
+        if (matchScore > 0) {
+            matchedPages.push({
+                index: i + 1,
+                title: page.title,
+                text: page.content.replace(/<[^>]*>/g, " ").trim().substring(0, 1200),
+                score: matchScore
+            });
+        }
+    }
+
+    matchedPages.sort((a, b) => b.score - a.score);
+
+    if (matchedPages.length === 0) return "";
+
+    const result = matchedPages.slice(0, maxMatches).map(p => {
+        return `--- POLICY MANUAL PAGE ${p.index}: ${p.title} ---\n${p.text}...`;
+    }).join("\n\n");
+
+    return `\nRELEVANT SECTIONS FROM THE EN3 SYSTEM POLICY MANUAL:\n${result}\n(Ensure that the suggested ad strictly complies with the policy book terms shown above)\n`;
+}
+
 function getGeminiSparkSuggestion(rawText, category, callback) {
     const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (!keyVal) {
@@ -12688,6 +12741,7 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
 
     const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     const dbContext = getDatabaseMatchesContext(rawText);
+    const policyContext = getPolicyMatchesContext(rawText);
     
     // Build the policy prompt context
     const prompt = `You are a strict advertisement editor for LifeInvader.
@@ -12699,6 +12753,7 @@ Your task is to correct a user's raw advertisement input text according to our s
 5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 ${dbContext}
+${policyContext}
 
 Translate this raw ad input: "${rawText}"
 Target category: "${category}"
@@ -12751,7 +12806,12 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
     // If user message is provided, push it to history
     if (userMessageText) {
         const dbContext = getDatabaseMatchesContext(report.rawInput + " " + userMessageText);
-        const textWithContext = userMessageText + (dbContext ? `\n\n(Note: Active system database matches matching current context:\n${dbContext})` : "");
+        const policyContext = getPolicyMatchesContext(report.rawInput + " " + userMessageText);
+        let noteContext = "";
+        if (dbContext || policyContext) {
+            noteContext = `\n\n(Note: Active system database matches matching current context:\n${dbContext}\n${policyContext})`;
+        }
+        const textWithContext = userMessageText + noteContext;
         
         const parts = [{ text: textWithContext }];
         let attachmentUrl = null;
@@ -12778,9 +12838,10 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
         // First turn - push initial prompt
         report.geminiChatHistory = [];
         const dbContext = getDatabaseMatchesContext(report.rawInput);
+        const policyContext = getPolicyMatchesContext(report.rawInput);
         report.geminiChatHistory.push({
             role: "user",
-            parts: [{ text: `Raw Ad Input: "${report.rawInput}"\nCategoryContext: "${category}"\n${dbContext}` }]
+            parts: [{ text: `Raw Ad Input: "${report.rawInput}"\nCategoryContext: "${category}"\n${dbContext}\n${policyContext}` }]
         });
     }
 

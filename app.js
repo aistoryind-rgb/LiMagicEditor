@@ -3216,8 +3216,18 @@ function runValidationPipeline(ctx, override) {
     // 0. Advanced direct translation mapping matching (Advanced Learning Method)
     const trimmedRaw = ctx.raw.replace(/\s+/g, ' ').trim().toLowerCase();
     if (customTranslations[trimmedRaw]) {
-        ctx.logs.push({ text: `Matched trained translation: <strong>${customTranslations[trimmedRaw]}</strong>`, type: 'policy' });
-        ctx.finalText = customTranslations[trimmedRaw];
+        const val = customTranslations[trimmedRaw];
+        let fixedText = val;
+        if (val && val.startsWith("{") && val.endsWith("}")) {
+            try {
+                const parsed = JSON.parse(val);
+                if (parsed && parsed.text) {
+                    fixedText = parsed.text;
+                }
+            } catch (e) {}
+        }
+        ctx.logs.push({ text: `Matched trained translation: <strong>${fixedText}</strong>`, type: 'policy' });
+        ctx.finalText = fixedText;
         ctx.category = override === "auto" ? detectCategory(ctx.finalText) : override;
         ctx.status = "passed";
         
@@ -10407,6 +10417,21 @@ function renderCustomSpelling() {
     }
 }
 
+function getActiveEditorName() {
+    if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+        if (sessionStorage.getItem("li_admin_role") === "super") {
+            return "Super Admin";
+        }
+        const fn = localStorage.getItem("li_request_firstname");
+        const ln = localStorage.getItem("li_request_lastname");
+        if (fn || ln) {
+            return `${fn || ""} ${ln || ""}`.trim();
+        }
+        return "Admin";
+    }
+    return "System";
+}
+
 function renderCustomTranslations() {
     const tbody = document.getElementById("admin-translations-list");
     if (!tbody) return;
@@ -10423,9 +10448,16 @@ function renderCustomTranslations() {
         badge.textContent = `Total: ${entries.length}`;
     }
 
-    const filteredEntries = query ? entries.filter(([raw, corr]) => 
-        raw.toLowerCase().includes(query) || corr.toLowerCase().includes(query)
-    ) : entries;
+    const filteredEntries = query ? entries.filter(([raw, corrValue]) => {
+        let text = corrValue;
+        if (corrValue && corrValue.startsWith("{") && corrValue.endsWith("}")) {
+            try {
+                const parsed = JSON.parse(corrValue);
+                text = parsed.text || corrValue;
+            } catch (e) {}
+        }
+        return raw.toLowerCase().includes(query) || text.toLowerCase().includes(query);
+    }) : entries;
 
     const isAuthorized = sessionStorage.getItem("li_admin_authenticated") === "true";
     const isSuperAdmin = isAuthorized && sessionStorage.getItem("li_admin_role") === "super";
@@ -10439,30 +10471,53 @@ function renderCustomTranslations() {
     // Adjust table headers
     const thRaw = document.getElementById("th-translations-raw");
     const thCorr = document.getElementById("th-translations-corr");
+    const thDetails = document.getElementById("th-translations-details");
     const thAction = document.getElementById("th-translations-action");
-    if (thRaw && thCorr && thAction) {
+    if (thRaw && thCorr && thDetails && thAction) {
         if (isAuthorized) {
-            thRaw.style.width = "45%";
-            thCorr.style.width = "45%";
+            thRaw.style.width = "35%";
+            thCorr.style.width = "35%";
+            thDetails.style.width = "20%";
             thAction.style.display = "";
         } else {
-            thRaw.style.width = "50%";
-            thCorr.style.width = "50%";
+            thRaw.style.width = "40%";
+            thCorr.style.width = "40%";
+            thDetails.style.width = "20%";
             thAction.style.display = "none";
         }
     }
 
     if (filteredEntries.length === 0) {
-        const colspan = isAuthorized ? 3 : 2;
+        const colspan = isAuthorized ? 4 : 3;
         tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--text-secondary); padding: 20px;">${query ? 'No matching trained ads found.' : 'No custom full ad translations trained yet.'}</td></tr>`;
         return;
     }
 
     filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
 
-    for (const [raw, corr] of filteredEntries) {
+    for (const [raw, corrValue] of filteredEntries) {
         const tr = document.createElement("tr");
 
+        let corrText = corrValue;
+        let author = "System";
+        let method = "Legacy Correction";
+        let fixedTime = "N/A";
+        let reporterTime = "N/A";
+
+        if (corrValue && corrValue.startsWith("{") && corrValue.endsWith("}")) {
+            try {
+                const parsed = JSON.parse(corrValue);
+                if (parsed && parsed.text) {
+                    corrText = parsed.text;
+                    author = parsed.author || "System";
+                    method = parsed.method || "Trained manually";
+                    fixedTime = parsed.timestamp || "N/A";
+                    reporterTime = parsed.reporterTime || "N/A";
+                }
+            } catch (e) {}
+        }
+
+        // Column 1: Raw Ad
         const tdRaw = document.createElement("td");
         tdRaw.style.wordBreak = "break-word";
         tdRaw.style.whiteSpace = "normal";
@@ -10470,10 +10525,26 @@ function renderCustomTranslations() {
         tdRaw.style.lineHeight = "1.4";
         tdRaw.style.padding = "10px";
         tdRaw.style.verticalAlign = "top";
-        tdRaw.style.color = "rgba(255,255,255,0.7)";
-        tdRaw.textContent = raw;
+        
+        const rawTextDiv = document.createElement("div");
+        rawTextDiv.style.fontWeight = "600";
+        rawTextDiv.style.color = "rgba(255,255,255,0.85)";
+        rawTextDiv.textContent = raw;
+        tdRaw.appendChild(rawTextDiv);
+
+        const reporterTimeDiv = document.createElement("div");
+        reporterTimeDiv.style.fontSize = "9.5px";
+        reporterTimeDiv.style.color = "var(--text-muted)";
+        reporterTimeDiv.style.marginTop = "6px";
+        reporterTimeDiv.style.display = "flex";
+        reporterTimeDiv.style.alignItems = "center";
+        reporterTimeDiv.style.gap = "4px";
+        reporterTimeDiv.innerHTML = `<i class="fa-regular fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Reported: ${reporterTime}`;
+        tdRaw.appendChild(reporterTimeDiv);
+        
         tr.appendChild(tdRaw);
 
+        // Column 2: Corrected Ad
         const tdCorr = document.createElement("td");
         tdCorr.style.wordBreak = "break-word";
         tdCorr.style.whiteSpace = "normal";
@@ -10481,10 +10552,82 @@ function renderCustomTranslations() {
         tdCorr.style.lineHeight = "1.4";
         tdCorr.style.padding = "10px";
         tdCorr.style.verticalAlign = "top";
-        tdCorr.style.color = "#30d158";
-        tdCorr.textContent = corr;
+        
+        const corrTextDiv = document.createElement("div");
+        corrTextDiv.style.fontWeight = "600";
+        corrTextDiv.style.color = "#30d158";
+        corrTextDiv.textContent = corrText;
+        tdCorr.appendChild(corrTextDiv);
+
+        const fixedTimeDiv = document.createElement("div");
+        fixedTimeDiv.style.fontSize = "9.5px";
+        fixedTimeDiv.style.color = "var(--text-muted)";
+        fixedTimeDiv.style.marginTop = "6px";
+        fixedTimeDiv.style.display = "flex";
+        fixedTimeDiv.style.alignItems = "center";
+        fixedTimeDiv.style.gap = "4px";
+        fixedTimeDiv.innerHTML = `<i class="fa-solid fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Fixed: ${fixedTime}`;
+        tdCorr.appendChild(fixedTimeDiv);
+        
         tr.appendChild(tdCorr);
 
+        // Column 3: Details
+        const tdDetails = document.createElement("td");
+        tdDetails.style.padding = "10px";
+        tdDetails.style.verticalAlign = "top";
+        
+        let methodBg, methodColor, methodBorder;
+        const m = method.toLowerCase();
+        if (m.includes("automatic")) {
+            methodBg = "rgba(52, 211, 153, 0.06)";
+            methodColor = "#34d399";
+            methodBorder = "rgba(52, 211, 153, 0.15)";
+        } else if (m.includes("policy")) {
+            methodBg = "rgba(167, 139, 250, 0.06)";
+            methodColor = "#a78bfa";
+            methodBorder = "rgba(167, 139, 250, 0.15)";
+        } else if (m.includes("item")) {
+            methodBg = "rgba(34, 211, 238, 0.06)";
+            methodColor = "#22d3ee";
+            methodBorder = "rgba(34, 211, 238, 0.15)";
+        } else if (m.includes("outdoors") || m.includes("vehicles") || m.includes("clothing") || m.includes("work")) {
+            methodBg = "rgba(96, 165, 250, 0.06)";
+            methodColor = "#60a5fa";
+            methodBorder = "rgba(96, 165, 250, 0.15)";
+        } else { // manual / legacy
+            methodBg = "rgba(251, 146, 60, 0.06)";
+            methodColor = "#fb923c";
+            methodBorder = "rgba(251, 146, 60, 0.15)";
+        }
+
+        const badgeSpan = document.createElement("span");
+        badgeSpan.className = "badge";
+        badgeSpan.style.background = methodBg;
+        badgeSpan.style.color = methodColor;
+        badgeSpan.style.borderColor = methodBorder;
+        badgeSpan.style.fontSize = "9.5px";
+        badgeSpan.style.padding = "2px 8px";
+        badgeSpan.style.borderRadius = "4px";
+        badgeSpan.style.fontWeight = "700";
+        badgeSpan.style.textTransform = "uppercase";
+        badgeSpan.style.letterSpacing = "0.3px";
+        badgeSpan.style.display = "inline-block";
+        badgeSpan.textContent = method;
+        tdDetails.appendChild(badgeSpan);
+
+        const authorDiv = document.createElement("div");
+        authorDiv.style.fontSize = "10px";
+        authorDiv.style.color = "var(--text-secondary)";
+        authorDiv.style.marginTop = "6px";
+        authorDiv.style.display = "flex";
+        authorDiv.style.alignItems = "center";
+        authorDiv.style.gap = "4px";
+        authorDiv.innerHTML = `<i class="fa-solid fa-user-shield" style="font-size: 8.5px; opacity: 0.6;"></i> By: <span style="font-weight: 600; color: rgba(255,255,255,0.7);">${author}</span>`;
+        tdDetails.appendChild(authorDiv);
+
+        tr.appendChild(tdDetails);
+
+        // Column 4: Actions (if authorized)
         if (isAuthorized) {
             const tdAction = document.createElement("td");
             tdAction.style.textAlign = "center";
@@ -10503,7 +10646,7 @@ function renderCustomTranslations() {
             
             btnDel.addEventListener("click", () => {
                 showCustomConfirmDialog(
-                    `Delete translation mapping for:\n\nOriginal: "${raw}"\n\nCorrected: "${corr}"?`,
+                    `Delete translation mapping for:\n\nOriginal: "${raw}"\n\nCorrected: "${corrText}"?`,
                     () => {
                         delete customTranslations[raw];
                         localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
@@ -12424,15 +12567,25 @@ function renderTriageCards(reports, container) {
                     const textEl = card.querySelector(".fixed-output-text");
                     const finalAdText = textEl ? textEl.textContent.trim() : "";
                     
-                    // If they edited the text directly, extract spelling corrections from it
+                    let finalMethod = report.trainedMethod || "Trained manually";
+                    // If they edited the text directly, extract spelling corrections from it and override method to manual
                     if (finalAdText && finalAdText !== lastPreviewText) {
                         learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
+                        finalMethod = "Trained manually";
                     }
                     
                     if (finalAdText) {
                         // Register direct exact raw-to-fixed translation mapping for advanced learning
                         const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
-                        customTranslations[trimmedRaw] = finalAdText;
+                        const details = {
+                            text: finalAdText,
+                            author: getActiveEditorName(),
+                            method: finalMethod,
+                            timestamp: new Date().toLocaleString(),
+                            reporterTime: report.timestamp || "Unknown",
+                            category: currentCategory
+                        };
+                        customTranslations[trimmedRaw] = JSON.stringify(details);
                         localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
                     }
                     
@@ -12466,6 +12619,7 @@ function renderTriageCards(reports, container) {
                     const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
                     if (trainedCorr) {
                         showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}" (previewing, click Confirm to save)`, "success");
+                        report.trainedMethod = "Trained from policy";
                         report.manualOverrideText = null;
                         updateCardBody();
                     } else {
@@ -12482,6 +12636,7 @@ function renderTriageCards(reports, container) {
                     const success = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
                     if (success) {
                         showCustomNotification("Trained from Vehicles & Clothing database list successfully! (previewing, click Confirm to save)", "success");
+                        report.trainedMethod = "Trained from Outdoors Clothing";
                         report.manualOverrideText = null;
                         updateCardBody();
                     } else {
@@ -12496,6 +12651,7 @@ function renderTriageCards(reports, container) {
                     const success = trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
                     if (success) {
                         showCustomNotification("Trained from Items database list successfully! (previewing, click Confirm to save)", "success");
+                        report.trainedMethod = "Trained from Items List";
                         report.manualOverrideText = null;
                         updateCardBody();
                     } else {
@@ -12531,6 +12687,7 @@ function renderTriageCards(reports, container) {
                     
                     // Directly override the live Fixed Output box to display exactly what they typed with no errors
                     report.manualOverrideText = similarVal;
+                    report.trainedMethod = "Trained manually";
                     updateCardBody();
                     
                     showCustomNotification("Target output successfully applied to Fixed Output preview! Review and click Confirm.", "success");
@@ -12547,10 +12704,19 @@ function renderTriageCards(reports, container) {
         
         // Auto-train on load: if there are any matches available in Policy, database, or items, apply them automatically
         const policyTrained = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
-        if (!policyTrained) {
+        if (policyTrained) {
+            report.trainedMethod = "Trained automatically (Policy)";
+        } else {
             const dbTrained = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
-            if (!dbTrained) {
-                trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
+            if (dbTrained) {
+                report.trainedMethod = "Trained automatically (Outdoors/Vehicles list)";
+            } else {
+                const itemsTrained = trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
+                if (itemsTrained) {
+                    report.trainedMethod = "Trained automatically (Items List)";
+                } else {
+                    report.trainedMethod = "Trained manually";
+                }
             }
         }
         

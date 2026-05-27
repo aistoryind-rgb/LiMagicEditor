@@ -486,7 +486,7 @@ textarea:focus, input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #0a84ff, #a78bfa, #ec4899, #f59e0b, #0a84ff);
-    animation: rotateGlow 12s linear infinite;
+    animation: rotateGlow 8s linear infinite;
     z-index: -2;
     opacity: 0;
     transform: translate(-50%, -50%);
@@ -1732,7 +1732,7 @@ textarea:focus, input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #0a84ff, #a78bfa, #ec4899, #f59e0b, #0a84ff);
-    animation: rotateGlow 12s linear infinite;
+    animation: rotateGlow 8s linear infinite;
     z-index: -2;
     transform: translate(-50%, -50%);
 }
@@ -1837,7 +1837,7 @@ textarea:focus, input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #0a84ff, #a78bfa, #ec4899, #f59e0b, #0a84ff);
-    animation: rotateGlow 12s linear infinite;
+    animation: rotateGlow 8s linear infinite;
     z-index: -2;
     transform: translate(-50%, -50%);
 }
@@ -3555,7 +3555,7 @@ textarea:focus, input:focus, select:focus {
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #0a84ff, #a78bfa, #ec4899, #f59e0b, #0a84ff);
-    animation: rotateGlow 12s linear infinite;
+    animation: rotateGlow 8s linear infinite;
     z-index: -2;
     transform: translate(-50%, -50%);
 }

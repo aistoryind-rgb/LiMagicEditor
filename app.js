@@ -12603,6 +12603,82 @@ function initGeminiEngine() {
     refreshAIAssistantTabVisibility();
 }
 
+function getDatabaseMatchesContext(rawText) {
+    if (!rawText) return "";
+    const rawClean = rawText.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+    const rawTokens = rawClean.split(/\s+/).filter(word => word.length >= 3);
+    if (rawTokens.length === 0) return "";
+
+    const stopwords = new Set(["buying", "selling", "trading", "renting", "hiring", "want", "buy", "sell", "trade", "rent", "hire", "with", "budget", "price", "negotiable", "each", "respectively", "luminous", "quality", "years", "experience", "and", "the", "for", "near"]);
+
+    const allDbItems = [];
+    
+    // Vehicles
+    if (typeof VEHICLE_DB !== "undefined") {
+        for (const cat in VEHICLE_DB) {
+            VEHICLE_DB[cat].forEach(name => {
+                allDbItems.push({ name, type: `Vehicle (${cat})` });
+            });
+        }
+    }
+    // Clothing
+    if (typeof CLOTHING_DB !== "undefined") {
+        for (const gender in CLOTHING_DB) {
+            for (const subcat in CLOTHING_DB[gender]) {
+                CLOTHING_DB[gender][subcat].forEach(name => {
+                    allDbItems.push({ name, type: `Clothing (${gender} ${subcat})` });
+                });
+            }
+        }
+    }
+    // Items
+    if (typeof ITEMS_DB !== "undefined") {
+        for (const cat in ITEMS_DB) {
+            ITEMS_DB[cat].forEach(name => {
+                allDbItems.push({ name, type: `Item (${cat})` });
+            });
+        }
+    }
+
+    const matchedItems = new Set();
+    const resultList = [];
+
+    for (const token of rawTokens) {
+        if (stopwords.has(token)) continue;
+        
+        for (const dbItem of allDbItems) {
+            const itemNameLower = dbItem.name.toLowerCase();
+            
+            // 1. Substring Match
+            if (itemNameLower.includes(token) || token.includes(itemNameLower)) {
+                if (!matchedItems.has(dbItem.name)) {
+                    matchedItems.add(dbItem.name);
+                    resultList.push(`- "${dbItem.name}" [Type: ${dbItem.type}]`);
+                }
+                continue;
+            }
+
+            // 2. Fuzzy spelling match
+            const dbTokens = itemNameLower.split(/\s+/);
+            for (const dbTok of dbTokens) {
+                if (dbTok.length >= 3) {
+                    const dist = levenshteinDistance(token, dbTok);
+                    if (dist <= 2 && dist < Math.max(token.length / 2, 2)) {
+                        if (!matchedItems.has(dbItem.name)) {
+                            matchedItems.add(dbItem.name);
+                            resultList.push(`- "${dbItem.name}" [Type: ${dbItem.type}]`);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (resultList.length === 0) return "";
+    return `\nLOCAL SYSTEM DATABASE MATCHES FOUND:\n${resultList.slice(0, 15).join("\n")}\n(IMPORTANT: If the user refers to any matching product or item, you MUST correct it to use the exact spelling from the list of official database matches above)\n`;
+}
+
 function getGeminiSparkSuggestion(rawText, category, callback) {
     const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (!keyVal) {
@@ -12611,6 +12687,8 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
     }
 
     const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const dbContext = getDatabaseMatchesContext(rawText);
+    
     // Build the policy prompt context
     const prompt = `You are a strict advertisement editor for LifeInvader.
 Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
@@ -12620,6 +12698,7 @@ Your task is to correct a user's raw advertisement input text according to our s
 4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
 5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
+${dbContext}
 
 Translate this raw ad input: "${rawText}"
 Target category: "${category}"
@@ -12671,7 +12750,10 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
 
     // If user message is provided, push it to history
     if (userMessageText) {
-        const parts = [{ text: userMessageText }];
+        const dbContext = getDatabaseMatchesContext(report.rawInput + " " + userMessageText);
+        const textWithContext = userMessageText + (dbContext ? `\n\n(Note: Active system database matches matching current context:\n${dbContext})` : "");
+        
+        const parts = [{ text: textWithContext }];
         let attachmentUrl = null;
         if (report.pendingAttachment) {
             parts.push({
@@ -12695,9 +12777,10 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
     } else {
         // First turn - push initial prompt
         report.geminiChatHistory = [];
+        const dbContext = getDatabaseMatchesContext(report.rawInput);
         report.geminiChatHistory.push({
             role: "user",
-            parts: [{ text: `Raw Ad Input: "${report.rawInput}"\nCategoryContext: "${category}"` }]
+            parts: [{ text: `Raw Ad Input: "${report.rawInput}"\nCategoryContext: "${category}"\n${dbContext}` }]
         });
     }
 
@@ -12902,7 +12985,8 @@ function renderTriageCards(reports, container) {
                             dispText = msg.parts[0].text;
                         }
                     } else {
-                        dispText = `<b>You:</b> ${msg.parts[0].text}`;
+                        const cleanUserMsg = msg.parts[0].text.split("\n\n(Note: Active")[0];
+                        dispText = `<b>You:</b> ${cleanUserMsg}`;
                     }
                     const attachHtml = msg.attachmentUrl ? `
                         <div style="margin-bottom: 6px; border-radius: 4px; overflow: hidden; max-width: 150px; max-height: 100px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="window.open('${msg.attachmentUrl}', '_blank')">

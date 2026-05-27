@@ -14051,7 +14051,7 @@ function renderTriageCards(reports, container) {
                     updateCardBody();
                 }
             }
-        }, 150);
+        }, 150 + idx * 3000);
 
         // Initial build
         updateCardBody();

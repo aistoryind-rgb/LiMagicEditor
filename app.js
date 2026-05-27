@@ -9392,6 +9392,10 @@ function initAdminPanel() {
                         content.classList.add("hide");
                     }
                 });
+
+                if (targetId === "tab-api-vault") {
+                    refreshAIAssistantTabVisibility();
+                }
             });
         });
     }
@@ -11232,7 +11236,7 @@ let currentPolicyPage = 0;
 const POLICY_PAGES = [
     {
         title: "Internal Policy Overview",
-        content: "<div class=\"policy-section\"><p>﻿INTERNAL POLICY</p><p>INTERNAL POLICY</p><p>(Credit List)</p><p>Last updated: 04-05-2026</p><p>What is LifeInvader about?</p><p>Lifeinvader is a private state organization that specializes in editing ads, hosting events like the talent show, and making news articles and videos that are informative for the public.</p></div>"
+        content: "<div class=\"policy-section\" style=\"text-align: center;\"><div class=\"lifeinvader-logo-block\" style=\"display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px auto 25px auto; font-family: var(--font-heading); user-select: none;\"><span style=\"font-size: 24px; font-weight: 800; letter-spacing: -1px; line-height: 1;\"><span style=\"color: #ffffff;\">Life</span><span style=\"color: #ff3b30;\">Invader</span></span><span style=\"background: #ff3b30; color: #ffffff; font-size: 8.5px; font-weight: 800; letter-spacing: 0.3px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.35); text-transform: uppercase; line-height: 1; display: inline-flex; align-items: center; justify-content: center; height: 16px; margin-top: 2px;\">EN3 OFFICIAL</span></div><p style=\"font-weight: 700; color: #ff3b30; letter-spacing: 1px; margin-bottom: 4px;\">INTERNAL POLICY</p><p style=\"font-weight: 700; color: #ff3b30; letter-spacing: 1px; margin-bottom: 8px;\">INTERNAL POLICY</p><p style=\"margin-bottom: 4px;\">(Credit List)</p><p style=\"font-size: 11px; opacity: 0.6; margin-bottom: 0;\">Last updated: 04-05-2026</p><div style=\"text-align: justify; margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 15px;\"><p style=\"font-weight: 600; color: #ff3b30; margin-bottom: 6px;\">What is LifeInvader about?</p><p>Lifeinvader is a private state organization that specializes in editing ads, hosting events like the talent show, and making news articles and videos that are informative for the public.</p></div></div>"
     },
     {
         title: "Buying & Selling Formats",
@@ -11244,7 +11248,7 @@ const POLICY_PAGES = [
     },
     {
         title: "Restricted Content Guidelines",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Looking/Dating Category:</h4><p>1) Looking for a boyfriend.</p><p>2) Looking for family members.</p><p>3) Looking for Max Uchiha.</p><p>________________</p><p>Advertisement Rules & Restricted Content Guidelines</p><p>Please carefully review the following rules regarding advertisements. Failure to follow these guidelines may result in ad rejection, warnings, or phone blacklisting depending on the violation.</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Issue a Phone Blacklist)</h4><h4 class=\"policy-subtitle\">If any of the following terms or items are found in an advertisement, the phone number used in the ad must be blacklisted immediately:</h4><ul class=\"policy-list-bullets\"><li>Firearms of any kind</li><li>Ammunition</li><li>Bulletproof vests</li><li>Dark Lui Vi Armored Vest</li><li>Weed / cannabis seeds or trees</li><li>Drugs and cocaine</li><li>EMS surgical masks or medical masks</li><li>Vehicle scanners and people scanners (radars)</li><li>Balaclava masks</li><li>Ropes</li><li>Flash drive with a virus (USB)</li><li>Lock picks</li><li>Troll advertisements</li><li>Anti-Radar</li><li>Engine Block</li><li>Smuggling Machine</li><li>Submodule</li><li>Hacking the Search Database</li></ul><p>It is also strictly forbidden to publish license plates containing offensive or inappropriate language. “Selling license plate (1SEX269). Price: Negotiable.”</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Do Not Issue a Phone Blacklist)</h4><p>If any of the following terms are found in an advertisement, reject the ad only. Do not issue a phone blacklist.</p><ul class=\"policy-list-bullets\"><li>Crowbar</li><li>All fabric</li><li>Head bag (except luminous head bag)</li><li>Animal skin</li><li>Armor skin</li><li>Air Horn</li><li>Earplugs</li><li>Barricade</li><li>Trap</li><li>Poison dart</li><li>Army Uniform</li><li>Tracking sensor</li><li>Dangerous razor</li><li>Resource scanners</li><li>Body armor plates</li><li>Body Armor</li><li>Ingredients for cocaine</li><li>Paper for money</li><li>Satellite dish</li><li>Tincture of forest mushrooms</li><li>First Aid Kits & all pills</li><li>Food items (Banana, Burger, Grilled Steak)</li></ul><h4 class=\"policy-subtitle\">Things We Cannot Advertise</h4><h4 class=\"policy-subtitle\">Advertisements involving any of the following must be rejected:</h4><ul class=\"policy-list-bullets\"><li>Grand Coins (Premium Battlepass / Premium Plus Battlepass)</li><li>All illegal items listed above</li><li>Lockpicks, ropes, and crowbars</li><li>Specific family names</li><li>“Looking for Playboy family members.” advertisements</li><li>(Family names cannot be mentioned)</li><li>Hype Body or branded armor</li><li>Gangs</li><li>Nationality</li><li>Anything involving the sale of people</li><li>Anything sexual or hinting at sexual content</li><li>Drugs of any kind</li><li>Food items (except fish)</li><li>Health products (medkits, pills, tincture soup, etc.)</li><li>Birthday advertisements</li><li>Leaders and deputy leaders</li></ul><p>(excluding leaders of unofficial organization families and crime organizations)</p><h4 class=\"policy-subtitle\">Places We Do Not Promote</h4><p>Punishment: Warning</p><h4 class=\"policy-subtitle\">The following locations, organizations, or events are not allowed to be promoted in advertisements:</h4><ul class=\"policy-list-bullets\"><li>Mega Mall</li><li>Gang Headquarters (Ballas, Vagos, Families, Bloods, and Marabunta)</li><li>Black Market</li><li>Parties at LSPD, FIB, SAHP, EMS, LifeInvader or Government buildings.</li><li>Parties at the ghetto</li></ul><p>Please make sure all advertisements follow these guidelines before publishing.</p><h4 class=\"policy-subtitle\">Rejection Reasons Guidelines</h4><p>Please ensure all rejection reasons are written professionally and clearly so citizens can properly understand the issue with their advertisement.</p><h4 class=\"policy-subtitle\">Common Rejection Reasons</h4><ul class=\"policy-list-bullets\"><li>Cannot advertise more than 1 vehicle at a time.</li><li>Cannot advertise more than 3 items at a time.</li><li>Cannot promote illegal items.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Improper advertisement.</li><li>Template not found. Contact LI to create a template.</li><li>Please mention the Full Name.</li><li>Person not found in database. (Person must be in the GRAND RP mail)</li><li>You cannot look for classified people.</li><li>(State organization Leaders and Deputy Leaders only)</li><li>Only if their name is mentioned in the #🧾|leader-list in LI mails.</li><li>Item not found in database. (Including Grand Coins and Battlepass)</li><li>Insufficient information for the item name.</li><li>Insufficient information for the vehicle name.</li><li>Please indicate the rental period.</li><li>LI cloud server not loading or offline. (Only for PDA bug cases)</li><li>Trolling advertisements.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Cannot advertise this vehicle as it is non-sellable.</li><li>A family cannot be traded.</li><li>Cannot look for a classified family.</li><li>We do not promote parties at any green grass location.</li><li>Green Grass Rule Example</li></ul><p>For example, “Party at the Beach Market.” should not be promoted and must instead be labeled as “Party at the Beach.” This rule exists because music is not allowed to be played in green grass areas.</p><p>________________</p><h4 class=\"policy-subtitle\">Categories:</h4><h4 class=\"policy-subtitle\">Real Estate:</h4><p>Houses / Apartments / Mansion / Casino penthouse</p><h4 class=\"policy-subtitle\">Auto:</h4><p>Cars / Trucks / Motorcycles / Bikes / ATVS / Boats</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Looking/Dating Category:</h4><p>1) Looking for a boyfriend.</p><p>2) Looking for family members.</p><p>3) Looking for Max Uchiha.</p><p>________________</p><p>Advertisement Rules & Restricted Content Guidelines</p><p>Please carefully review the following rules regarding advertisements. Failure to follow these guidelines may result in ad rejection, warnings, or phone blacklisting depending on the violation.</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Issue a Phone Blacklist)</h4><h4 class=\"policy-subtitle\">If any of the following terms or items are found in an advertisement, the phone number used in the ad must be blacklisted immediately:</h4><ul class=\"policy-list-bullets\"><li>Firearms of any kind</li><li>Ammunition</li><li>Bulletproof vests</li><li>Dark Lui Vi Armored Vest</li><li>Weed / cannabis seeds or trees</li><li>Drugs and cocaine</li><li>EMS surgical masks or medical masks</li><li>Vehicle scanners and people scanners (radars)</li><li>Balaclava masks</li><li>Ropes</li><li>Flash drive with a virus (USB)</li><li>Lock picks</li><li>Troll advertisements</li><li>Anti-Radar</li><li>Engine Block</li><li>Smuggling Machine</li><li>Submodule</li><li>Hacking the Search Database</li></ul><p>It is also strictly forbidden to publish license plates containing offensive or inappropriate language. “Selling license plate (1SEX269). Price: Negotiable.”</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Do Not Issue a Phone Blacklist)</h4><p>If any of the following terms are found in an advertisement, reject the ad only. Do not issue a phone blacklist.</p><ul class=\"policy-list-bullets\"><li>Crowbar</li><li>All fabric</li><li>Head bag (except luminous head bag)</li><li>Animal skin</li><li>Armor skin</li><li>Air Horn</li><li>Earplugs</li><li>Barricade</li><li>Trap</li><li>Poison dart</li><li>Army Uniform</li><li>Tracking sensor</li><li>Dangerous razor</li><li>Resource scanners</li><li>Body armor plates</li><li>Body Armor</li><li>Ingredients for cocaine</li><li>Paper for money</li><li>Satellite dish</li><li>Tincture of forest mushrooms</li><li>First Aid Kits & all pills</li><li>Food items (Banana, Burger, Grilled Steak)</li></ul><h4 class=\"policy-subtitle\">Things We Cannot Advertise</h4><h4 class=\"policy-subtitle\">Advertisements involving any of the following must be rejected:</h4><ul class=\"policy-list-bullets\"><li>Grand Coins (Premium Battlepass / Premium Plus Battlepass)</li><li>All illegal items listed above</li><li>Lockpicks, ropes, and crowbars</li><li>Specific family names</li><li>“Looking for Playboy family members.” advertisements</li><li>(Family names cannot be mentioned)</li><li>Hype Body or branded armor</li><li>Gangs</li><li>Nationality</li><li>Anything involving the sale of people</li><li>Anything sexual or hinting at sexual content</li><li>Drugs of any kind</li><li>Food items (except fish)</li><li>Health products (medkits, pills, tincture soup, etc.)</li><li>Birthday advertisements</li><li>Leaders and deputy leaders</li></ul><p>(excluding leaders of unofficial organization families and crime organizations)</p><h4 class=\"policy-subtitle\">Places We Do Not Promote</h4><p>Punishment: Warning</p><h4 class=\"policy-subtitle\">The following locations, organizations, or events are not allowed to be promoted in advertisements:</h4><ul class=\"policy-list-bullets\"><li>Mega Mall</li><li>Gang Headquarters (Ballas, Vagos, Families, Bloods, and Marabunta)</li><li>Black Market</li><li>Parties at LSPD, FIB, SAHP, EMS, LifeInvader or Government buildings.</li><li>Parties at the ghetto</li></ul><p>Please make sure all advertisements follow these guidelines before publishing.</p><h4 class=\"policy-subtitle\">Rejection Reasons Guidelines</h4><p>Please ensure all rejection reasons are written professionally and clearly so citizens can properly understand the issue with their advertisement.</p><h4 class=\"policy-subtitle\">Common Rejection Reasons</h4><ul class=\"policy-list-bullets\"><li>Cannot advertise more than 1 vehicle at a time.</li><li>Cannot advertise more than 3 items at a time.</li><li>Cannot promote illegal items.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Improper advertisement.</li><li>Template not found. Contact LI to create a template.</li><li>Please mention the Full Name.</li><li>Person not found in database. (Person must be in the GRAND RP mail)</li><li>You cannot look for classified people.</li><li>(State organization Leaders and Deputy Leaders only)</li><li>Only if their name is mentioned in the #📁|leader-list in LI mails.</li><li>Item not found in database. (Including Grand Coins and Battlepass)</li><li>Insufficient information for the item name.</li><li>Insufficient information for the vehicle name.</li><li>Please indicate the rental period.</li><li>LI cloud server not loading or offline. (Only for PDA bug cases)</li><li>Trolling advertisements.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Cannot advertise this vehicle as it is non-sellable.</li><li>A family cannot be traded.</li><li>Cannot look for a classified family.</li><li>We do not promote parties at any green grass location.</li><li>Green Grass Rule Example</li></ul><p>For example, “Party at the Beach Market.” should not be promoted and must instead be labeled as “Party at the Beach.” This rule exists because music is not allowed to be played in green grass areas.</p><p>________________</p><h4 class=\"policy-subtitle\">Categories:</h4><h4 class=\"policy-subtitle\">Real Estate:</h4><p>Houses / Apartments / Mansion / Casino penthouse</p><h4 class=\"policy-subtitle\">Auto:</h4><p>Cars / Trucks / Motorcycles / Bikes / ATVS / Boats</p></div>"
     },
     {
         title: "Banned Content & Locations",
@@ -11435,6 +11439,10 @@ const POLICY_PAGES = [
         content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>Use the word \"Renting out\". Instead of using \"Price\", use the word \"Rent\".</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Renting out a vehicle. Rent: Negotiable. (for single vehicle)</p><p>Renting out vehicles. Rent: Negotiable. (for more than one vehicle)</p><p>Renting out \"Truffade Chiron\". Rent: Negotiable.</p><p>Renting out \"Truffade Chiron\". Rent: $100.000 per week.</p><p>Renting out \"Truffade Chiron\". Rent: $100.000 for 3 days.</p><p>Renting out \"Truffade Chiron\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Rent: Negotiable.</p><p>Renting out \"Truffade Chiron\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Rent: $100.000 for 3 days.</p><h4 class=\"policy-subtitle\">An owner of a car sharing business would post:</h4><p>Renting a vehicle. Budget: Negotiable.</p><p>Renting a vehicle. Budget: $100.000 per week.</p><p>Renting vehicles. Budget: $100.000 per week per car. (for more than one vehicle)</p><p>Renting \"Truffade Chiron\". Budget: $100.000 per week.</p><p>Renting \"Truffade Chiron\" with partial configuration and visual upgrades. Budget: $100.000 for 3 days.</p><ul class=\"policy-list-bullets\"><li>*Players are also now able to rent exclusive truck skins to boost their earnings from the trucking job. This would be advertised as the following:</li></ul><p>Renting a \"20 percent\" exclusive truck. Budget: Negotiable.</p><p>If rent and budget are specified but no rental period is specified, (1-21 days/per week/for 1-21 days) reject with the message \"Please indicate rental period.\"</p><h4 class=\"policy-subtitle\">Credit List:</h4><h4 class=\"policy-subtitle\">Editors:</h4><p>White Rabbit</p><p>Mya Rae</p><p>Minxy Malono</p><p>Cherry Choo</p><p>Kim Abergil</p><p>Habib Rahman</p><p>Calvin Classic</p><p>Nate Blakely</p><p>Nyx Kleps</p><p>Frankie Hill</p><p>Azure Duke</p><p>Carl Jordan</p><p>Eve Mystbloom</p><p>Emazeo Ferry</p><p>Shikamaru Frankie</p><p>Lucio Escobar</p><p>Elite Alpha</p><p>Max Uchiha</p><p>C E O</p><p>Max Uchiha</p><p>Ex: CEO</p><p>2x Elite Alpha | 2988</p><p>2x Nate Blakely | 60897</p><p>2x Zandre Mortez | 124460</p><p>Lucio Escobar | 44513</p><p>2x Nyx Kleps | 71788</p><p>Azure Duke | 62753</p><p>John Funchallez | 1378</p><p>Emazeo Ferry | 113643</p><p>Viking Nawab | 39322</p><p>Abdul Hadii | 98878</p><p>John Ice | 127082</p><p>2x Evee Smoke | 60696</p><p>Axon Drake | 84678</p><p>Carl Jordan | 38646</p><p>Nateq Blakely | 60897</p><p>2x Captain Voax | 31031</p><p>Kiana Kaslana | 39734</p><p>Levi Pluxury | 4660</p><p>2x Habib Rahman | 37496</p><p>2x Lucio Escobar | 44513</p><p>Hazem Prod | 41953</p><p>2x Minxy Malono | 5944</p><p>John Funchalez | 1378</p><p>Rui Ace | 240</p><p>Opti Pride | 12854</p><p>Minxy Malono | 5944</p><p>Josh Anton | 38601</p><p>2x Lavi Pluxury | 13752</p><p>2x Hamada Ninja | 10494</p><p>Singham Vella | 14790</p><p>Broolz Hurmaci | 347</p><p>Elizabeth Targaryen | 7238</p><p>3rd Carlo Russo | 186</p><p>2nd Don Kiddick | 359</p><p>1st Nyx Liu l | 94</p></div>"
     }
 ];
+
+
+
+
 
 
 let currentPolicySpread = 0;
@@ -11774,14 +11782,27 @@ function initPolicyBook() {
     }
 
     if (searchInput) {
+        const searchClearBtn = document.getElementById("book-search-clear");
+        
         searchInput.addEventListener("input", (e) => {
             const query = e.target.value.trim();
             if (query.length > 0) {
+                if (searchClearBtn) searchClearBtn.style.display = "flex";
                 showBookSearchResults(query);
             } else {
+                if (searchClearBtn) searchClearBtn.style.display = "none";
                 renderPolicySpread(currentPolicySpread);
             }
         });
+
+        if (searchClearBtn) {
+            searchClearBtn.addEventListener("click", () => {
+                searchInput.value = "";
+                searchClearBtn.style.display = "none";
+                renderPolicySpread(currentPolicySpread);
+                searchInput.focus();
+            });
+        }
     }
 
     renderPolicySpread(currentPolicySpread);
@@ -12649,36 +12670,429 @@ function resolveBugReport(report, card, isIgnore = false) {
 
 // --- Gemini Spark AI Engine & Fuzzy Suggestion Fallback Helpers ---
 
-// --- AI Assistant Tab Visibility Helper ---
-function refreshAIAssistantTabVisibility() {
-    const lockScreen = document.getElementById("ai-assistant-lock-screen");
-    const dashboardContent = document.getElementById("ai-assistant-dashboard-content");
-    if (!lockScreen || !dashboardContent) return;
+// --- Gemini Backup Key Vault & Auto-Failover Logic ---
 
-    const isAuth = sessionStorage.getItem("li_admin_authenticated") === "true";
-    if (isAuth) {
-        lockScreen.classList.add("hide");
-        dashboardContent.classList.remove("hide");
+// Helper to update the visual state of a vault slot status dot
+function updateVaultStatusDot(slot, status) {
+    const dot = document.querySelector(`.vault-status-dot[data-slot="${slot}"]`);
+    if (!dot) return;
+    if (status === "active") {
+        dot.style.background = "#30d158";
+        dot.title = "Active (Connected)";
+    } else if (status === "rate-limit") {
+        dot.style.background = "#ff9f0a";
+        dot.title = "Rate Limited / Quota Exceeded (429)";
+    } else if (status === "invalid" || status === "error") {
+        dot.style.background = "#ff453a";
+        dot.title = "Invalid Key / Connection Error";
+    } else {
+        dot.style.background = "rgba(255,255,255,0.15)";
+        dot.title = "Untested";
+    }
+}
+
+// Test health of a single key slot
+async function testSingleKeyHealth(keyVal) {
+    if (!keyVal) return { ok: false, status: "empty", msg: "Empty Slot" };
+    try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Hello!" }] }]
+            })
+        });
+        if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            const code = errBody?.error?.code || res.status;
+            const message = errBody?.error?.message || "API error";
+            return { ok: false, status: code === 429 ? "rate-limit" : "invalid", msg: message };
+        }
+        trackGeminiAPICall();
+        return { ok: true, status: "active", msg: "Connected" };
+    } catch (e) {
+        return { ok: false, status: "error", msg: e.message || "Network Error" };
+    }
+}
+
+// Auto-failover: sequentially rotate active slot to next populated slot and return key
+function failoverToNextKey() {
+    const isFailoverEnabled = localStorage.getItem("li_gemini_auto_failover") === "true";
+    if (!isFailoverEnabled) return null;
+
+    const startSlot = parseInt(localStorage.getItem("li_gemini_active_slot") || "1");
+    let nextSlot = startSlot;
+
+    for (let attempts = 1; attempts <= 5; attempts++) {
+        nextSlot = (nextSlot % 5) + 1; // sequentially advance: 1->2->3->4->5->1
         
-        // Load settings inputs
-        const inputKey = document.getElementById("input-ai-gemini-key");
-        const customPromptTextarea = document.getElementById("ai-custom-prompt");
-        const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
-        if (inputKey) {
-            if (isAssistant) {
-                inputKey.value = "••••••••••••••••••••••••••••••••";
-            } else {
-                inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+        const backupKey = localStorage.getItem(`li_gemini_vault_key_${nextSlot}`);
+        if (backupKey && backupKey.trim()) {
+            // Found a valid key slot!
+            localStorage.setItem("li_gemini_active_slot", nextSlot.toString());
+            localStorage.setItem("li_gemini_api_key", backupKey.trim());
+            
+            // Sync with hidden main key input
+            const mainInput = document.getElementById("input-ai-gemini-key");
+            if (mainInput) mainInput.value = backupKey.trim();
+
+            // Refresh UI in settings
+            updateAIGeminiStatusDisplay();
+            
+            // Highlight row visually in Settings tab
+            for (let s = 1; s <= 5; s++) {
+                const r = document.querySelector(`.vault-row[data-slot="${s}"]`);
+                const ba = r?.querySelector(`.btn-vault-activate`);
+                if (r) {
+                    if (s === nextSlot) {
+                        r.classList.add("active");
+                        if (ba) {
+                            ba.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+                            ba.style.color = "var(--color-primary)";
+                        }
+                    } else {
+                        r.classList.remove("active");
+                        if (ba) {
+                            ba.innerHTML = `<i class="fa-regular fa-circle"></i>`;
+                            ba.style.color = "var(--text-muted)";
+                        }
+                    }
+                }
+            }
+
+            if (typeof showCustomNotification === "function") {
+                showCustomNotification(`Failover Triggered: Switched to Slot ${nextSlot} backup key!`, "warning");
+            }
+            return backupKey.trim();
+        }
+    }
+    
+    return null; // no other valid backup key found
+}
+
+// Unified API calling promise wrapper with Auto-Failover rotation
+function geminiPostWithFailover(payload) {
+    let activeKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    const autoFailoverEnabled = localStorage.getItem("li_gemini_auto_failover") === "true";
+
+    const attemptPost = (key, slotsTested = new Set()) => {
+        return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                const code = errBody?.error?.code || res.status;
+                const message = errBody?.error?.message || `HTTP ${res.status}`;
+                throw { code, message };
+            }
+            return res.json();
+        })
+        .catch(async err => {
+            console.warn(`Gemini Request failed with key: ...${key.slice(-6)}. Error:`, err);
+            const errCode = err.code || 0;
+            const isApiError = errCode === 429 || errCode === 403 || errCode === 400 || errCode === 0;
+
+            if (isApiError && autoFailoverEnabled) {
+                const currentSlot = localStorage.getItem("li_gemini_active_slot") || "1";
+                slotsTested.add(currentSlot);
+                updateVaultStatusDot(currentSlot, errCode === 429 ? "rate-limit" : "invalid");
+
+                const nextKey = failoverToNextKey();
+                if (nextKey && !slotsTested.has(localStorage.getItem("li_gemini_active_slot"))) {
+                    console.log(`Retrying Gemini request with Backup Key from Slot ${localStorage.getItem("li_gemini_active_slot")}`);
+                    return attemptPost(nextKey, slotsTested);
+                }
+            }
+            throw err;
+        });
+    };
+
+    return attemptPost(activeKey);
+}
+
+// Initializes settings vault panel controls and event handlers
+function initBackupKeyVault() {
+    const vaultList = document.getElementById("api-vault-list");
+    if (!vaultList) return;
+
+    // Load active slot from localStorage (default "1")
+    let activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
+    
+    // Load failover switch state
+    const failoverToggle = document.getElementById("toggle-ai-failover");
+    let autoFailover = localStorage.getItem("li_gemini_auto_failover");
+    if (autoFailover === null) {
+        autoFailover = "true";
+        localStorage.setItem("li_gemini_auto_failover", "true");
+    }
+    if (failoverToggle) {
+        failoverToggle.checked = autoFailover === "true";
+        // Wire up change listener
+        if (!failoverToggle.dataset.wired) {
+            failoverToggle.dataset.wired = "true";
+            failoverToggle.addEventListener("change", (e) => {
+                localStorage.setItem("li_gemini_auto_failover", e.target.checked ? "true" : "false");
+                showCustomNotification("Auto-Failover " + (e.target.checked ? "enabled" : "disabled") + ".", "success");
+            });
+        }
+    }
+
+    // Migration logic
+    const globalKey = localStorage.getItem("li_gemini_api_key");
+    const slot1Key = localStorage.getItem("li_gemini_vault_key_1");
+    if (globalKey && !slot1Key && globalKey !== "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54") {
+        localStorage.setItem("li_gemini_vault_key_1", globalKey);
+    }
+
+    // Set up each row (1 to 5)
+    for (let slot = 1; slot <= 5; slot++) {
+        const row = document.querySelector(`.vault-row[data-slot="${slot}"]`);
+        if (!row) continue;
+
+        const input = row.querySelector(`.vault-key-input`);
+        const btnActivate = row.querySelector(`.btn-vault-activate`);
+        const btnVisibility = row.querySelector(`.btn-vault-visibility`);
+        const btnCopy = row.querySelector(`.btn-vault-copy`);
+        const btnPaste = row.querySelector(`.btn-vault-paste`);
+        const btnLock = row.querySelector(`.btn-vault-lock`);
+
+        // Load value
+        const key = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
+        if (input) {
+            input.value = key;
+            input.placeholder = key ? "••••••••••••••••••••••••••••••••" : `Empty Slot ${slot}`;
+        }
+
+        // Apply active/inactive visual states
+        if (slot.toString() === activeSlot) {
+            row.classList.add("active");
+            if (btnActivate) {
+                btnActivate.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+                btnActivate.style.color = "var(--color-primary)";
+            }
+        } else {
+            row.classList.remove("active");
+            if (btnActivate) {
+                btnActivate.innerHTML = `<i class="fa-regular fa-circle"></i>`;
+                btnActivate.style.color = "var(--text-muted)";
             }
         }
-        if (customPromptTextarea) {
-            customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
+
+        // Apply locked editing state by default
+        row.classList.add("locked");
+        row.classList.remove("unlocked");
+        if (input) {
+            input.setAttribute("readonly", "true");
         }
-        updateAIGeminiStatusDisplay();
-    } else {
-        lockScreen.classList.remove("hide");
-        dashboardContent.classList.add("hide");
+        if (btnLock) {
+            btnLock.innerHTML = `<i class="fa-solid fa-lock"></i>`;
+            btnLock.style.color = "var(--text-muted)";
+        }
+
+        // Skip event wiring if already done to prevent duplicates
+        if (row.dataset.wired) continue;
+        row.dataset.wired = "true";
+
+        // Activate slot event
+        if (btnActivate) {
+            btnActivate.addEventListener("click", () => {
+                const currentKey = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
+                if (!currentKey) {
+                    showCustomNotification(`Cannot activate empty slot ${slot}. Please paste a key first.`, "warning");
+                    return;
+                }
+                
+                // Set active slot
+                activeSlot = slot.toString();
+                localStorage.setItem("li_gemini_active_slot", activeSlot);
+                
+                // Update global API key for backward compatibility
+                localStorage.setItem("li_gemini_api_key", currentKey);
+                const mainInput = document.getElementById("input-ai-gemini-key");
+                if (mainInput) {
+                    mainInput.value = currentKey;
+                }
+                updateAIGeminiStatusDisplay();
+
+                // Update UI rows active state
+                for (let s = 1; s <= 5; s++) {
+                    const r = document.querySelector(`.vault-row[data-slot="${s}"]`);
+                    const ba = r?.querySelector(`.btn-vault-activate`);
+                    if (r) {
+                        if (s === slot) {
+                            r.classList.add("active");
+                            if (ba) {
+                                ba.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+                                ba.style.color = "var(--color-primary)";
+                            }
+                        } else {
+                            r.classList.remove("active");
+                            if (ba) {
+                                ba.innerHTML = `<i class="fa-regular fa-circle"></i>`;
+                                ba.style.color = "var(--text-muted)";
+                            }
+                        }
+                    }
+                }
+                showCustomNotification(`Slot ${slot} activated as primary API key!`, "success");
+            });
+        }
+
+        // Show/Hide Visibility
+        if (btnVisibility) {
+            btnVisibility.addEventListener("click", () => {
+                if (!input) return;
+                const isPassword = input.type === "password";
+                input.type = isPassword ? "text" : "password";
+                btnVisibility.innerHTML = isPassword ? `<i class="fa-solid fa-eye-slash"></i>` : `<i class="fa-solid fa-eye"></i>`;
+            });
+        }
+
+        // Copy Key
+        if (btnCopy) {
+            btnCopy.addEventListener("click", () => {
+                const currentKey = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
+                if (!currentKey) {
+                    showCustomNotification(`Slot ${slot} is empty. Nothing to copy!`, "warning");
+                    return;
+                }
+                navigator.clipboard.writeText(currentKey)
+                    .then(() => showCustomNotification(`Slot ${slot} API Key copied to clipboard!`, "success"))
+                    .catch(() => {
+                        const tempTextarea = document.createElement("textarea");
+                        tempTextarea.value = currentKey;
+                        document.body.appendChild(tempTextarea);
+                        tempTextarea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(tempTextarea);
+                        showCustomNotification(`Slot ${slot} API Key copied to clipboard!`, "success");
+                    });
+            });
+        }
+
+        // Paste Key
+        if (btnPaste) {
+            btnPaste.addEventListener("click", async () => {
+                if (row.classList.contains("locked")) {
+                    showCustomNotification(`Unlock Slot ${slot} to paste a new key!`, "warning");
+                    return;
+                }
+                
+                try {
+                    let text = "";
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        text = await navigator.clipboard.readText().catch(() => "");
+                    }
+                    if (!text) {
+                        text = prompt(`Paste Gemini API Key for Slot ${slot}:`);
+                    }
+                    if (text) {
+                        text = text.trim();
+                        if (text.startsWith("AIzaSy")) {
+                            if (input) {
+                                input.value = text;
+                                input.placeholder = "••••••••••••••••••••••••••••••••";
+                            }
+                            localStorage.setItem(`li_gemini_vault_key_${slot}`, text);
+                            
+                            // If this slot is the active one, sync with the global key as well
+                            if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
+                                localStorage.setItem("li_gemini_api_key", text);
+                                const mainInput = document.getElementById("input-ai-gemini-key");
+                                if (mainInput) mainInput.value = text;
+                                updateAIGeminiStatusDisplay();
+                            }
+                            
+                            showCustomNotification(`API Key pasted into Slot ${slot}!`, "success");
+                        } else {
+                            showCustomNotification(`Invalid Gemini API Key format. Must start with "AIzaSy".`, "error");
+                        }
+                    }
+                } catch (e) {
+                    console.error("Paste failed:", e);
+                }
+            });
+        }
+
+        // Lock / Unlock Editing
+        if (btnLock) {
+            btnLock.addEventListener("click", () => {
+                if (!input) return;
+                const isLocked = row.classList.contains("locked");
+                if (isLocked) {
+                    // Unlock editing
+                    row.classList.remove("locked");
+                    row.classList.add("unlocked");
+                    input.removeAttribute("readonly");
+                    input.focus();
+                    btnLock.innerHTML = `<i class="fa-solid fa-lock-open"></i>`;
+                    btnLock.style.color = "#ff9f0a";
+                    showCustomNotification(`Slot ${slot} unlocked for manual editing.`, "warning");
+                } else {
+                    // Lock editing and save
+                    const val = input.value.trim();
+                    if (val && !val.startsWith("AIzaSy")) {
+                        showCustomNotification(`Invalid key. Gemini keys must start with "AIzaSy".`, "error");
+                        return;
+                    }
+                    
+                    row.classList.remove("unlocked");
+                    row.classList.add("locked");
+                    input.setAttribute("readonly", "true");
+                    btnLock.innerHTML = `<i class="fa-solid fa-lock"></i>`;
+                    btnLock.style.color = "var(--text-muted)";
+
+                    if (val) {
+                        localStorage.setItem(`li_gemini_vault_key_${slot}`, val);
+                        input.placeholder = "••••••••••••••••••••••••••••••••";
+                        
+                        // Sync global key if active
+                        if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
+                            localStorage.setItem("li_gemini_api_key", val);
+                            const mainInput = document.getElementById("input-ai-gemini-key");
+                            if (mainInput) mainInput.value = val;
+                            updateAIGeminiStatusDisplay();
+                        }
+                    } else {
+                        localStorage.removeItem(`li_gemini_vault_key_${slot}`);
+                        input.placeholder = `Empty Slot ${slot}`;
+                        
+                        // Sync global key if active and now empty
+                        if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
+                            localStorage.removeItem("li_gemini_api_key");
+                            const mainInput = document.getElementById("input-ai-gemini-key");
+                            if (mainInput) mainInput.value = "";
+                            updateAIGeminiStatusDisplay();
+                        }
+                    }
+                    showCustomNotification(`Slot ${slot} editing locked & saved.`, "success");
+                }
+            });
+        }
     }
+}
+
+// --- AI Assistant Tab Visibility Helper ---
+function refreshAIAssistantTabVisibility() {
+    // Load settings inputs
+    const inputKey = document.getElementById("input-ai-gemini-key");
+    const customPromptTextarea = document.getElementById("ai-custom-prompt");
+    const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+    if (inputKey) {
+        if (isAssistant) {
+            inputKey.value = "••••••••••••••••••••••••••••••••";
+        } else {
+            inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+        }
+    }
+    if (customPromptTextarea) {
+        customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
+    }
+    updateAIGeminiStatusDisplay();
+    initBackupKeyVault();
 }
 
 function refreshBugTriageTabVisibility() {
@@ -12697,16 +13111,33 @@ function refreshBugTriageTabVisibility() {
     }
 }
 
-// ── API Usage Tracking System ──
-const GEMINI_DAILY_QUOTA = 1500; // Free-tier Gemini Flash daily limit (approximate)
+// ── API Usage Tracking System (1-Min RPM & Daily RPD) ──
+const GEMINI_RPM_LIMIT = 15;
+const GEMINI_DAILY_QUOTA = 1500;
 
-function getUsageData() {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+function initAPILimitTracker() {
+    getDailyUsageData();
+
+    // Check/initialize RPM window
+    let windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
+    const now = Date.now();
+    if (!windowEnds || now >= windowEnds) {
+        windowEnds = now + 60000;
+        localStorage.setItem("li_gemini_window_ends", windowEnds.toString());
+        localStorage.setItem("li_gemini_rpm_count", "0");
+    }
+
+    // Start the timer loop (updates every second)
+    setInterval(updateRPMTimer, 1000);
+    updateAPIUsageBar();
+}
+
+function getDailyUsageData() {
+    const today = new Date().toISOString().slice(0, 10);
     const raw = localStorage.getItem("li_gemini_usage");
     let data = null;
     try { data = JSON.parse(raw); } catch (e) {}
     if (!data || data.date !== today) {
-        // Reset for a new day
         data = { date: today, count: 0 };
         localStorage.setItem("li_gemini_usage", JSON.stringify(data));
     }
@@ -12714,24 +13145,60 @@ function getUsageData() {
 }
 
 function trackGeminiAPICall() {
-    const data = getUsageData();
-    data.count++;
-    localStorage.setItem("li_gemini_usage", JSON.stringify(data));
+    // Increment daily count
+    const dailyData = getDailyUsageData();
+    dailyData.count++;
+    localStorage.setItem("li_gemini_usage", JSON.stringify(dailyData));
+
+    // Increment RPM count
+    let rpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
+    rpmCount++;
+    localStorage.setItem("li_gemini_rpm_count", rpmCount.toString());
+
+    updateAPIUsageBar();
+}
+
+function updateRPMTimer() {
+    const now = Date.now();
+    let windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
+    
+    if (now >= windowEnds) {
+        // Reset window
+        let oldRpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
+        windowEnds = now + 60000;
+        localStorage.setItem("li_gemini_window_ends", windowEnds.toString());
+        localStorage.setItem("li_gemini_rpm_count", "0");
+        
+        if (oldRpmCount >= GEMINI_RPM_LIMIT) {
+            if (typeof showCustomNotification === "function") {
+                showCustomNotification("Gemini API rate limit has reset! 15 new requests available.", "success");
+            }
+        }
+    }
+    
     updateAPIUsageBar();
 }
 
 function updateAPIUsageBar() {
-    const data = getUsageData();
-    const count = data.count;
-    const pct = Math.min(Math.round((count / GEMINI_DAILY_QUOTA) * 100), 100);
+    const now = Date.now();
+    const windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
+    const remainingMs = Math.max(0, windowEnds - now);
+    const remainingSecs = Math.ceil(remainingMs / 1000);
+
+    const rpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
+    const dailyData = getDailyUsageData();
+
+    const pct = Math.min(Math.round((rpmCount / GEMINI_RPM_LIMIT) * 100), 100);
 
     const barFill = document.getElementById("ai-usage-bar-fill");
     const countEl = document.getElementById("ai-usage-count");
     const statusEl = document.getElementById("ai-usage-status");
     const pctEl = document.getElementById("ai-usage-pct");
+    const dailyEl = document.getElementById("ai-usage-daily-count");
 
-    if (countEl) countEl.textContent = `${count.toLocaleString()} / ${GEMINI_DAILY_QUOTA.toLocaleString()} requests`;
+    if (countEl) countEl.textContent = `${rpmCount} / ${GEMINI_RPM_LIMIT} requests`;
     if (pctEl) pctEl.textContent = `${pct}%`;
+    if (dailyEl) dailyEl.textContent = `Daily Total: ${dailyData.count} / ${GEMINI_DAILY_QUOTA}`;
 
     if (barFill) {
         barFill.style.width = `${pct}%`;
@@ -12748,27 +13215,20 @@ function updateAPIUsageBar() {
     }
 
     if (statusEl) {
-        if (pct < 30) {
-            statusEl.textContent = "Plenty of quota remaining";
-            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
-        } else if (pct < 50) {
-            statusEl.textContent = "Healthy usage level";
-            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
-        } else if (pct < 70) {
-            statusEl.textContent = "Moderate — consider slowing down";
-            statusEl.style.color = "rgba(255, 159, 10, 0.8)";
-        } else if (pct < 85) {
-            statusEl.textContent = "⚠ High usage — prepare a backup key";
-            statusEl.style.color = "rgba(255, 159, 10, 0.9)";
-        } else if (pct < 95) {
-            statusEl.textContent = "⚠ Critical — switch keys soon!";
-            statusEl.style.color = "rgba(255, 69, 58, 0.9)";
-        } else {
-            statusEl.textContent = "🔴 Quota exhausted — switch API key now!";
+        if (pct >= 100) {
+            statusEl.textContent = `🔴 Limit reached! Resets in ${remainingSecs}s`;
             statusEl.style.color = "#ff453a";
+        } else if (pct >= 80) {
+            statusEl.textContent = `⚠ Running low! Resets in ${remainingSecs}s`;
+            statusEl.style.color = "rgba(255, 159, 10, 0.9)";
+        } else {
+            statusEl.textContent = `Resets in ${remainingSecs}s`;
+            statusEl.style.color = "rgba(255, 255, 255, 0.5)";
         }
     }
 }
+
+let isActiveKeyRevealed = false;
 
 function updateAIGeminiStatusDisplay() {
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
@@ -12785,6 +13245,51 @@ function updateAIGeminiStatusDisplay() {
     }
     // Also refresh usage bar on status update
     updateAPIUsageBar();
+
+    // Active key display & toggle logic
+    const activeKeyWrapper = document.getElementById("active-key-display-wrapper");
+    const activeKeyMaskedText = document.getElementById("active-key-masked-text");
+    const btnActiveKeyReveal = document.getElementById("btn-active-key-reveal");
+
+    if (activeKeyWrapper && activeKeyMaskedText && btnActiveKeyReveal) {
+        if (savedKey) {
+            activeKeyWrapper.style.display = "flex";
+            
+            // Default to always hidden/masked on status updates (e.g. slot switch, load, refresh)
+            isActiveKeyRevealed = false;
+
+            const maskKey = (key) => {
+                if (!key) return "";
+                if (key.length <= 8) return "••••••••";
+                return key.substring(0, 6) + "••••••••" + key.substring(key.length - 4);
+            };
+
+            const updateUI = () => {
+                if (isActiveKeyRevealed) {
+                    activeKeyMaskedText.textContent = savedKey;
+                    btnActiveKeyReveal.innerHTML = `<i class="fa-solid fa-eye"></i>`;
+                    btnActiveKeyReveal.style.color = "var(--text-primary)";
+                } else {
+                    activeKeyMaskedText.textContent = maskKey(savedKey);
+                    btnActiveKeyReveal.innerHTML = `<i class="fa-solid fa-eye-slash"></i>`;
+                    btnActiveKeyReveal.style.color = "var(--text-muted)";
+                }
+            };
+
+            updateUI();
+
+            // Replace old event listeners by cloning button
+            const newBtn = btnActiveKeyReveal.cloneNode(true);
+            btnActiveKeyReveal.parentNode.replaceChild(newBtn, btnActiveKeyReveal);
+            
+            newBtn.addEventListener("click", () => {
+                isActiveKeyRevealed = !isActiveKeyRevealed;
+                updateUI();
+            });
+        } else {
+            activeKeyWrapper.style.display = "none";
+        }
+    }
 }
 
 function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
@@ -13009,52 +13514,72 @@ function initGeminiEngine() {
         });
     };
 
-    // Save button listener — saves key and auto-tests it
+    // Save button listener — saves custom prompt and auto-tests active vault key
     btnSave.addEventListener("click", () => {
-        let keyVal = inputKey.value.trim();
         const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
-        
-        if (keyVal === "••••••••••••••••••••••••••••••••") {
-            // Skip overwriting the real key with masked placeholder dots
-            const actualStoredKey = localStorage.getItem("li_gemini_api_key");
-            if (actualStoredKey) {
-                // Auto-test the stored key silently
-                if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
-                showCustomNotification("Settings saved. Testing key...", "success");
-                runLiveHealthCheck(actualStoredKey, { silent: true });
-                return;
-            } else {
-                updateStatusDisplay("disconnected", "Disconnected (No Key)");
-            }
-        } else if (!keyVal) {
-            localStorage.removeItem("li_gemini_api_key");
-            updateStatusDisplay("disconnected", "Disconnected (No Key)");
-        } else {
-            localStorage.setItem("li_gemini_api_key", keyVal);
-            if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
-            showCustomNotification("Key saved! Running live connection test...", "success");
-            // Auto-test the newly entered key
-            runLiveHealthCheck(keyVal, { silent: false });
-            return;
-        }
-
         if (customPromptTextarea) {
             localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
         }
-        showCustomNotification("Gemini Spark settings saved.", "success");
+
+        const activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
+        const keyVal = localStorage.getItem(`li_gemini_vault_key_${activeSlot}`);
+        
+        if (keyVal) {
+            showCustomNotification("Settings saved. Testing active key...", "success");
+            runLiveHealthCheck(keyVal, { silent: true });
+        } else {
+            showCustomNotification("Settings saved. No active key in vault.", "warning");
+            updateStatusDisplay("disconnected", "Disconnected (No Key)");
+        }
     });
 
-    // Test button listener — runs a standalone diagnostic
-    btnTest.addEventListener("click", () => {
-        let keyVal = inputKey.value.trim();
-        if (keyVal === "••••••••••••••••••••••••••••••••") {
-            keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+    // Test button listener — runs a sequential diagnostic check over all slots
+    btnTest.addEventListener("click", async () => {
+        btnTest.disabled = true;
+        btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing Vault...`;
+        showCustomNotification("Beginning health check of all API keys in the vault...", "success");
+        
+        let activeOk = false;
+        const activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
+
+        for (let slot = 1; slot <= 5; slot++) {
+            const keyVal = localStorage.getItem(`li_gemini_vault_key_${slot}`);
+            const dot = document.querySelector(`.vault-status-dot[data-slot="${slot}"]`);
+            if (dot) {
+                dot.style.background = "#ff9f0a";
+                dot.title = "Testing...";
+            }
+            
+            if (keyVal) {
+                const result = await testSingleKeyHealth(keyVal);
+                updateVaultStatusDot(slot, result.status);
+                if (slot.toString() === activeSlot) {
+                    activeOk = result.ok;
+                    if (result.ok) {
+                        updateStatusDisplay("active", "Active (Connected ✓)");
+                    } else {
+                        let statusMsg = "Connection Failed";
+                        if (result.status === "rate-limit") statusMsg = "Rate Limited (Quota Exceeded)";
+                        else if (result.status === "invalid") statusMsg = "Forbidden (Invalid Key)";
+                        updateStatusDisplay("disconnected", statusMsg);
+                    }
+                }
+            } else {
+                updateVaultStatusDot(slot, "empty");
+                if (slot.toString() === activeSlot) {
+                    updateStatusDisplay("disconnected", "Disconnected (No Key)");
+                }
+            }
         }
-        if (!keyVal) {
-            showCustomNotification("Please paste a Gemini API Key first.", "warning");
-            return;
+
+        btnTest.disabled = false;
+        btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Health`;
+        
+        if (activeOk) {
+            showCustomConfirmDialog("Vault health check complete. Your active API key is working successfully!", null, null, "OK", false);
+        } else {
+            showCustomConfirmDialog("Vault health check complete. Warning: Your active API key is currently inactive or empty.", null, null, "Close", true);
         }
-        runLiveHealthCheck(keyVal, { silent: false });
     });
 
     // ── Sandbox Playground controls ──
@@ -13151,6 +13676,7 @@ function initGeminiEngine() {
     refreshAIAssistantTabVisibility();
     refreshBugTriageTabVisibility();
     updateAIAssistButtonsVisibility();
+    initAPILimitTracker();
 }
 
 function getDatabaseMatchesContext(rawText) {
@@ -13313,7 +13839,7 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
         return;
     }
 
-    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const customDirectives = "";
     const dbContext = getDatabaseMatchesContext(rawText);
     const policyContext = getPolicyMatchesContext(rawText);
     const fullPolicyContext = getCompletePolicyContext();
@@ -13381,17 +13907,9 @@ Target category: "${category}"
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-        })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
+    geminiPostWithFailover({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
     })
     .then(data => {
         trackGeminiAPICall();
@@ -13421,7 +13939,7 @@ function getGeminiBugTriageSuggestion(rawText, expectedText, category, screensho
         return;
     }
 
-    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const customDirectives = "";
     const dbContext = getDatabaseMatchesContext(rawText);
     const policyContext = getPolicyMatchesContext(rawText);
     const fullPolicyContext = getCompletePolicyContext();
@@ -13469,17 +13987,9 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
         parts.push(imagePart);
     }
 
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: [{ parts: parts }],
-            generationConfig: { responseMimeType: "application/json" }
-        })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
+    geminiPostWithFailover({
+        contents: [{ parts: parts }],
+        generationConfig: { responseMimeType: "application/json" }
     })
     .then(data => {
         trackGeminiAPICall();
@@ -13554,7 +14064,7 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
         });
     }
 
-    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const customDirectives = "";
     const fullPolicyContext = getCompletePolicyContext();
     const systemPrompt = `You are a strict and professional advertisement editor for LifeInvader.
 Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
@@ -13613,20 +14123,12 @@ ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : "
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied or how the suggestion was updated). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: report.geminiChatHistory,
-            systemInstruction: {
-                parts: [{ text: systemPrompt }]
-            },
-            generationConfig: { responseMimeType: "application/json" }
-        })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("API error");
-        return res.json();
+    geminiPostWithFailover({
+        contents: report.geminiChatHistory,
+        systemInstruction: {
+            parts: [{ text: systemPrompt }]
+        },
+        generationConfig: { responseMimeType: "application/json" }
     })
     .then(data => {
         trackGeminiAPICall();

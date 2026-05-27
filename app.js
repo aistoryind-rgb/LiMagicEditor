@@ -12761,6 +12761,22 @@ function getPolicyMatchesContext(rawText) {
     return `\nRELEVANT SECTIONS FROM THE EN3 SYSTEM POLICY MANUAL:\n${result}\n(Ensure that the suggested ad strictly complies with the policy book terms shown above)\n`;
 }
 
+function getCompletePolicyContext() {
+    if (typeof POLICY_PAGES === "undefined" || !Array.isArray(POLICY_PAGES)) return "";
+    return POLICY_PAGES.map((page, idx) => {
+        const plainText = page.content
+            .replace(/<[^>]*>/g, " ")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&nbsp;/g, " ")
+            .trim();
+        return `=== POLICY PAGE ${idx + 1}: ${page.title} ===\n${plainText}`;
+    }).join("\n\n");
+}
+
 function getGeminiSparkSuggestion(rawText, category, callback) {
     const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyD0EVzakyo6h5aHXhhEz0G69s0-Qwq0uH4";
     if (!keyVal) {
@@ -12771,10 +12787,14 @@ function getGeminiSparkSuggestion(rawText, category, callback) {
     const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     const dbContext = getDatabaseMatchesContext(rawText);
     const policyContext = getPolicyMatchesContext(rawText);
+    const fullPolicyContext = getCompletePolicyContext();
     
     // Build the policy prompt context
     const prompt = `You are a strict and professional advertisement editor for LifeInvader.
 Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
+
+[CRITICAL GROUNDING DIRECTIVE]:
+You MUST strictly correct the ad and reply based ONLY on the provided LifeInvader Internal Policy manual. Do NOT use real-life logic, external facts, standard grammatical conventions, or common sense if they conflict with the policy manual. The provided Policy Manual Reference is the absolute and only source of truth.
 
 ### Core Formatting Rules:
 1. Always begin the ad with one of these exact action words: "Buying", "Selling", "Trading", "Selling or trading". The first letter must ALWAYS be capitalized.
@@ -12821,6 +12841,11 @@ Your task is to correct and format the user's raw advertisement input strictly a
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 ${dbContext}
 ${policyContext}
+
+=========================================
+COMPLETE LIFEINVADER OFFICIAL POLICY MANUAL REFERENCE:
+${fullPolicyContext}
+=========================================
 
 Translate this raw ad input: "${rawText}"
 Target category: "${category}"
@@ -12913,8 +12938,12 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
     }
 
     const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
+    const fullPolicyContext = getCompletePolicyContext();
     const systemPrompt = `You are a strict and professional advertisement editor for LifeInvader.
 Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
+
+[CRITICAL GROUNDING DIRECTIVE]:
+You MUST strictly correct the ad and reply based ONLY on the provided LifeInvader Internal Policy manual. Do NOT use real-life logic, external facts, standard grammatical conventions, or common sense if they conflict with the policy manual. The provided Policy Manual Reference is the absolute and only source of truth.
 
 ### Core Formatting Rules:
 1. Always begin the ad with one of these exact action words: "Buying", "Selling", "Trading", "Selling or trading". The first letter must ALWAYS be capitalized.
@@ -12957,6 +12986,11 @@ Your task is to correct and format the user's raw advertisement input strictly a
    - If no Bet is specified: Use "Bet: Negotiable."
    - The maximum allowed bet is "$10 Million". Any bet above $10 Million must be changed to "Bet: Negotiable."
 7. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format if present.
+
+=========================================
+COMPLETE LIFEINVADER OFFICIAL POLICY MANUAL REFERENCE:
+${fullPolicyContext}
+=========================================
 
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 

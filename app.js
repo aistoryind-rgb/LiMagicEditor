@@ -9998,6 +9998,66 @@ function initAdminPanel() {
         });
     }
 
+    // --- Refresh button for Fixed Bug translations list ---
+    const btnTranslationsRefresh = document.getElementById("btn-translations-refresh");
+    if (btnTranslationsRefresh) {
+        btnTranslationsRefresh.addEventListener("click", () => {
+            const icon = btnTranslationsRefresh.querySelector("i");
+            if (icon) icon.classList.add("fa-spin");
+            btnTranslationsRefresh.disabled = true;
+
+            if (!CONFIG.GOOGLE_SCRIPT_URL) {
+                // No backend — just re-render from local data
+                renderCustomTranslations();
+                if (icon) icon.classList.remove("fa-spin");
+                btnTranslationsRefresh.disabled = false;
+                showCustomNotification("Fixed bug list refreshed from local cache.", "success");
+                return;
+            }
+
+            // Force-sync from backend (bypass the 45s cooldown)
+            fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ action: "get_custom_data" })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "success") {
+                    if (data.translations) {
+                        customTranslations = data.translations;
+                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                    }
+                    if (data.spelling) {
+                        customSpelling = data.spelling;
+                        localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                    }
+                    if (data.templates) {
+                        customTemplates = data.templates;
+                        localStorage.setItem("li_custom_templates", JSON.stringify(customTemplates));
+                    }
+                    renderCustomTranslations();
+                    if (typeof renderCustomSpelling === "function") renderCustomSpelling();
+                    if (typeof renderCustomTemplates === "function") renderCustomTemplates();
+                    if (typeof processAd === "function") processAd();
+                    showCustomNotification("Fixed bug list refreshed with latest data from cloud!", "success");
+                } else {
+                    showCustomNotification("Failed to refresh from backend.", "warning");
+                }
+            })
+            .catch(err => {
+                console.error("Refresh error:", err);
+                // Fallback: just re-render local data
+                renderCustomTranslations();
+                showCustomNotification("Could not reach cloud. Refreshed from local cache.", "warning");
+            })
+            .finally(() => {
+                if (icon) icon.classList.remove("fa-spin");
+                btnTranslationsRefresh.disabled = false;
+            });
+        });
+    }
+
     // --- Clear ALL Custom Translations (hold-to-confirm) ---
     const btnClearAllTranslations = document.getElementById("btn-admin-clear-all-translations");
     if (btnClearAllTranslations) {
@@ -10693,7 +10753,20 @@ function renderCustomTranslations() {
         return;
     }
 
-    filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
+    filteredEntries.sort((a, b) => {
+        // Parse timestamps from JSON values to sort newest first
+        let timeA = 0, timeB = 0;
+        try {
+            const parsedA = JSON.parse(a[1]);
+            if (parsedA.timestamp) timeA = new Date(parsedA.timestamp).getTime() || 0;
+        } catch (e) {}
+        try {
+            const parsedB = JSON.parse(b[1]);
+            if (parsedB.timestamp) timeB = new Date(parsedB.timestamp).getTime() || 0;
+        } catch (e) {}
+        if (timeB !== timeA) return timeB - timeA; // Newest first
+        return a[0].localeCompare(b[0]); // Fallback alphabetical
+    });
 
     for (const [raw, corrValue] of filteredEntries) {
         const tr = document.createElement("tr");
@@ -10833,7 +10906,71 @@ function renderCustomTranslations() {
             tdAction.style.textAlign = "center";
             tdAction.style.verticalAlign = "top";
             tdAction.style.padding = "10px";
-            
+            tdAction.style.display = "flex";
+            tdAction.style.flexDirection = "column";
+            tdAction.style.gap = "6px";
+            tdAction.style.alignItems = "center";
+
+            // Retrain button
+            const btnRetrain = document.createElement("button");
+            btnRetrain.type = "button";
+            btnRetrain.className = "btn-preset";
+            btnRetrain.style.padding = "4px 8px";
+            btnRetrain.style.fontSize = "10px";
+            btnRetrain.style.background = "rgba(167, 139, 250, 0.1)";
+            btnRetrain.style.color = "#a78bfa";
+            btnRetrain.style.border = "1px solid rgba(167, 139, 250, 0.25)";
+            btnRetrain.style.borderRadius = "4px";
+            btnRetrain.style.cursor = "pointer";
+            btnRetrain.style.display = "inline-flex";
+            btnRetrain.style.alignItems = "center";
+            btnRetrain.style.gap = "4px";
+            btnRetrain.style.whiteSpace = "nowrap";
+            btnRetrain.style.transition = "all 0.2s ease";
+            btnRetrain.innerHTML = `<i class="fa-solid fa-rotate"></i> Retrain`;
+            btnRetrain.title = "Send back to Bug Reports for re-triage";
+
+            btnRetrain.addEventListener("click", () => {
+                showCustomConfirmDialog(
+                    `Send this ad back for retraining?\n\nRaw: "${raw}"\nCurrent fix: "${corrText}"\n\nThe existing mapping will be removed and a new bug report will be created for re-triage.`,
+                    () => {
+                        // Remove the existing translation mapping
+                        delete customTranslations[raw];
+                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                        saveCustomDataToBackend();
+
+                        // Inject as a new bug report into the triage queue
+                        const retrainReport = {
+                            rawInput: raw,
+                            expectedOutput: corrText,
+                            timestamp: new Date().toLocaleString(),
+                            category: "auto",
+                            screenshotBase64: null,
+                            source: "retrain"
+                        };
+
+                        // Push to the pending bug reports array used by the triage renderer
+                        if (!window._pendingBugReports) window._pendingBugReports = [];
+                        window._pendingBugReports.push(retrainReport);
+
+                        // Also store in localStorage so it persists across refreshes
+                        const storedRetrains = JSON.parse(localStorage.getItem("li_retrain_queue") || "[]");
+                        storedRetrains.push(retrainReport);
+                        localStorage.setItem("li_retrain_queue", JSON.stringify(storedRetrains));
+
+                        renderCustomTranslations();
+                        if (typeof processAd === "function") processAd();
+                        showCustomNotification(`Ad sent back for retraining! Open the Bug Reports tab to retriage.`, "success");
+                    },
+                    null,
+                    "Retrain",
+                    false
+                );
+            });
+
+            tdAction.appendChild(btnRetrain);
+
+            // Delete button
             const btnDel = document.createElement("button");
             btnDel.type = "button";
             btnDel.className = "btn-preset";

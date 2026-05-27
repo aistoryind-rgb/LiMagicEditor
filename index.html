@@ -814,9 +814,14 @@
                     <div class="tab-content" id="tab-translations">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <h4 style="margin: 0; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">Fixed Bug Mappings</h4>
-                            <button type="button" id="btn-admin-clear-all-translations" class="btn-action glow-red" style="padding: 4px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; border-radius: 4px; width: auto; min-width: 160px;">
-                                <i class="fa-solid fa-trash-can"></i> Clear All Mappings
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button type="button" id="btn-translations-refresh" class="btn-preset" style="padding: 4px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; border-radius: 4px; width: auto; min-width: 100px; background: rgba(48, 209, 88, 0.1); border: 1px solid rgba(48, 209, 88, 0.2); color: #30d158;">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                </button>
+                                <button type="button" id="btn-admin-clear-all-translations" class="btn-action glow-red" style="padding: 4px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; border-radius: 4px; width: auto; min-width: 160px;">
+                                    <i class="fa-solid fa-trash-can"></i> Clear All Mappings
+                                </button>
+                            </div>
                         </div>
                         <p class="section-desc">These are exact raw-to-corrected ad translation mappings created when you confirm manual corrections in triage. When an exact match is found, the correction is applied automatically.</p>
                         

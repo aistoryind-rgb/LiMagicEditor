@@ -1360,6 +1360,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initFloatingClipboard();
     initCustomData();
     renderCustomTranslations();
+    initGeminiEngine();
     initAdminPanel();
     initPolicyBook();
     initPresetButtons();
@@ -12367,6 +12368,194 @@ function resolveBugReport(report, card, isIgnore = false) {
     });
 }
 
+// --- Gemini Spark AI Engine & Fuzzy Suggestion Fallback Helpers ---
+
+function initGeminiEngine() {
+    const inputKey = document.getElementById("input-gemini-key");
+    const btnToggleVisibility = document.getElementById("btn-toggle-gemini-key-visibility");
+    const btnSave = document.getElementById("btn-gemini-save");
+    const btnTest = document.getElementById("btn-gemini-test");
+    const statusIndicator = document.getElementById("gemini-status-indicator");
+    const statusText = document.getElementById("gemini-status-text");
+
+    if (!inputKey || !btnSave || !btnTest) return;
+
+    // Toggle Visibility
+    if (btnToggleVisibility) {
+        btnToggleVisibility.addEventListener("click", () => {
+            const isPassword = inputKey.type === "password";
+            inputKey.type = isPassword ? "text" : "password";
+            btnToggleVisibility.innerHTML = isPassword ? `<i class="fa-solid fa-eye-slash"></i>` : `<i class="fa-solid fa-eye"></i>`;
+        });
+    }
+
+    // Update Status Display helper
+    const updateStatusDisplay = (status, msg) => {
+        if (!statusIndicator || !statusText) return;
+        if (status === "active") {
+            statusIndicator.style.background = "#30d158"; // Green
+            statusText.textContent = msg || "Active (Connected)";
+        } else if (status === "testing") {
+            statusIndicator.style.background = "#ff9f0a"; // Amber
+            statusText.textContent = msg || "Testing connection...";
+        } else {
+            statusIndicator.style.background = "#ff453a"; // Red
+            statusText.textContent = msg || "Disconnected (No Key)";
+        }
+    };
+
+    // Load key from localStorage
+    const savedKey = localStorage.getItem("li_gemini_api_key");
+    if (savedKey) {
+        inputKey.value = savedKey;
+        updateStatusDisplay("active", "Active (Key Saved)");
+    }
+
+    // Save button listener
+    btnSave.addEventListener("click", () => {
+        const keyVal = inputKey.value.trim();
+        if (!keyVal) {
+            localStorage.removeItem("li_gemini_api_key");
+            updateStatusDisplay("disconnected", "Disconnected (No Key)");
+            showCustomNotification("Gemini API Key removed.", "info");
+        } else {
+            localStorage.setItem("li_gemini_api_key", keyVal);
+            updateStatusDisplay("active", "Active (Key Saved)");
+            showCustomNotification("Gemini API Key saved successfully!", "success");
+        }
+    });
+
+    // Test button listener
+    btnTest.addEventListener("click", () => {
+        const keyVal = inputKey.value.trim();
+        if (!keyVal) {
+            showCustomNotification("Please paste a Gemini API Key first.", "warning");
+            return;
+        }
+
+        updateStatusDisplay("testing", "Testing connection...");
+        btnTest.disabled = true;
+        btnTest.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
+
+        // Query Gemini 1.5 Flash using direct REST fetch
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyVal}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Hello! Reply with a single word 'Connected!' if you can read this." }] }]
+            })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            btnTest.disabled = false;
+            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Connection`;
+            
+            const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            if (responseText.toLowerCase().includes("connect")) {
+                updateStatusDisplay("active", "Active (Connected Successfully)");
+                showCustomConfirmDialog("Gemini connection test successful! Spark AI Engine is fully active.", null, null, "OK", false);
+            } else {
+                updateStatusDisplay("disconnected", "Connection Failed (Unexpected Response)");
+                showCustomConfirmDialog(`Connection failed. Response was: ${responseText}`, null, null, "Close", true);
+            }
+        })
+        .catch(err => {
+            btnTest.disabled = false;
+            btnTest.innerHTML = `<i class="fa-solid fa-vial"></i> Test Connection`;
+            updateStatusDisplay("disconnected", "Connection Failed (Error)");
+            showCustomConfirmDialog(`Test failed: ${err.message}. Please double-check your API key and internet connection.`, null, null, "Close", true);
+        });
+    });
+}
+
+function getGeminiSparkSuggestion(rawText, category, callback) {
+    const keyVal = localStorage.getItem("li_gemini_api_key");
+    if (!keyVal) {
+        callback(null);
+        return;
+    }
+
+    // Build the policy prompt context
+    const prompt = `You are a strict advertisement editor for LifeInvader.
+Your task is to correct a user's raw advertisement input text according to our strict formatting rules:
+1. Always start with action word: Selling, Buying, Trading, Renting, Hiring, etc. Capitalize first letter.
+2. Format prices beautifully, e.g. "2k" or "2000" to "$2,000". If price is per item, use "each" or "respectively".
+3. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format.
+4. Replace slang: "lambergini" to "Lamborghini", "Lui Vi" to "Louis Vuitton", "bhk" to "BHK", etc.
+5. If the ad content is completely valid, keep it and format capitalization/spaces cleanly.
+
+Translate this raw ad input: "${rawText}"
+Target category: "${category}"
+
+Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
+
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
+    })
+    .then(data => {
+        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        try {
+            const parsed = JSON.parse(responseText.trim());
+            if (parsed && parsed.text) {
+                callback(parsed);
+            } else {
+                callback(null);
+            }
+        } catch (e) {
+            // Fallback if not JSON
+            callback({ text: responseText.trim(), reason: "AI suggestion" });
+        }
+    })
+    .catch(err => {
+        console.error("Gemini Suggestion Error:", err);
+        callback(null);
+    });
+}
+
+function findLocalFuzzyMatch(rawText) {
+    const rawClean = rawText.toLowerCase().trim().replace(/\s+/g, ' ');
+    const entries = Object.entries(customTranslations);
+    if (entries.length === 0) return null;
+
+    let bestMatch = null;
+    let highestScore = 0;
+
+    for (const [trainedRaw, corrValue] of entries) {
+        // Compute token Jaccard similarity
+        const tokens1 = new Set(rawClean.split(" "));
+        const tokens2 = new Set(trainedRaw.split(" "));
+        
+        const intersection = new Set([...tokens1].filter(x => tokens2.has(x)));
+        const union = new Set([...tokens1, ...tokens2]);
+        const score = intersection.size / union.size;
+
+        if (score > highestScore && score >= 0.75) { // 75% token similarity threshold
+            highestScore = score;
+            let corrText = corrValue;
+            if (corrValue && corrValue.startsWith("{") && corrValue.endsWith("}")) {
+                try {
+                    const parsed = JSON.parse(corrValue);
+                    corrText = parsed.text || corrValue;
+                } catch(e) {}
+            }
+            bestMatch = { text: corrText, rawMatched: trainedRaw, score: Math.round(score * 100) };
+        }
+    }
+    return bestMatch;
+}
+
 /**
  * Renders triage cards into the container.
  */
@@ -12503,6 +12692,9 @@ function renderTriageCards(reports, container) {
                         </button>
                     </div>
                 </div>
+                
+                <!-- Gemini Suggestion Container -->
+                <div class="gemini-suggestion-container" style="display: none; margin-top: 8px;"></div>
                 
                 <!-- Action Buttons -->
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
@@ -12720,6 +12912,75 @@ function renderTriageCards(reports, container) {
             }
         }
         
+        // Trigger Async Suggestion (Gemini or Fuzzy Fallback)
+        setTimeout(() => {
+            const geminiContainer = card.querySelector(".gemini-suggestion-container");
+            if (!geminiContainer) return;
+            
+            const localKey = localStorage.getItem("li_gemini_api_key");
+            if (localKey) {
+                getGeminiSparkSuggestion(report.rawInput, currentCategory, (suggestion) => {
+                    if (suggestion && suggestion.text) {
+                        geminiContainer.style.display = "block";
+                        geminiContainer.innerHTML = `
+                            <div style="background: rgba(167, 139, 250, 0.05); border: 1px solid rgba(167, 139, 250, 0.25); border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
+                                <div style="flex: 1; text-align: left;">
+                                    <div style="font-size: 9px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-sparkles"></i> Gemini Spark Suggestion
+                                    </div>
+                                    <div style="font-size: 11.5px; color: rgba(255,255,255,0.9); margin-top: 4px; font-family: var(--font-mono, monospace); font-weight: 600;">
+                                        "${suggestion.text}"
+                                    </div>
+                                    ${suggestion.reason ? `<div style="font-size: 9.5px; color: var(--text-muted); margin-top: 2px;">Reason: ${suggestion.reason}</div>` : ""}
+                                </div>
+                                <button type="button" class="btn-preset btn-apply-gemini" style="padding: 6px 12px; font-size: 10.5px; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-weight: 700; border-radius: 4px; cursor: pointer; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin: 0; white-space: nowrap;">Apply</button>
+                            </div>
+                        `;
+                        
+                        const applyBtn = geminiContainer.querySelector(".btn-apply-gemini");
+                        if (applyBtn) {
+                            applyBtn.addEventListener("click", () => {
+                                report.manualOverrideText = suggestion.text;
+                                report.trainedMethod = "Trained from Gemini Spark";
+                                updateCardBody();
+                                showCustomNotification("Gemini Spark suggestion applied!", "success");
+                            });
+                        }
+                    }
+                });
+            } else {
+                // Search local translations for similarity
+                const bestLocalMatch = findLocalFuzzyMatch(report.rawInput);
+                if (bestLocalMatch) {
+                    geminiContainer.style.display = "block";
+                    geminiContainer.innerHTML = `
+                        <div style="background: rgba(48, 209, 88, 0.05); border: 1px solid rgba(48, 209, 88, 0.25); border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
+                            <div style="flex: 1; text-align: left;">
+                                <div style="font-size: 9px; font-weight: 700; color: #30d158; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Fuzzy History Match (${bestLocalMatch.score}% similarity)
+                                </div>
+                                <div style="font-size: 11.5px; color: rgba(255,255,255,0.9); margin-top: 4px; font-family: var(--font-mono, monospace); font-weight: 600;">
+                                    "${bestLocalMatch.text}"
+                                </div>
+                                <div style="font-size: 9.5px; color: var(--text-muted); margin-top: 2px; word-break: break-all;">Matched from trained: "${bestLocalMatch.rawMatched}"</div>
+                            </div>
+                            <button type="button" class="btn-preset btn-apply-local-fuzzy" style="padding: 6px 12px; font-size: 10.5px; background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.3); color: #30d158; font-weight: 700; border-radius: 4px; cursor: pointer; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin: 0; white-space: nowrap;">Apply</button>
+                        </div>
+                    `;
+                    
+                    const applyFuzzyBtn = geminiContainer.querySelector(".btn-apply-local-fuzzy");
+                    if (applyFuzzyBtn) {
+                        applyFuzzyBtn.addEventListener("click", () => {
+                            report.manualOverrideText = bestLocalMatch.text;
+                            report.trainedMethod = "Trained automatically (Fuzzy Match)";
+                            updateCardBody();
+                            showCustomNotification("History match suggestion applied!", "success");
+                        });
+                    }
+                }
+            }
+        }, 100);
+
         // Initial build
         updateCardBody();
         container.appendChild(card);

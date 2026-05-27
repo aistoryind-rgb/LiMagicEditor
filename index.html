@@ -81,6 +81,11 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
+    
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body>
     <!-- Access Control Gate Overlay -->
@@ -304,7 +309,7 @@
                     <div class="panel-body">
                         <!-- Final Processed Advertisement Display -->
                         <div class="form-group">
-                            <label for="processed-ad-text"><i class="fa-solid fa-bullhorn"></i> Final Advertisement Text</label>
+                            <label><i class="fa-solid fa-bullhorn"></i> Final Advertisement Text</label>
                             <div class="processed-container">
                                 <div class="processed-text-wrapper">
                                     <div id="processed-ad-text" class="processed-text placeholder" contenteditable="true" spellcheck="false">Processed ad will appear here...</div>
@@ -822,6 +827,52 @@
                                             </button>
                                             <button type="button" id="btn-admin-import" class="btn-action glow-red" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
                                                 <i class="fa-solid fa-upload"></i> Import
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Center Card: Backend Settings -->
+                                    <div class="admin-card" style="flex: 1.1; min-width: 300px; background: rgba(22, 22, 28, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div>
+                                            <h4 style="margin: 0 0 4px 0; font-family: var(--font-heading); color: var(--text-color); font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
+                                                <i class="fa-solid fa-server text-primary" style="margin-right: 6px;"></i> Backend Settings
+                                            </h4>
+                                            <p class="section-desc" style="margin: 0 0 15px 0; font-size: 11.5px; opacity: 0.65; line-height: 1.4;">Configure whether this app uses Google Apps Script or Firebase.</p>
+                                            
+                                            <div style="margin-bottom: 12px;">
+                                                <label for="admin-backend-type" style="display: block; font-size: 11px; margin-bottom: 5px; opacity: 0.7; font-weight: 600; text-transform: uppercase;">Active Backend Type</label>
+                                                <select id="admin-backend-type" style="width: 100%; height: 32px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; color: var(--text-primary); outline: none; font-size: 12px; font-family: var(--font-heading); cursor: pointer;">
+                                                    <option value="google">Google Apps Script</option>
+                                                    <option value="firebase">Firebase Database</option>
+                                                </select>
+                                            </div>
+
+                                            <div id="admin-firebase-fields" class="hide" style="display: flex; flex-direction: column; gap: 8px;">
+                                                <div>
+                                                    <label for="admin-fb-apikey" style="display: block; font-size: 10px; margin-bottom: 3px; opacity: 0.7;">Firebase API Key</label>
+                                                    <input type="password" id="admin-fb-apikey" placeholder="AIzaSy..." style="width: 100%; height: 32px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; color: var(--text-primary); font-size: 11px; font-family: monospace;">
+                                                </div>
+                                                <div>
+                                                    <label for="admin-fb-projectid" style="display: block; font-size: 10px; margin-bottom: 3px; opacity: 0.7;">Project ID</label>
+                                                    <input type="text" id="admin-fb-projectid" placeholder="lifeinvader-ads" style="width: 100%; height: 32px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; color: var(--text-primary); font-size: 11px;">
+                                                </div>
+                                                <div>
+                                                    <label for="admin-fb-storagebucket" style="display: block; font-size: 10px; margin-bottom: 3px; opacity: 0.7;">Storage Bucket (Optional)</label>
+                                                    <input type="text" id="admin-fb-storagebucket" placeholder="lifeinvader-ads.appspot.com" style="width: 100%; height: 32px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; color: var(--text-primary); font-size: 11px;">
+                                                </div>
+                                            </div>
+
+                                            <div id="admin-google-fields" style="display: flex; flex-direction: column; gap: 8px;">
+                                                <div>
+                                                    <label for="admin-gs-url" style="display: block; font-size: 10px; margin-bottom: 3px; opacity: 0.7;">Google Script Web App URL</label>
+                                                    <input type="text" id="admin-gs-url" placeholder="https://script.google.com/..." style="width: 100%; height: 32px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 0 8px; color: var(--text-primary); font-size: 11px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="margin-top: 15px; width: 100%;">
+                                            <button type="button" id="btn-admin-save-backend" class="btn-action" style="width: 100%; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
+                                                <i class="fa-solid fa-floppy-disk"></i> Save Configurations
                                             </button>
                                         </div>
                                     </div>

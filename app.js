@@ -8154,6 +8154,7 @@ function initFloatingClipboard() {
    ========================================================================== */
 
 const CONFIG = {
+    BACKEND_TYPE: localStorage.getItem('li_backend_type') || 'firebase',
     GOOGLE_SCRIPT_URL: (() => {
         const stored = localStorage.getItem('li_google_script_url');
         const defaultUrl = 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec';
@@ -8162,8 +8163,300 @@ const CONFIG = {
             return defaultUrl;
         }
         return stored;
-    })()
+    })(),
+    FIREBASE: {
+        apiKey: localStorage.getItem('li_firebase_api_key') || "",
+        authDomain: localStorage.getItem('li_firebase_auth_domain') || "",
+        projectId: localStorage.getItem('li_firebase_project_id') || "",
+        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "",
+        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "",
+        appId: localStorage.getItem('li_firebase_app_id') || ""
+    }
 };
+
+let fbApp = null;
+let fbDb = null;
+
+function getFirebaseDb() {
+    if (!window.firebase) {
+        throw new Error("Firebase SDK not loaded. Please make sure script tags are loaded.");
+    }
+    if (!CONFIG.FIREBASE.apiKey || !CONFIG.FIREBASE.projectId) {
+        throw new Error("Firebase configurations are missing.");
+    }
+    if (!fbApp) {
+        fbApp = firebase.initializeApp(CONFIG.FIREBASE);
+        fbDb = firebase.firestore();
+    }
+    return fbDb;
+}
+
+async function handleFirebaseRequest(payload) {
+    const db = getFirebaseDb();
+    const action = payload.action;
+
+    if (action === "access_request") {
+        const clientUuid = payload.clientUuid;
+        if (!clientUuid) throw new Error("Missing client UUID.");
+        
+        const docRef = db.collection("access_requests").doc(clientUuid);
+        const doc = await docRef.get();
+        if (doc.exists && doc.data().status === "approved") {
+            return { status: "already_approved", message: "You already have access." };
+        }
+        
+        const timestamp = new Date().toISOString();
+        await docRef.set({
+            firstname: payload.firstname || "",
+            lastname: payload.lastname || "",
+            id: payload.id || "",
+            clientUuid: clientUuid,
+            status: "pending",
+            role: payload.role || "user",
+            timestamp: timestamp,
+            screenshot: payload.screenshotBase64 || ""
+        }, { merge: true });
+        
+        return { status: "success", message: "Access request submitted successfully." };
+    }
+
+    if (action === "check_access") {
+        const clientUuid = payload.clientUuid;
+        if (!clientUuid) throw new Error("Missing client UUID.");
+        
+        const doc = await db.collection("access_requests").doc(clientUuid).get();
+        if (!doc.exists) {
+            return { status: "success", approved: false, requestStatus: "none", role: "user" };
+        }
+        const data = doc.data();
+        return {
+            status: "success",
+            approved: data.status === "approved",
+            requestStatus: data.status || "pending",
+            role: data.role || "user"
+        };
+    }
+
+    if (action === "get_access_requests") {
+        let authorized = false;
+        let isSuperAdmin = false;
+        if (payload.passcode === "DopamineAdmin2026!") {
+            authorized = true;
+            isSuperAdmin = true;
+        } else if (payload.authUuid || payload.clientUuid) {
+            const adminDoc = await db.collection("access_requests").doc(payload.authUuid || payload.clientUuid).get();
+            if (adminDoc.exists && adminDoc.data().status === "approved" && adminDoc.data().role === "assistant_admin") {
+                authorized = true;
+            }
+        }
+        if (!authorized) {
+            return { status: "error", message: "Unauthorized access." };
+        }
+
+        const snapshot = await db.collection("access_requests").get();
+        const requests = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            requests.push({
+                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
+                firstname: data.firstname || "",
+                lastname: data.lastname || "",
+                id: data.id || "",
+                clientUuid: data.clientUuid || "",
+                status: data.status || "pending",
+                role: data.role || "user",
+                screenshotBase64: data.screenshot || ""
+            });
+        });
+        // Sort requests by timestamp desc
+        requests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return { status: "success", requests: requests, isSuperAdmin: isSuperAdmin };
+    }
+
+    if (action === "approve_access_request") {
+        const clientUuid = payload.clientUuid;
+        if (!clientUuid) throw new Error("Missing client UUID.");
+        await db.collection("access_requests").doc(clientUuid).set({
+            status: "approved"
+        }, { merge: true });
+        return { status: "success", message: "Access request approved." };
+    }
+
+    if (action === "reject_access_request") {
+        const clientUuid = payload.clientUuid;
+        if (!clientUuid) throw new Error("Missing client UUID.");
+        await db.collection("access_requests").doc(clientUuid).set({
+            status: "rejected",
+            role: ""
+        }, { merge: true });
+        return { status: "success", message: "Access request rejected." };
+    }
+
+    if (action === "set_user_role") {
+        if (payload.passcode !== "DopamineAdmin2026!") {
+            return { status: "error", message: "Only super admin can change roles." };
+        }
+        const clientUuid = payload.clientUuid;
+        if (!clientUuid) throw new Error("Missing client UUID.");
+        await db.collection("access_requests").doc(clientUuid).set({
+            role: payload.role || "user"
+        }, { merge: true });
+        return { status: "success", message: "User role updated." };
+    }
+
+    if (action === "bug_report") {
+        await db.collection("bug_reports").add({
+            category: payload.category || "",
+            rawInput: payload.rawInput || "",
+            expectedOutput: payload.expectedOutput || "",
+            timestamp: new Date().toISOString()
+        });
+        return { status: "success", message: "Bug report submitted." };
+    }
+
+    if (action === "get_bug_reports") {
+        const snapshot = await db.collection("bug_reports").get();
+        const reports = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            reports.push({
+                id: doc.id,
+                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
+                category: data.category || "",
+                rawInput: data.rawInput || "",
+                expectedOutput: data.expectedOutput || ""
+            });
+        });
+        reports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return { status: "success", reports: reports };
+    }
+
+    if (action === "resolve_bug_report") {
+        const id = payload.id;
+        if (!id) throw new Error("Missing report ID.");
+        await db.collection("bug_reports").doc(id).delete();
+        return { status: "success", message: "Bug report resolved." };
+    }
+
+    if (action === "clear_bug_reports") {
+        const snapshot = await db.collection("bug_reports").get();
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        return { status: "success", message: "All bug reports cleared." };
+    }
+
+    if (action === "log_ad") {
+        await db.collection("ad_history").add({
+            adText: payload.adText || "",
+            category: payload.category || "",
+            status: payload.status || "",
+            reason: payload.reason || "",
+            timestamp: new Date().toISOString()
+        });
+        return { status: "success", message: "Ad logged." };
+    }
+
+    if (action === "get_history") {
+        const snapshot = await db.collection("ad_history").get();
+        const history = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            history.push({
+                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
+                adText: data.adText || "",
+                category: data.category || "",
+                status: data.status || "",
+                reason: data.reason || ""
+            });
+        });
+        history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return { status: "success", history: history };
+    }
+
+    if (action === "get_custom_data") {
+        const doc = await db.collection("config").doc("custom_data").get();
+        if (doc.exists) {
+            return {
+                status: "success",
+                spelling: doc.data().spelling || [],
+                translations: doc.data().translations || [],
+                templates: doc.data().templates || []
+            };
+        }
+        return { status: "success", spelling: [], translations: [], templates: [] };
+    }
+
+    if (action === "save_custom_data") {
+        const updateData = {};
+        updateData[payload.type] = payload.data;
+        await db.collection("config").doc("custom_data").set(updateData, { merge: true });
+        return { status: "success", message: "Configurations saved successfully." };
+    }
+
+    if (action === "validate_key") {
+        const approvalKey = payload.approvalKey || "";
+        if (!approvalKey) {
+            return { status: "success", valid: false, message: "No key provided." };
+        }
+        const parts = approvalKey.split('-');
+        if (parts.length === 5 && parts[0] === 'LI' && parts[1] === 'APPROVED') {
+            const server = parts[2];
+            const id = parts[3];
+            const sig = parts[4];
+            const clientUuid = payload.clientUuid || "";
+            
+            const APPROVE_SALT = "DopamineLifeInvader2026!NewApprovalKey_Revoked_2026_05_24";
+            const dataStr = `${server.toLowerCase().trim()}:${id.toString().trim()}:${(clientUuid || "").toString().trim()}:${APPROVE_SALT}`;
+            let hash = 0x811c9dc5;
+            for (let i = 0; i < dataStr.length; i++) {
+                hash ^= dataStr.charCodeAt(i);
+                hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+            }
+            const expectedSig = (hash >>> 0).toString(16).toUpperCase().substring(0, 6);
+            
+            if (sig === expectedSig) {
+                return { status: "success", valid: true, message: "Key valid." };
+            }
+        }
+        return { status: "success", valid: false, message: "Invalid key." };
+    }
+
+    throw new Error("Unsupported action: " + action);
+}
+
+// Monkey patch window.fetch to support Firebase backend transparently
+(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+        if (url === CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE === 'firebase') {
+            try {
+                let payload = {};
+                if (options && options.body) {
+                    payload = JSON.parse(options.body);
+                }
+                const resData = await handleFirebaseRequest(payload);
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => resData,
+                    text: async () => JSON.stringify(resData)
+                };
+            } catch (e) {
+                console.error("Firebase backend handler error:", e);
+                return {
+                    ok: false,
+                    status: 500,
+                    json: async () => ({ status: "error", message: e.message || "Firebase Database error" }),
+                    text: async () => JSON.stringify({ status: "error", message: e.message || "Firebase Database error" })
+                };
+            }
+        }
+        return originalFetch.apply(this, arguments);
+    };
+})();
 
 
 function getOrCreateClientUuid() {
@@ -9870,6 +10163,72 @@ function initAdminPanel() {
             } catch (err) {
                 showCustomAlertDialog("Invalid JSON format. Verification failed:\n" + err.toString(), null, "error");
             }
+        });
+    }
+
+    // Backend Configuration UI Handling
+    const selectBackendType = document.getElementById("admin-backend-type");
+    const fbFields = document.getElementById("admin-firebase-fields");
+    const googleFields = document.getElementById("admin-google-fields");
+    const inputFbApiKey = document.getElementById("admin-fb-apikey");
+    const inputFbProjectId = document.getElementById("admin-fb-projectid");
+    const inputFbStorageBucket = document.getElementById("admin-fb-storagebucket");
+    const inputGsUrl = document.getElementById("admin-gs-url");
+    const btnSaveBackend = document.getElementById("btn-admin-save-backend");
+
+    if (selectBackendType) {
+        // Load initial values
+        selectBackendType.value = CONFIG.BACKEND_TYPE;
+        if (inputFbApiKey) inputFbApiKey.value = CONFIG.FIREBASE.apiKey;
+        if (inputFbProjectId) inputFbProjectId.value = CONFIG.FIREBASE.projectId;
+        if (inputFbStorageBucket) inputFbStorageBucket.value = CONFIG.FIREBASE.storageBucket;
+        if (inputGsUrl) inputGsUrl.value = CONFIG.GOOGLE_SCRIPT_URL;
+
+        const toggleBackendFields = () => {
+            if (selectBackendType.value === "firebase") {
+                if (fbFields) fbFields.classList.remove("hide");
+                if (googleFields) googleFields.classList.add("hide");
+            } else {
+                if (fbFields) fbFields.classList.add("hide");
+                if (googleFields) googleFields.classList.remove("hide");
+            }
+        };
+
+        selectBackendType.addEventListener("change", toggleBackendFields);
+        toggleBackendFields(); // Run initially
+    }
+
+    if (btnSaveBackend) {
+        btnSaveBackend.addEventListener("click", () => {
+            const type = selectBackendType ? selectBackendType.value : "google";
+            const apiKey = inputFbApiKey ? inputFbApiKey.value.trim() : "";
+            const projectId = inputFbProjectId ? inputFbProjectId.value.trim() : "";
+            const storageBucket = inputFbStorageBucket ? inputFbStorageBucket.value.trim() : "";
+            const gsUrl = inputGsUrl ? inputGsUrl.value.trim() : "";
+
+            if (type === "firebase" && (!apiKey || !projectId)) {
+                showCustomNotification("For Firebase, API Key and Project ID are required.", "error");
+                return;
+            }
+
+            localStorage.setItem("li_backend_type", type);
+            localStorage.setItem("li_google_script_url", gsUrl);
+            localStorage.setItem("li_firebase_api_key", apiKey);
+            localStorage.setItem("li_firebase_project_id", projectId);
+            localStorage.setItem("li_firebase_storage_bucket", storageBucket);
+
+            // Update CONFIG
+            CONFIG.BACKEND_TYPE = type;
+            CONFIG.GOOGLE_SCRIPT_URL = gsUrl;
+            CONFIG.FIREBASE.apiKey = apiKey;
+            CONFIG.FIREBASE.projectId = projectId;
+            CONFIG.FIREBASE.storageBucket = storageBucket;
+
+            // Reset Firebase instances so they reinitialize with new configurations
+            fbApp = null;
+            fbDb = null;
+
+            showCustomNotification("Backend configurations saved successfully!", "success");
         });
     }
 

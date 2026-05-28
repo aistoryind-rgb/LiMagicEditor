@@ -3776,8 +3776,8 @@ function smartDictLookup(input, dictionary, options = {}) {
             const inputCoversKey = computeTokenCoverage(inputTokens, keyTokens);
             // Also check reverse: how well do key tokens cover input tokens?
             const keyCoversInput = computeTokenCoverage(keyTokens, inputTokens);
-            // Use the better of the two (handles both shorter and longer inputs)
-            const score = Math.max(inputCoversKey, keyCoversInput);
+            // Use average coverage to ensure bidirectional token relevance and prevent small keys from matching large inputs
+            const score = (inputCoversKey + keyCoversInput) / 2;
             
             if (score >= minTokenCoverage && score > highestTokenScore) {
                 highestTokenScore = score;
@@ -10165,6 +10165,18 @@ function initCustomData() {
     }, 60000);
 }
 
+function stableStringify(obj) {
+    if (obj === null || typeof obj !== "object") {
+        return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+        return "[" + obj.map(stableStringify).join(",") + "]";
+    }
+    const keys = Object.keys(obj).sort();
+    const parts = keys.map(k => JSON.stringify(k) + ":" + stableStringify(obj[k]));
+    return "{" + parts.join(",") + "}";
+}
+
 function syncCustomDataFromBackend() {
     if (!CONFIG.GOOGLE_SCRIPT_URL) return;
     
@@ -10184,7 +10196,7 @@ function syncCustomDataFromBackend() {
         if (data.status === "success") {
             let changed = false;
             if (data.spelling) {
-                const fetchedSpellingStr = JSON.stringify(data.spelling);
+                const fetchedSpellingStr = stableStringify(data.spelling);
                 if (localStorage.getItem("li_custom_spelling") !== fetchedSpellingStr) {
                     customSpelling = data.spelling;
                     localStorage.setItem("li_custom_spelling", fetchedSpellingStr);
@@ -10192,7 +10204,7 @@ function syncCustomDataFromBackend() {
                 }
             }
             if (data.templates) {
-                const fetchedTemplatesStr = JSON.stringify(data.templates);
+                const fetchedTemplatesStr = stableStringify(data.templates);
                 if (localStorage.getItem("li_custom_templates") !== fetchedTemplatesStr) {
                     customTemplates = data.templates;
                     localStorage.setItem("li_custom_templates", fetchedTemplatesStr);
@@ -10200,7 +10212,7 @@ function syncCustomDataFromBackend() {
                 }
             }
             if (data.translations) {
-                const fetchedTranslationsStr = JSON.stringify(data.translations);
+                const fetchedTranslationsStr = stableStringify(data.translations);
                 if (localStorage.getItem("li_custom_translations") !== fetchedTranslationsStr) {
                     customTranslations = data.translations;
                     localStorage.setItem("li_custom_translations", fetchedTranslationsStr);
@@ -13408,7 +13420,15 @@ function cleanExpectedOutput(rawInput, expectedOutput, category) {
         let bestDist = Infinity;
         for (const pw of policyWords) {
             const dist = levenshteinDistance(cand, pw);
-            if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
+            // Strict edit distance threshold based on candidate length to avoid false matches
+            let allowedDist = 0;
+            if (cand.length >= 8) {
+                allowedDist = 2;
+            } else if (cand.length >= 4) {
+                allowedDist = 1;
+            }
+            
+            if (dist <= allowedDist && dist < bestDist) {
                 bestDist = dist;
                 bestWord = pw;
             }
@@ -13562,7 +13582,15 @@ function selfTrainFromPolicy(rawInput, category, dict = customSpelling) {
         let bestDist = Infinity;
         for (const pw of policyWords) {
             const dist = levenshteinDistance(cand, pw);
-            if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
+            // Strict edit distance threshold based on candidate length to avoid false matches
+            let allowedDist = 0;
+            if (cand.length >= 8) {
+                allowedDist = 2;
+            } else if (cand.length >= 4) {
+                allowedDist = 1;
+            }
+            
+            if (dist <= allowedDist && dist < bestDist) {
                 bestDist = dist;
                 bestWord = pw;
             }
@@ -13709,7 +13737,15 @@ function learnFromSimilarExample(rawText, similarText, category, dict = customSp
             const cleanSimTok = simTok.toLowerCase().replace(/[^a-z0-9]/g, "");
             if (!cleanSimTok) continue;
             const dist = levenshteinDistance(rawTok, cleanSimTok);
-            if (dist < bestDist && dist <= 2) {
+            // Strict edit distance threshold based on candidate length to avoid false matches
+            let allowedDist = 0;
+            if (rawTok.length >= 8) {
+                allowedDist = 2;
+            } else if (rawTok.length >= 4) {
+                allowedDist = 1;
+            }
+            
+            if (dist <= allowedDist && dist < bestDist) {
                 bestDist = dist;
                 bestSimTok = simTok;
             }
@@ -13852,21 +13888,36 @@ function trainFromDatabase(rawText, dbType, dict = customSpelling) {
         
         // 3. Fuzzy match (only check single words)
         if (!cand.includes(" ")) {
-            let bestWord = null;
+            let bestWordToken = null;
             let bestDist = Infinity;
             for (const dbWord of dbWords) {
+                const dbWordTokensOriginal = dbWord.split(/\s+/);
                 const dbWordLower = dbWord.toLowerCase();
                 const dbWordTokens = dbWordLower.split(/\s+/);
-                for (const token of dbWordTokens) {
+                for (let idx = 0; idx < dbWordTokens.length; idx++) {
+                    const token = dbWordTokens[idx];
                     const dist = levenshteinDistance(cand, token);
-                    if (dist < bestDist && dist <= 2 && dist < Math.max(cand.length / 2, 2)) {
+                    
+                    // Define strict threshold for spelling typos:
+                    // - Length < 4: Only allow exact match (dist = 0)
+                    // - Length 4-7: Allow max 1 edit (dist <= 1)
+                    // - Length >= 8: Allow max 2 edits (dist <= 2)
+                    let allowedDist = 0;
+                    if (cand.length >= 8) {
+                        allowedDist = 2;
+                    } else if (cand.length >= 4) {
+                        allowedDist = 1;
+                    }
+                    
+                    if (dist <= allowedDist && dist < bestDist) {
                         bestDist = dist;
-                        bestWord = dbWord;
+                        bestWordToken = dbWordTokensOriginal[idx];
                     }
                 }
             }
-            if (bestWord) {
-                dict[cand] = bestWord;
+            // Only add if the spelling correction actually changes the word (case-insensitive)
+            if (bestWordToken && cand !== bestWordToken.toLowerCase()) {
+                dict[cand] = bestWordToken;
                 trainedCount++;
             }
         }

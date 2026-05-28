@@ -15871,27 +15871,7 @@ function renderTriageCards(reports, container) {
                             <i class="fa-solid fa-xmark"></i> Ignore
                         </button>
                     </div>
-                    
-                    <!-- Row 2: Training Engine -->
-                    <div style="display: flex; gap: 6px;">
-                        <button type="button" class="btn-triage-train-policy" style="
-                            flex: 1; background: linear-gradient(135deg, rgba(255,149,0,0.12), rgba(255,149,0,0.04)); border: 1px solid rgba(255,149,0,0.2); color: #ff9500; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
-                        ">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Train Policy
-                        </button>
-                        
-                        <button type="button" class="btn-triage-train-vehicles-clothing" style="
-                            flex: 1; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.18); color: #a78bfa; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
-                        ">
-                            <i class="fa-solid fa-car"></i> Train Auto/Clothing
-                        </button>
-                        
-                        <button type="button" class="btn-triage-train-items" style="
-                            flex: 1; background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.18); color: #22d3ee; padding: 8px 4px; border-radius: 8px; font-family: var(--font-heading); font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; letter-spacing: 0.2px; white-space: nowrap;
-                        ">
-                            <i class="fa-solid fa-box"></i> Train Items
-                        </button>
-                    </div>
+
 
                     <!-- Row 2b: AI Training Engine -->
                     <button type="button" class="btn-triage-train-gemini" style="

@@ -8938,10 +8938,57 @@ async function handleFirebaseRequest(payload) {
             return { status: "success", approved: false, requestStatus: "none", role: "user" };
         }
         const data = doc.data();
+        const approved = data.status === "approved";
+        
+        let requestStatus = data.status || "pending";
+        let message = "";
+        
+        if (approved) {
+            const userId = data.id || "Unknown";
+            if (userId !== "Unknown") {
+                const sessionDocRef = db.collection("active_sessions").doc(userId);
+                const registerSession = payload.registerSession === true;
+                
+                try {
+                    const activeSessionDoc = await runWithTimeout(sessionDocRef.get(), 6000);
+                    if (activeSessionDoc.exists) {
+                        const activeUuid = activeSessionDoc.data().clientUuid;
+                        if (activeUuid !== clientUuid) {
+                            if (registerSession) {
+                                // Take over session with current clientUuid
+                                await runWithTimeout(sessionDocRef.set({
+                                    clientUuid: clientUuid,
+                                    lastActive: new Date().toISOString()
+                                }, { merge: true }), 6000);
+                            } else {
+                                // Session is active on another browser/device
+                                requestStatus = "session_expired";
+                                message = "This session is active on another device or browser.";
+                            }
+                        } else {
+                            // Update last active timestamp
+                            await runWithTimeout(sessionDocRef.set({
+                                lastActive: new Date().toISOString()
+                            }, { merge: true }), 6000);
+                        }
+                    } else {
+                        // First time session registration
+                        await runWithTimeout(sessionDocRef.set({
+                            clientUuid: clientUuid,
+                            lastActive: new Date().toISOString()
+                        }), 6000);
+                    }
+                } catch (err) {
+                    console.error("Session verification error in Firebase handler:", err);
+                }
+            }
+        }
+        
         return {
             status: "success",
-            approved: data.status === "approved",
-            requestStatus: data.status || "pending",
+            approved: approved && requestStatus !== "session_expired",
+            requestStatus: requestStatus,
+            message: message,
             role: data.role || "user",
             firstname: data.firstname || "",
             lastname: data.lastname || "",
@@ -9272,7 +9319,7 @@ function initAccessGate() {
             CONFIG.GOOGLE_SCRIPT_URL = url;
             showCustomNotification("Settings saved! Web App URL updated.", "success");
             settingsDrawer.classList.add("hide");
-            checkCurrentAccessStatus(true);
+            checkCurrentAccessStatus(true, true);
         });
     }
 
@@ -9454,7 +9501,10 @@ function initAccessGate() {
                     document.documentElement.classList.add("user-unauthorized");
                     if (gate) gate.classList.remove("hide");
                     if (statusText) {
-                        if (data.requestStatus === "rejected") {
+                        if (data.requestStatus === "session_expired") {
+                            statusText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Session Expired (Active on another device)`;
+                            statusText.style.color = "#ff453a";
+                        } else if (data.requestStatus === "rejected") {
                             statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Request Rejected`;
                             statusText.style.color = "#e63946";
                         } else if (data.requestStatus === "pending") {
@@ -9473,6 +9523,12 @@ function initAccessGate() {
                         showCustomAlertDialog("Access request is still pending admin approval. Please check back later.", null, "warning");
                     } else if (showFeedback && data.requestStatus === "rejected") {
                         showCustomAlertDialog("Your access request was rejected. Please contact an administrator.", null, "error");
+                    } else if (data.requestStatus === "session_expired") {
+                        showCustomAlertDialog("This session is now active on another device or browser. This tab has been locked.", null, "error");
+                        if (statusPollInterval) {
+                            clearInterval(statusPollInterval);
+                            statusPollInterval = null;
+                        }
                     }
                 }
             }
@@ -9497,7 +9553,7 @@ function initAccessGate() {
         document.documentElement.classList.add("user-approved");
         document.documentElement.classList.remove("user-unauthorized");
         if (gate) gate.classList.add("hide");
-        checkCurrentAccessStatus();
+        checkCurrentAccessStatus(false, true);
     } else {
         document.documentElement.classList.remove("user-approved");
         document.documentElement.classList.add("user-unauthorized");
@@ -9510,17 +9566,17 @@ function initAccessGate() {
         if (hasActiveRequest) {
             if (screenRequest) screenRequest.classList.remove("active");
             if (screenApprove) screenApprove.classList.add("active");
-            checkCurrentAccessStatus();
+            checkCurrentAccessStatus(false, true);
             startPolling();
         }
     }
     
     function startPolling() {
         if (statusPollInterval) clearInterval(statusPollInterval);
-        checkCurrentAccessStatus();
+        checkCurrentAccessStatus(false, false);
         statusPollInterval = setInterval(() => {
             if (document.hidden) return;
-            checkCurrentAccessStatus();
+            checkCurrentAccessStatus(false, false);
         }, 10000);
     }
     
@@ -9728,7 +9784,7 @@ function initAccessGate() {
         btnCheckStatus.addEventListener("click", () => {
             btnCheckStatus.disabled = true;
             btnCheckStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking...`;
-            checkCurrentAccessStatus(true);
+            checkCurrentAccessStatus(true, true);
             setTimeout(() => {
                 if (btnCheckStatus) {
                     btnCheckStatus.disabled = false;

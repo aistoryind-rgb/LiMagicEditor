@@ -3604,13 +3604,17 @@ function getSemanticCanonicalKey(text) {
 
 function extractTranslationValue(val) {
     if (!val) return val;
+    let res = val;
     if (val.startsWith("{") && val.endsWith("}")) {
         try {
             const parsed = JSON.parse(val);
-            return parsed.text || val;
+            res = parsed.text || val;
         } catch (e) {}
     }
-    return val;
+    if (typeof res === "string" && res.toLowerCase().includes("__has_each__")) {
+        res = res.replace(/__has_each__/gi, "each").replace(/\s+/g, " ").trim();
+    }
+    return res;
 }
 
 /**
@@ -4284,6 +4288,7 @@ function runValidationPipeline(ctx, override) {
     // 8. Assemble Final Ad Text
     // Capitalize first letter of the ad
     let mainSentence = `${action} ${processedBody}`.trim();
+    mainSentence = mainSentence.replace(/__has_each__/gi, "").replace(/\s+/g, ' ').trim();
     mainSentence = mainSentence.charAt(0).toUpperCase() + mainSentence.slice(1);
     
     // Insert Price details

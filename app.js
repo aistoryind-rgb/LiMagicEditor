@@ -35,34 +35,7 @@ try {
     };
 }
 
-// Parse URL parameters to restore state in incognito/private mode
-(function() {
-    try {
-        var urlParams = new URLSearchParams(window.location.search);
-        var changed = false;
-        if (urlParams.get("approved") === "true") {
-            localStorage.setItem("li_approved_token", "APPROVED");
-        }
-        if (urlParams.get("admin") === "true") {
-            localStorage.setItem("li_admin_authenticated", "true");
-            sessionStorage.setItem("li_admin_authenticated", "true");
-            var key = urlParams.get("passcode");
-            if (key) {
-                localStorage.setItem("li_admin_passcode", key);
-                sessionStorage.setItem("li_admin_passcode", key);
-                urlParams.delete("passcode");
-                changed = true;
-            }
-        }
-        if (changed) {
-            var newSearch = urlParams.toString();
-            var newUrl = window.location.pathname + (newSearch ? "?" + newSearch : "");
-            window.history.replaceState({}, document.title, newUrl);
-        }
-    } catch (e) {
-        console.error("Failed to parse URL parameters:", e);
-    }
-})();
+// URL parameter bypass logic removed for security
 
 const VEHICLE_DB = {
     "helicopters":  [
@@ -1420,6 +1393,19 @@ function initPremiumImprovisations() {
             setAppTheme(theme);
         });
     });
+
+    // 1.5. Collapsible advanced backup keys drawer
+    const btnToggleBackup = document.getElementById("btn-toggle-backup-drawer");
+    const backupKeysDrawer = document.getElementById("backup-keys-drawer");
+    if (btnToggleBackup && backupKeysDrawer) {
+        btnToggleBackup.addEventListener("click", () => {
+            const isOpen = backupKeysDrawer.classList.toggle("open");
+            btnToggleBackup.classList.toggle("open", isOpen);
+            btnToggleBackup.querySelector("span").textContent = isOpen 
+                ? "Hide Backup Keys (Auto-Failover)" 
+                : "Show Backup Keys (Auto-Failover)";
+        });
+    }
 
     // 2. Autocomplete Suggestions Key handlers on raw-ad
     const rawAdTextarea = document.getElementById("raw-ad");
@@ -9973,13 +9959,13 @@ function initAccessGate() {
         btnRequestSubmit.addEventListener("click", () => {
             if (isSubmitting) return;
             
+            const id = inputId ? inputId.value.trim() : "";
             const firstname = inputFirstname ? inputFirstname.value.trim() : "";
             const lastname = inputLastname ? inputLastname.value.trim() : "";
-            const id = inputId ? inputId.value.trim() : "";
             const server = "EN3";
             
-            if (!firstname || !lastname || !id) {
-                showCustomNotification("Please fill out all fields.", "warning");
+            if (!id) {
+                showCustomNotification("Please enter your In-Game ID.", "warning");
                 return;
             }
             
@@ -9987,14 +9973,80 @@ function initAccessGate() {
                 showCustomNotification("In-Game ID must be alphanumeric (max 20 characters).", "warning");
                 return;
             }
+
+            // Generate deterministic UUID based on In-Game ID to allow logins on any device
+            const deterministicUuid = `00000000-0000-0000-0000-${id.padStart(12, '0')}`;
+            localStorage.setItem("li_client_uuid", deterministicUuid);
+            sessionStorage.setItem("li_client_uuid", deterministicUuid);
+
+            const nameRow = document.getElementById("access-name-row");
+            const isLoginMode = nameRow && nameRow.classList.contains("hide");
+
+            if (isLoginMode) {
+                if (CONFIG.GOOGLE_SCRIPT_URL) {
+                    isSubmitting = true;
+                    btnRequestSubmit.disabled = true;
+                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking Access...`;
+
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain" },
+                        body: JSON.stringify({
+                            action: "check_access",
+                            clientUuid: deterministicUuid,
+                            registerSession: false
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        isSubmitting = false;
+                        btnRequestSubmit.disabled = false;
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
+
+                        if (data.status === "success" && data.approved) {
+                            localStorage.setItem("li_approved_token", "APPROVED");
+                            localStorage.setItem("li_request_firstname", data.firstname || "User");
+                            localStorage.setItem("li_request_lastname", data.lastname || "Approved");
+                            localStorage.setItem("li_request_id", id);
+                            localStorage.setItem("li_request_server", server);
+
+                            document.documentElement.classList.add("user-approved");
+                            document.documentElement.classList.remove("user-unauthorized");
+                            if (gate) gate.classList.add("hide");
+
+                            checkCurrentAccessStatus(false, true);
+                            startPolling();
+                            
+                            showCustomNotification("Welcome back! Access granted.", "success");
+                        } else {
+                            nameRow.classList.remove("hide");
+                            btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                            showCustomNotification("ID not approved yet. Please enter details to request access.", "warning");
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Access verification error:", err);
+                        isSubmitting = false;
+                        btnRequestSubmit.disabled = false;
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
+                        showCustomNotification("Connection error. Please try again.", "error");
+                    });
+                } else {
+                    showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
+                }
+                return;
+            }
+
+            // Otherwise, submit a new access request with name fields
+            if (!firstname || !lastname) {
+                showCustomNotification("Please fill out all fields.", "warning");
+                return;
+            }
             
             if (CONFIG.GOOGLE_SCRIPT_URL) {
                 isSubmitting = true;
                 btnRequestSubmit.disabled = true;
                 btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
-                
-                const timestamp = new Date().toLocaleString();
-                const clientUuid = getOrCreateClientUuid();
                 
                 fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                     method: "POST",
@@ -10005,7 +10057,7 @@ function initAccessGate() {
                         lastname: lastname,
                         server: server,
                         id: id,
-                        clientUuid: clientUuid,
+                        clientUuid: deterministicUuid,
                         screenshotBase64: ""
                     })
                 })
@@ -10022,28 +10074,18 @@ function initAccessGate() {
                         transitionToApproveScreen();
                         startPolling();
                     } else if (data.status === "already_approved") {
-                        // User already has access - unlock directly
                         localStorage.setItem("li_approved_token", "APPROVED");
                         localStorage.setItem("li_request_firstname", firstname);
                         localStorage.setItem("li_request_lastname", lastname);
                         localStorage.setItem("li_request_id", id);
                         localStorage.setItem("li_request_server", server);
                         
-                        // Unlock DOM instantly
                         document.documentElement.classList.add("user-approved");
                         document.documentElement.classList.remove("user-unauthorized");
                         if (gate) gate.classList.add("hide");
                         
-                        // Activate session & start polling to enforce tab locking
                         checkCurrentAccessStatus(false, true);
                         startPolling();
-                        
-                        // Update URL query string dynamically without reload
-                        try {
-                            window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
-                        } catch(e) {
-                            console.error("replaceState failed:", e);
-                        }
 
                         showCustomAlertDialog("You already have access! Welcome back.", null, "success");
                     } else {
@@ -10094,6 +10136,13 @@ function initAccessGate() {
             }
             if (screenApprove) screenApprove.classList.remove("active");
             if (screenRequest) screenRequest.classList.add("active");
+            
+            // Show registration details form so they can update their request name/ID
+            const nameRow = document.getElementById("access-name-row");
+            if (nameRow) nameRow.classList.remove("hide");
+            if (btnRequestSubmit) {
+                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+            }
         });
     }
 }
@@ -15069,9 +15118,24 @@ function refreshBugTriageTabVisibility() {
         lockScreen.classList.add("hide");
         triageContent.classList.remove("hide");
         loadAndRenderBugTriage();
+        // Render only if the templates drawer is currently open
+        const templatesDrawer = document.getElementById("bug-triage-templates-drawer");
+        if (templatesDrawer && templatesDrawer.classList.contains("open") && typeof renderCustomTemplates === "function") {
+            renderCustomTemplates();
+        }
     } else {
         lockScreen.classList.remove("hide");
         triageContent.classList.add("hide");
+        // Reset the templates drawer state when locked/unauthenticated
+        const templatesDrawer = document.getElementById("bug-triage-templates-drawer");
+        const templatesBtn = document.getElementById("btn-triage-templates");
+        if (templatesDrawer) {
+            templatesDrawer.classList.remove("open");
+        }
+        if (templatesBtn) {
+            templatesBtn.style.background = "rgba(167, 139, 250, 0.05)";
+            templatesBtn.style.borderColor = "rgba(167, 139, 250, 0.15)";
+        }
     }
 }
 
@@ -16808,11 +16872,33 @@ function renderTriageCards(reports, container) {
     const refreshBtn = document.getElementById("btn-triage-refresh");
     const clearAllBtn = document.getElementById("btn-triage-clear-all");
     const unlockLoginBtn = document.getElementById("btn-bug-unlock-login");
+    const templatesBtn = document.getElementById("btn-triage-templates");
+    const templatesDrawer = document.getElementById("bug-triage-templates-drawer");
     
     if (triageTabBtn) {
         triageTabBtn.addEventListener("click", () => {
             if (sessionStorage.getItem("li_admin_authenticated") === "true") {
                 loadAndRenderBugTriage();
+            }
+        });
+    }
+
+    if (templatesBtn && templatesDrawer) {
+        templatesBtn.addEventListener("click", () => {
+            if (sessionStorage.getItem("li_admin_authenticated") !== "true") {
+                showCustomNotification("Please authenticate as admin first.", "warning");
+                return;
+            }
+            const isOpen = templatesDrawer.classList.toggle("open");
+            if (isOpen) {
+                templatesBtn.style.background = "rgba(167, 139, 250, 0.15)";
+                templatesBtn.style.borderColor = "rgba(167, 139, 250, 0.4)";
+                if (typeof renderCustomTemplates === "function") {
+                    renderCustomTemplates();
+                }
+            } else {
+                templatesBtn.style.background = "rgba(167, 139, 250, 0.05)";
+                templatesBtn.style.borderColor = "rgba(167, 139, 250, 0.15)";
             }
         });
     }

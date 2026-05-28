@@ -7656,6 +7656,52 @@ function fuzzyCorrectItemName(rawItem, ctx) {
             return resultName;
         }
     }
+
+    // 7. Fallback: Automatically match against all official database items from ITEMS_DB
+    const allOfficialItems = [];
+    if (typeof ITEMS_DB !== "undefined") {
+        for (const cat in ITEMS_DB) {
+            ITEMS_DB[cat].forEach(item => allOfficialItems.push(item));
+        }
+    }
+    const cleanAliases = allOfficialItems.map(cleanItemForFuzzy);
+    let matchedIdx = -1;
+    
+    // Exact or close match on cleaned name
+    let matchedItem = getClosestMatch(cleaned, cleanAliases, 0.8);
+    if (matchedItem) {
+        matchedIdx = cleanAliases.indexOf(matchedItem);
+    } else {
+        // Fallback to matching raw cleanLower
+        let matchedRaw = getClosestMatch(cleanLower, allOfficialItems, 0.8);
+        if (matchedRaw) {
+            matchedIdx = allOfficialItems.indexOf(matchedRaw);
+        }
+    }
+    
+    if (matchedIdx !== -1) {
+        const canonical = allOfficialItems[matchedIdx];
+        let qty = parseQuantity(rawItem);
+        let qtyText = qty ? `${qty} ` : "";
+        let finalName = canonical;
+        
+        let quality = "";
+        if (cleanLower.includes("low") || cleaned.includes("low") || /\b(?:lvl|level)\s*1\b/i.test(cleanLower) || /\b1\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "low quality ";
+        else if (cleanLower.includes("medium") || cleanLower.includes("med") || cleaned.includes("medium") || cleaned.includes("med") || /\b(?:lvl|level)\s*2\b/i.test(cleanLower) || /\b2\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "medium quality ";
+        else if (cleanLower.includes("high") || cleanLower.includes("high") || /\b(?:lvl|level)\s*3\b/i.test(cleanLower) || /\b3\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "high quality ";
+        else if (cleanLower.includes("max") || cleanLower.includes("max") || /\b(?:lvl|level)\s*4\b/i.test(cleanLower) || /\b4\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "max quality ";
+        else if (cleanLower.includes("advanced") || cleanLower.includes("advanced") || /\b(?:lvl|level)\s*5\b/i.test(cleanLower) || /\b5\s*(?:lvl|level)\b/i.test(cleanLower)) quality = "advanced quality ";
+
+        if (qty > 1 || cleanLower.endsWith("s") || cleanLower.includes("in bulk") || cleanLower.includes("bulk") || hasEach) {
+            finalName = pluralizeItemName(finalName);
+        }
+        
+        let resultName = `${qtyText}${quality}${finalName}`;
+        if ((cleanLower.includes("in bulk") || cleanLower.includes("bulk")) && !resultName.toLowerCase().includes("in bulk")) {
+            resultName += " in bulk";
+        }
+        return resultName;
+    }
     
     return null;
 }

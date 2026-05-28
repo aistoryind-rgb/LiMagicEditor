@@ -244,7 +244,10 @@
                         <!-- Raw Ad Form -->
                         <div class="form-group">
                             <label for="raw-ad"><i class="fa-solid fa-file-import"></i> Paste Advertisement Content</label>
-                            <textarea id="raw-ad" placeholder="e.g. buying fully upgraded sandking xl 12m budget negotiable or trade for obay r8..."></textarea>
+                            <div class="autocomplete-container">
+                                <textarea id="raw-ad" placeholder="e.g. buying fully upgraded sandking xl 12m budget negotiable or trade for obay r8..."></textarea>
+                                <div class="autocomplete-suggestions" id="raw-ad-suggestions"></div>
+                            </div>
                             <div class="processed-action-row">
                                 <button type="button" id="btn-clear-raw" class="btn-clear">
                                     <i class="fa-solid fa-trash-can"></i> Clear
@@ -349,6 +352,16 @@
                                 <div class="notice-body" id="rejection-reason-text">
                                     Why the ad was rejected.
                                 </div>
+                                <!-- Actionable Help and AI Fix recommendations -->
+                                <div class="policy-helper-card hide" id="rejection-policy-helper">
+                                    <div class="policy-helper-desc" id="rejection-policy-helper-desc">
+                                        According to the handbook, this format is rejected.
+                                    </div>
+                                    <div class="policy-helper-action-row">
+                                        <button type="button" class="btn-policy-fix" id="btn-rejection-policy-fix">Auto-Fix Ad</button>
+                                        <a href="#" class="btn-policy-link" id="btn-rejection-policy-link">Open Handbook</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -359,6 +372,16 @@
                                 </div>
                                 <div class="notice-body" id="blacklist-reason-text">
                                     Details about the phone blacklist trigger.
+                                </div>
+                                <!-- Actionable Help and AI Fix recommendations -->
+                                <div class="policy-helper-card hide" id="blacklist-policy-helper">
+                                    <div class="policy-helper-desc" id="blacklist-policy-helper-desc">
+                                        Advertising this item is prohibited.
+                                    </div>
+                                    <div class="policy-helper-action-row">
+                                        <button type="button" class="btn-policy-fix" id="btn-blacklist-policy-fix">Auto-Fix Ad</button>
+                                        <a href="#" class="btn-policy-link" id="btn-blacklist-policy-link">Open Handbook</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -676,6 +699,46 @@
                                 <h4 style="margin: 0; font-family: var(--font-heading); color: var(--text-color); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;"><i class="fa-solid fa-clipboard-list"></i> System Logs & Activity</h4>
                                 <p class="section-desc">Monitor processed advertisements, user registrations, and system access status.</p>
                                 
+                                <!-- Logs Analytics Dashboard Grid -->
+                                <div class="analytics-grid" style="margin-top: 15px;">
+                                    <div class="metric-card">
+                                        <div class="metric-icon-wrapper">
+                                            <i class="fa-solid fa-database"></i>
+                                        </div>
+                                        <div class="metric-info">
+                                            <span class="metric-val" id="metric-total-logs">—</span>
+                                            <span class="metric-lbl">Total Logs Audited</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon-wrapper">
+                                            <i class="fa-solid fa-user-clock"></i>
+                                        </div>
+                                        <div class="metric-info">
+                                            <span class="metric-val" id="metric-pending-requests">—</span>
+                                            <span class="metric-lbl">Pending Invites</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon-wrapper">
+                                            <i class="fa-solid fa-paint-roller"></i>
+                                        </div>
+                                        <div class="metric-info">
+                                            <span class="metric-val" id="metric-active-theme">Standard</span>
+                                            <span class="metric-lbl">Active Theme Skin</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon-wrapper">
+                                            <i class="fa-solid fa-key"></i>
+                                        </div>
+                                        <div class="metric-info">
+                                            <span class="metric-val" id="metric-key-health">—</span>
+                                            <span class="metric-lbl">Gemini Core Keys</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="log-subtabs-nav" style="display: flex; gap: 10px; margin-top: 12px; margin-bottom: 12px;">
                                     <button type="button" class="log-subtab-btn active" data-log-type="ads">
                                         <i class="fa-solid fa-message"></i> Ads Processed
@@ -830,6 +893,43 @@
                                                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: var(--text-muted);">
                                                     <span id="ai-usage-status">Resets in 60s</span>
                                                     <span id="ai-usage-daily-count">Daily Total: 0 / 1500</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Theme Selector Customizer -->
+                                            <div id="theme-selector-section" style="margin-top: 15px; background: rgba(255, 255, 255, 0.02); padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                                                <span style="font-size: 9.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
+                                                    <i class="fa-solid fa-palette" style="font-size: 9px; color: #a78bfa;"></i> Application Theme Customizer
+                                                </span>
+                                                <div class="theme-selector-grid">
+                                                    <div class="theme-select-card active" data-theme="dark" title="Standard Dark Theme">
+                                                        <span style="font-size: 10px; font-weight: 600; color: #f5f5f7;">Standard</span>
+                                                        <div class="theme-preview-dots">
+                                                            <div class="theme-dot" style="background: #ff3b30;"></div>
+                                                            <div class="theme-dot" style="background: #0a0b10;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="theme-select-card" data-theme="synthwave" title="Cyberpunk Synthwave Theme">
+                                                        <span style="font-size: 10px; font-weight: 600; color: #f5f5f7;">Synthwave</span>
+                                                        <div class="theme-preview-dots">
+                                                            <div class="theme-dot" style="background: #ec4899;"></div>
+                                                            <div class="theme-dot" style="background: #0f051d;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="theme-select-card" data-theme="matrix" title="Emerald Matrix Theme">
+                                                        <span style="font-size: 10px; font-weight: 600; color: #f5f5f7;">Matrix</span>
+                                                        <div class="theme-preview-dots">
+                                                            <div class="theme-dot" style="background: #30d158;"></div>
+                                                            <div class="theme-dot" style="background: #020703;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="theme-select-card" data-theme="nordic" title="Nordic Ice Theme">
+                                                        <span style="font-size: 10px; font-weight: 600; color: #f5f5f7;">Nordic</span>
+                                                        <div class="theme-preview-dots">
+                                                            <div class="theme-dot" style="background: #0ea5e9;"></div>
+                                                            <div class="theme-dot" style="background: #0a0e17;"></div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

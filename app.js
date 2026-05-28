@@ -1402,6 +1402,314 @@ function trackCopiedAd(rawVal) {
     renderPresetButtons();
 }
 
+/* ==========================================================================
+   Premium Portal Improvisations - Logic
+   ========================================================================== */
+
+let selectedTheme = "dark";
+
+function initPremiumImprovisations() {
+    // 1. Load Theme Customizer
+    selectedTheme = localStorage.getItem("li_app_theme") || "dark";
+    setAppTheme(selectedTheme);
+
+    const themeCards = document.querySelectorAll(".theme-select-card");
+    themeCards.forEach(card => {
+        card.addEventListener("click", () => {
+            const theme = card.getAttribute("data-theme");
+            setAppTheme(theme);
+        });
+    });
+
+    // 2. Autocomplete Suggestions Key handlers on raw-ad
+    const rawAdTextarea = document.getElementById("raw-ad");
+    const autocompleteSuggestions = document.getElementById("raw-ad-suggestions");
+    
+    if (rawAdTextarea && autocompleteSuggestions) {
+        let selectedIndex = -1;
+        let suggestionsList = [];
+
+        rawAdTextarea.addEventListener("input", (e) => {
+            const val = rawAdTextarea.value.trim();
+            if (!val || val.length < 2) {
+                closeSuggestions();
+                return;
+            }
+
+            const query = val.toLowerCase();
+            suggestionsList = [];
+
+            // Find matching spelling corrections
+            if (typeof customSpelling !== 'undefined') {
+                for (const [wrong, right] of Object.entries(customSpelling)) {
+                    if (wrong.startsWith(query) && suggestionsList.length < 8) {
+                        suggestionsList.push({
+                            type: "spelling",
+                            key: wrong,
+                            value: right,
+                            label: `Correct "${wrong}" to "${right}"`
+                        });
+                    }
+                }
+            }
+
+            // Find matching templates or category shorthands
+            if (typeof customTemplates !== 'undefined') {
+                customTemplates.forEach(ct => {
+                    if (ct.shorthand && ct.shorthand.toLowerCase().includes(query) && suggestionsList.length < 8) {
+                        suggestionsList.push({
+                            type: "template",
+                            key: ct.shorthand,
+                            value: ct.text,
+                            label: `[${ct.category}] ${ct.shorthand}: ${ct.text}`
+                        });
+                    } else if (ct.category.toLowerCase().startsWith(query) && suggestionsList.length < 8) {
+                        suggestionsList.push({
+                            type: "template",
+                            key: ct.category,
+                            value: ct.text,
+                            label: `[${ct.category}] Layout: ${ct.text}`
+                        });
+                    }
+                });
+            }
+
+            if (suggestionsList.length > 0) {
+                renderSuggestions(suggestionsList);
+            } else {
+                closeSuggestions();
+            }
+        });
+
+        // Keyboard navigations inside textarea
+        rawAdTextarea.addEventListener("keydown", (e) => {
+            if (!autocompleteSuggestions.classList.contains("active")) return;
+
+            const items = autocompleteSuggestions.querySelectorAll(".suggestion-item");
+            
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % items.length;
+                updateSelection(items);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                updateSelection(items);
+            } else if (e.key === "Enter") {
+                if (selectedIndex >= 0 && selectedIndex < items.length) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                }
+            } else if (e.key === "Escape") {
+                closeSuggestions();
+            }
+        });
+
+        function renderSuggestions(list) {
+            autocompleteSuggestions.innerHTML = "";
+            selectedIndex = -1;
+            autocompleteSuggestions.classList.add("active");
+
+            list.forEach((item, idx) => {
+                const div = document.createElement("div");
+                div.className = "suggestion-item";
+                if (idx === selectedIndex) div.classList.add("selected");
+
+                const textSpan = document.createElement("span");
+                textSpan.textContent = item.label;
+                textSpan.style.textOverflow = "ellipsis";
+                textSpan.style.overflow = "hidden";
+                textSpan.style.whiteSpace = "nowrap";
+                textSpan.style.maxWidth = "80%";
+                div.appendChild(textSpan);
+
+                const badge = document.createElement("span");
+                badge.className = "suggestion-badge";
+                badge.textContent = item.type;
+                div.appendChild(badge);
+
+                div.addEventListener("click", () => {
+                    if (item.type === "spelling") {
+                        rawAdTextarea.value = item.value;
+                    } else if (item.type === "template") {
+                        rawAdTextarea.value = item.value;
+                    }
+                    closeSuggestions();
+                    processAd();
+                });
+
+                autocompleteSuggestions.appendChild(div);
+            });
+        }
+
+        function updateSelection(items) {
+            items.forEach((item, idx) => {
+                if (idx === selectedIndex) {
+                    item.classList.add("selected");
+                    item.scrollIntoView({ block: "nearest" });
+                } else {
+                    item.classList.remove("selected");
+                }
+            });
+        }
+
+        function closeSuggestions() {
+            autocompleteSuggestions.innerHTML = "";
+            autocompleteSuggestions.classList.remove("active");
+            selectedIndex = -1;
+        }
+
+        // Close on clicking outside
+        document.addEventListener("click", (e) => {
+            if (!rawAdTextarea.contains(e.target) && !autocompleteSuggestions.contains(e.target)) {
+                closeSuggestions();
+            }
+        });
+    }
+
+    // 3. Policy Fix actions bindings
+    const btnBlacklistFix = document.getElementById("btn-blacklist-policy-fix");
+    if (btnBlacklistFix) {
+        btnBlacklistFix.addEventListener("click", () => {
+            const rawAd = document.getElementById("raw-ad");
+            if (rawAd) {
+                let text = rawAd.value;
+                const replacements = {
+                    "ammo": "decorative box",
+                    "ammunition": "decorations box",
+                    "rifle": "toy rifle",
+                    "gun": "water gun",
+                    "weapon": "replica model",
+                    "drugs": "medicines",
+                    "cocaine": "white dust collectors",
+                    "weed": "green tea bag"
+                };
+                for (const [wrong, right] of Object.entries(replacements)) {
+                    const re = new RegExp(`\\b${wrong}\\b`, "gi");
+                    text = text.replace(re, right);
+                }
+                rawAd.value = text;
+                processAd();
+                showCustomNotification("Auto-fixed prohibited policy terms!", "success");
+            }
+        });
+    }
+
+    const btnRejectionFix = document.getElementById("btn-rejection-policy-fix");
+    if (btnRejectionFix) {
+        btnRejectionFix.addEventListener("click", () => {
+            const rawAd = document.getElementById("raw-ad");
+            if (rawAd) {
+                let text = rawAd.value.trim();
+                if (text.length > 0) {
+                    text = text.charAt(0).toUpperCase() + text.slice(1);
+                }
+                if (text.length > 0 && !text.endsWith(".") && !/\d$/.test(text)) {
+                    text += ".";
+                }
+                rawAd.value = text;
+                processAd();
+                showCustomNotification("Applied standard policy syntax rules!", "success");
+            }
+        });
+    }
+
+    // Bind scroll to policy book tab on links
+    const handbookLinks = ["btn-blacklist-policy-link", "btn-rejection-policy-link"];
+    handbookLinks.forEach(linkId => {
+        const link = document.getElementById(linkId);
+        if (link) {
+            link.addEventListener("click", (e) => {
+                e.preventDefault();
+                const bookTabBtn = document.querySelector('[data-tab="tab-policy"]');
+                if (bookTabBtn) {
+                    bookTabBtn.click();
+                } else {
+                    const sidebarBook = document.getElementById("btn-sidebar-policy") || document.querySelector('.sidebar-btn[data-tab="tab-policy"]');
+                    if (sidebarBook) sidebarBook.click();
+                }
+                showCustomNotification("Navigated to Policy Book Handbook page!", "info");
+            });
+        }
+    });
+}
+
+function setAppTheme(theme) {
+    document.body.classList.remove("theme-synthwave", "theme-matrix", "theme-nordic");
+    if (theme !== "dark") {
+        document.body.classList.add(`theme-${theme}`);
+    }
+
+    localStorage.setItem("li_app_theme", theme);
+    selectedTheme = theme;
+
+    const cards = document.querySelectorAll(".theme-select-card");
+    cards.forEach(c => {
+        if (c.getAttribute("data-theme") === theme) {
+            c.classList.add("active");
+        } else {
+            c.classList.remove("active");
+        }
+    });
+
+    const displayTag = document.getElementById("metric-active-theme");
+    if (displayTag) {
+        displayTag.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
+    
+    if (typeof logSystemEventToBackend === "function") {
+        logSystemEventToBackend("Settings", "Change Theme", `Switched UI theme skin to: ${theme.toUpperCase()}`);
+    }
+}
+
+function updateLogsAnalytics() {
+    const activeThemeSpan = document.getElementById("metric-active-theme");
+    if (activeThemeSpan) {
+        activeThemeSpan.textContent = selectedTheme.charAt(0).toUpperCase() + selectedTheme.slice(1);
+    }
+
+    const keyHealthSpan = document.getElementById("metric-key-health");
+    if (keyHealthSpan) {
+        let configuredCount = 0;
+        if (CONFIG.API_KEY_VAULT && Array.isArray(CONFIG.API_KEY_VAULT)) {
+            CONFIG.API_KEY_VAULT.forEach(k => {
+                if (k && k.trim()) configuredCount++;
+            });
+        }
+        keyHealthSpan.textContent = `${configuredCount} / 5 Keys`;
+    }
+
+    const totalLogsSpan = document.getElementById("metric-total-logs");
+    const pendingInvitesSpan = document.getElementById("metric-pending-requests");
+
+    let totalCount = 0;
+
+    const adsRows = document.querySelectorAll("#history-table-body tr");
+    adsRows.forEach(row => {
+        if (row.cells.length > 1) totalCount++;
+    });
+
+    let pendingRequestsCount = 0;
+    const userRows = document.querySelectorAll("#user-logs-table-body tr");
+    userRows.forEach(row => {
+        if (row.cells.length > 1) {
+            totalCount++;
+            const statusCell = row.cells[row.cells.length - 1];
+            if (statusCell && statusCell.textContent.toLowerCase().includes("pending")) {
+                pendingRequestsCount++;
+            }
+        }
+    });
+
+    const systemRows = document.querySelectorAll("#system-logs-table-body tr");
+    systemRows.forEach(row => {
+        if (row.cells.length > 1) totalCount++;
+    });
+
+    if (totalLogsSpan) totalLogsSpan.textContent = totalCount;
+    if (pendingInvitesSpan) pendingInvitesSpan.textContent = pendingRequestsCount;
+}
+
 // Force browser scroll to top on reload and prevent scroll restoration
 if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
@@ -1425,6 +1733,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initAdminPanel();
     initPolicyBook();
     initPresetButtons();
+    initPremiumImprovisations();
     
     const lastUpdatedMain = document.getElementById("last-updated-main");
     if (lastUpdatedMain) {
@@ -7608,6 +7917,12 @@ function updateUI(ctx) {
         });
     }
     
+    // Policy Helper Cards variables
+    const blacklistHelper = document.getElementById("blacklist-policy-helper");
+    const blacklistHelperDesc = document.getElementById("blacklist-policy-helper-desc");
+    const rejectionHelper = document.getElementById("rejection-policy-helper");
+    const rejectionHelperDesc = document.getElementById("rejection-policy-helper-desc");
+
     // Render status
     if (ctx.status === "passed") {
         textDisplay.textContent = ctx.finalText;
@@ -7622,6 +7937,9 @@ function updateUI(ctx) {
         blacklistBox.classList.add("hide");
         btnCopy.disabled = false;
         
+        if (blacklistHelper) blacklistHelper.classList.add("hide");
+        if (rejectionHelper) rejectionHelper.classList.add("hide");
+
         if (btnCopyRej) btnCopyRej.classList.add("hide");
         const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
         if (btnSubmitBugInline && updateUI._lastText !== ctx.raw) {
@@ -7650,6 +7968,18 @@ function updateUI(ctx) {
         blacklistBox.classList.add("hide");
         btnCopy.disabled = true;
         
+        if (blacklistHelper) blacklistHelper.classList.add("hide");
+        if (rejectionHelper) {
+            rejectionHelper.classList.remove("hide");
+            let helperText = "According to the official Handbook guidelines, this ad format cannot be processed. Check spelling, spacing, or pricing formats.";
+            if (ctx.rejectionReason.toLowerCase().includes("sentence")) {
+                helperText = "Policy Handbook Rule: The first letter must be capitalized, and the ad must end with a period (.) unless ending in numbers/digits.";
+            } else if (ctx.rejectionReason.toLowerCase().includes("price") || ctx.rejectionReason.toLowerCase().includes("budget")) {
+                helperText = "Policy Handbook Rule: Prices must use a dollar sign ($) before values and use periods (.) instead of commas. No abbreviations (k/m) allowed.";
+            }
+            rejectionHelperDesc.textContent = helperText;
+        }
+
         if (btnCopyRej) {
             btnCopyRej.classList.remove("hide");
         }
@@ -7680,6 +8010,16 @@ function updateUI(ctx) {
         rejectionBox.classList.remove("hide");
         blacklistBox.classList.add("hide");
         btnCopy.disabled = true;
+
+        if (rejectionHelper) rejectionHelper.classList.add("hide");
+        if (blacklistHelper) {
+            blacklistHelper.classList.remove("hide");
+            let helperText = "Policy Handbook Rule: Advertising illegal items, weapons, ammunition, or drugs is strictly prohibited.";
+            if (ctx.blacklistReason.toLowerCase().includes("number") || ctx.blacklistReason.toLowerCase().includes("phone")) {
+                helperText = "Policy Handbook Rule: The phone number specified triggers a system spam or blacklisted number violation.";
+            }
+            blacklistHelperDesc.textContent = helperText;
+        }
         
         if (btnCopyRej) {
             btnCopyRej.classList.remove("hide");
@@ -7709,6 +8049,11 @@ function updateUI(ctx) {
             btn.classList.remove("active");
         }
     });
+
+    // Update Logs analytics dashboard widgets dynamically
+    if (typeof updateLogsAnalytics === "function") {
+        updateLogsAnalytics();
+    }
 }
 
 

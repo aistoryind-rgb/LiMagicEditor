@@ -3580,6 +3580,39 @@ function isTemplateAd(text) {
    All dictionary lookups in the system route through these utilities.
    ========================================================================== */
 
+function detectActionCategory(text) {
+    if (!text) return "other";
+    const lower = text.toLowerCase();
+    
+    // Check Buying
+    if (/\b(buying|buy|wtb|purchase|purchasing|want to buy)\b/i.test(lower)) {
+        return "buying";
+    }
+    // Check Selling
+    if (/\b(selling|sell|wts|sale)\b/i.test(lower)) {
+        return "selling";
+    }
+    // Check Renting
+    if (/\b(renting|rent|wtr)\b/i.test(lower)) {
+        return "renting";
+    }
+    // Check Hiring
+    if (/\b(hiring|hire)\b/i.test(lower)) {
+        return "hiring";
+    }
+    
+    return "other";
+}
+
+function stripActualPrices(text) {
+    if (!text) return "";
+    return text
+        .replace(/\$\s*[\d.,]+\s*(?:k|m|mil|million|billion|b|trillion)?/gi, "")
+        .replace(/\b[\d.,]+\s*(?:k|m|mil|million|billion|b|trillion)\b/gi, "")
+        .replace(/\b(?:price|budget)\s*[:.]?\s*(?:negotiable|nego)?\.?\s*/gi, "")
+        .replace(/\s+/g, " ").trim();
+}
+
 function getCanonicalKey(text) {
     if (!text) return "";
     return text.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -3889,9 +3922,9 @@ function isDuplicateTrainingEntry(newKey, newValue, dictionary) {
    ========================================================================== */
 
 function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
-    // Strip prices first to avoid price numbers interfering with quantity/ID numbers
-    const cleanInput = stripPricesFromText(inputText).toLowerCase().replace(/\s+/g, ' ').trim();
-    const cleanKey = stripPricesFromText(matchedKey).toLowerCase().replace(/\s+/g, ' ').trim();
+    // Use stripActualPrices instead of stripPricesFromText to keep naked numbers (SIM numbers, IDs, quantities)
+    const cleanInput = stripActualPrices(inputText).toLowerCase().replace(/\s+/g, ' ').trim();
+    const cleanKey = stripActualPrices(matchedKey).toLowerCase().replace(/\s+/g, ' ').trim();
     
     // Extract remaining numbers in positional order
     const inputNums = cleanInput.match(/\b\d+\b/g) || [];
@@ -3940,11 +3973,42 @@ function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
     
     for (let i = 0; i < keyNums.length; i++) {
         if (keyNums[i] !== inputNums[i]) {
-            const regex = new RegExp(`\\b${keyNums[i]}\\b`);
-            if (regex.test(result)) {
-                result = result.replace(regex, inputNums[i]);
+            const keyNum = keyNums[i];
+            const inputNum = inputNums[i];
+            
+            // Try exact match first
+            const exactRegex = new RegExp(`\\b${keyNum}\\b`);
+            if (exactRegex.test(result)) {
+                result = result.replace(exactRegex, inputNum);
             } else {
-                substitutionSuccessful = false;
+                // Format-aware match (handling hyphens, spaces, dots inside output)
+                const digits = keyNum.split("");
+                const formatRegexPattern = digits.map(d => `${d}`).join("\\D*");
+                const formatRegex = new RegExp(formatRegexPattern);
+                
+                const match = result.match(formatRegex);
+                if (match) {
+                    const matchedStr = match[0];
+                    let formatted = "";
+                    let inputIdx = 0;
+                    for (let j = 0; j < matchedStr.length; j++) {
+                        const char = matchedStr[j];
+                        if (/\d/.test(char)) {
+                            if (inputIdx < inputNum.length) {
+                                formatted += inputNum[inputIdx++];
+                            }
+                        } else {
+                            formatted += char; // Keep formatting separators (e.g. hyphens or spaces)
+                        }
+                    }
+                    // Append remaining digits if any
+                    while (inputIdx < inputNum.length) {
+                        formatted += inputNum[inputIdx++];
+                    }
+                    result = result.replace(matchedStr, formatted);
+                } else {
+                    substitutionSuccessful = false;
+                }
             }
         }
     }
@@ -3959,7 +4023,17 @@ function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
 function findTrainedMapping(rawText) {
     if (!rawText || !customTranslations) return { found: false };
     
-    const result = smartDictLookup(rawText, customTranslations, {
+    const inputAction = detectActionCategory(rawText);
+    
+    // Filter customTranslations to match the action category
+    const filteredTranslations = {};
+    for (const [key, val] of Object.entries(customTranslations)) {
+        if (detectActionCategory(key) === inputAction) {
+            filteredTranslations[key] = val;
+        }
+    }
+    
+    const result = smartDictLookup(rawText, filteredTranslations, {
         fuzzyThreshold: 0.75,
         stripPrices: true,
         minTokenCoverage: 0.70,

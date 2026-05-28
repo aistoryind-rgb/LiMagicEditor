@@ -626,9 +626,6 @@
                                 <button type="button" class="admin-tab-btn" data-target="tab-history">
                                     <i class="fa-solid fa-clock-rotate-left"></i> System History
                                 </button>
-                                <button type="button" class="admin-tab-btn" data-target="tab-backup">
-                                    <i class="fa-solid fa-file-shield"></i> Backup & Restore
-                                </button>
                                 <button type="button" class="admin-tab-btn" data-target="tab-users">
                                     <i class="fa-solid fa-users"></i> Users
                                 </button>
@@ -806,54 +803,6 @@
                                 </div>
                             </div>
 
-                            <!-- Tab 5: Backup & Restore -->
-                            <div id="tab-backup" class="admin-tab-content hide">
-                                <div class="backup-grid" style="display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap;">
-                                    
-                                    <!-- Left Card: Backup & Restore -->
-                                    <div class="admin-card" style="flex: 1.2; min-width: 320px; background: rgba(22, 22, 28, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
-                                        <div>
-                                            <h4 style="margin: 0 0 4px 0; font-family: var(--font-heading); color: var(--text-color); font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
-                                                <i class="fa-solid fa-file-shield text-primary" style="margin-right: 6px;"></i> Configurations Backup
-                                            </h4>
-                                            <p class="section-desc" style="margin: 0 0 15px 0; font-size: 11.5px; opacity: 0.65; line-height: 1.4;">Export or restore spelling and template configurations.</p>
-                                            
-                                            <textarea id="admin-backup-textarea" placeholder="JSON backup content will appear here or can be pasted here for restoration..." rows="4" style="font-family: monospace; font-size: 11px; min-height: 110px; width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; color: var(--text-primary); resize: none;"></textarea>
-                                        </div>
-                                        
-                                        <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                            <button type="button" id="btn-admin-export" class="btn-preset" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-                                                <i class="fa-solid fa-download"></i> Export
-                                            </button>
-                                            <button type="button" id="btn-admin-import" class="btn-action glow-red" style="flex: 1; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
-                                                <i class="fa-solid fa-upload"></i> Import
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Right Card: System Database Maintenance -->
-                                    <div class="admin-card" style="flex: 1; min-width: 280px; background: rgba(22, 22, 28, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
-                                        <div>
-                                            <h4 style="margin: 0 0 4px 0; font-family: var(--font-heading); color: var(--text-color); font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
-                                                <i class="fa-solid fa-triangle-exclamation" style="color: #ff9f0a; margin-right: 6px;"></i> System Maintenance
-                                            </h4>
-                                            <p class="section-desc" style="margin: 0 0 15px 0; font-size: 11.5px; opacity: 0.65; line-height: 1.4;">Permanently wipe bug logs and delete Google Drive screenshot cards.</p>
-                                            
-                                            <div style="background: rgba(255, 159, 10, 0.04); border: 1px solid rgba(255, 159, 10, 0.15); padding: 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; color: rgba(255, 255, 255, 0.7); display: flex; gap: 10px; align-items: flex-start;">
-                                                <i class="fa-solid fa-circle-info" style="color: #ff9f0a; font-size: 14px; margin-top: 2px; flex-shrink: 0;"></i>
-                                                <span>Wiping does not affect user registrations, role permissions, or custom templates. This action is irreversible.</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div style="margin-top: 15px; width: 100%;">
-                                            <button type="button" id="btn-admin-clear-bugs" class="btn-action glow-red" style="width: 100%; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0;">
-                                                <i class="fa-solid fa-trash-can"></i> Clear Bug Reports
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                </div>
-                            </div>
 
                             <!-- Tab 1b: Authorized Users -->
                             <div id="tab-users" class="admin-tab-content hide">
@@ -1099,9 +1048,14 @@
                         <div id="bug-triage-active-content" class="hide" style="margin-top: 15px;">
                             <p class="section-desc" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                                 <span>Review automatically captured bug reports, analyze raw vs expected outputs, and train the correction engine in one click.</span>
-                                <button type="button" id="btn-triage-refresh" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); padding: 6px 14px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;">
-                                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                                </button>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" id="btn-triage-clear-all" class="btn-action glow-red" style="padding: 6px 14px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px; margin: 0; height: auto;">
+                                        <i class="fa-solid fa-trash-can"></i> Clear All
+                                    </button>
+                                    <button type="button" id="btn-triage-refresh" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); padding: 6px 14px; border-radius: var(--radius-sm); font-family: var(--font-heading); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; letter-spacing: 0.3px;">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                                    </button>
+                                </div>
                             </p>
 
                             <div id="admin-triage-list-container" style="margin-top: 15px; display: grid; gap: 15px; grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));">

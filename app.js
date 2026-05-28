@@ -7071,8 +7071,8 @@ function updateUI(ctx) {
    ========================================================================== */
 
 function escapeHTML(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    if (str === null || str === undefined) return "";
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function escapeRegExp(string) {
@@ -8235,6 +8235,15 @@ function getFirebaseDb() {
     return fbDb;
 }
 
+function runWithTimeout(promise, ms = 6000) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Database operation timed out. Please check your network connection.")), ms)
+        )
+    ]);
+}
+
 async function handleFirebaseRequest(payload) {
     const db = getFirebaseDb();
     const action = payload.action;
@@ -8244,22 +8253,30 @@ async function handleFirebaseRequest(payload) {
         if (!clientUuid) throw new Error("Missing client UUID.");
         
         const docRef = db.collection("access_requests").doc(clientUuid);
-        const doc = await docRef.get();
-        if (doc.exists && doc.data().status === "approved") {
-            return { status: "already_approved", message: "You already have access." };
+        try {
+            const doc = await runWithTimeout(docRef.get(), 6000);
+            if (doc.exists && doc.data().status === "approved") {
+                return { status: "already_approved", message: "You already have access." };
+            }
+        } catch (err) {
+            console.warn("Could not check existing access request before submit:", err);
+            if (err.message.includes("timed out")) throw err;
         }
         
         const timestamp = new Date().toISOString();
-        await docRef.set({
+        const requestData = {
             firstname: payload.firstname || "",
             lastname: payload.lastname || "",
             id: payload.id || "",
             clientUuid: clientUuid,
             status: "pending",
             role: payload.role || "user",
-            timestamp: timestamp,
-            screenshot: payload.screenshotBase64 || ""
-        }, { merge: true });
+            timestamp: timestamp
+        };
+        if (payload.screenshotBase64 && payload.screenshotBase64.length < 700000) {
+            requestData.screenshot = payload.screenshotBase64;
+        }
+        await runWithTimeout(docRef.set(requestData, { merge: true }), 6000);
         
         return { status: "success", message: "Access request submitted successfully." };
     }
@@ -8268,7 +8285,7 @@ async function handleFirebaseRequest(payload) {
         const clientUuid = payload.clientUuid;
         if (!clientUuid) throw new Error("Missing client UUID.");
         
-        const doc = await db.collection("access_requests").doc(clientUuid).get();
+        const doc = await runWithTimeout(db.collection("access_requests").doc(clientUuid).get(), 6000);
         if (!doc.exists) {
             return { status: "success", approved: false, requestStatus: "none", role: "user" };
         }
@@ -8289,7 +8306,7 @@ async function handleFirebaseRequest(payload) {
             authorized = true;
             isSuperAdmin = true;
         } else if (payload.authUuid || payload.clientUuid) {
-            const adminDoc = await db.collection("access_requests").doc(payload.authUuid || payload.clientUuid).get();
+            const adminDoc = await runWithTimeout(db.collection("access_requests").doc(payload.authUuid || payload.clientUuid).get(), 6000);
             if (adminDoc.exists && adminDoc.data().status === "approved" && adminDoc.data().role === "assistant_admin") {
                 authorized = true;
             }
@@ -8298,7 +8315,7 @@ async function handleFirebaseRequest(payload) {
             return { status: "error", message: "Unauthorized access." };
         }
 
-        const snapshot = await db.collection("access_requests").get();
+        const snapshot = await runWithTimeout(db.collection("access_requests").get(), 10000);
         const requests = [];
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -8321,20 +8338,21 @@ async function handleFirebaseRequest(payload) {
     if (action === "approve_access_request") {
         const clientUuid = payload.clientUuid;
         if (!clientUuid) throw new Error("Missing client UUID.");
-        await db.collection("access_requests").doc(clientUuid).set({
+        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
             status: "approved"
-        }, { merge: true });
+        }, { merge: true }), 6000);
         return { status: "success", message: "Access request approved." };
     }
 
     if (action === "reject_access_request") {
         const clientUuid = payload.clientUuid;
         if (!clientUuid) throw new Error("Missing client UUID.");
-        await db.collection("access_requests").doc(clientUuid).set({
-            status: "rejected",
-            role: ""
-        }, { merge: true });
-        return { status: "success", message: "Access request rejected." };
+        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
+            status: payload.preserveUser ? "revoked" : "rejected",
+            role: "",
+            revokedAt: payload.preserveUser ? new Date().toISOString() : ""
+        }, { merge: true }), 6000);
+        return { status: "success", message: payload.preserveUser ? "User access deactivated and preserved." : "Access request rejected." };
     }
 
     if (action === "set_user_role") {
@@ -8344,24 +8362,26 @@ async function handleFirebaseRequest(payload) {
         }
         const clientUuid = payload.clientUuid;
         if (!clientUuid) throw new Error("Missing client UUID.");
-        await db.collection("access_requests").doc(clientUuid).set({
+        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
             role: payload.role || "user"
-        }, { merge: true });
+        }, { merge: true }), 6000);
         return { status: "success", message: "User role updated." };
     }
 
     if (action === "bug_report") {
-        await db.collection("bug_reports").add({
+        db.collection("bug_reports").add({
             category: payload.category || "",
             rawInput: payload.rawInput || "",
             expectedOutput: payload.expectedOutput || "",
+            source: payload.source || "bug_report",
+            screenshot: payload.screenshotBase64 || "",
             timestamp: new Date().toISOString()
-        });
+        }).catch(err => console.error("Firestore bug report write error:", err));
         return { status: "success", message: "Bug report submitted." };
     }
 
     if (action === "get_bug_reports") {
-        const snapshot = await db.collection("bug_reports").get();
+        const snapshot = await runWithTimeout(db.collection("bug_reports").get(), 10000);
         const reports = [];
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -8380,33 +8400,33 @@ async function handleFirebaseRequest(payload) {
     if (action === "resolve_bug_report") {
         const id = payload.id;
         if (!id) throw new Error("Missing report ID.");
-        await db.collection("bug_reports").doc(id).delete();
+        await runWithTimeout(db.collection("bug_reports").doc(id).delete(), 6000);
         return { status: "success", message: "Bug report resolved." };
     }
 
     if (action === "clear_bug_reports") {
-        const snapshot = await db.collection("bug_reports").get();
+        const snapshot = await runWithTimeout(db.collection("bug_reports").get(), 10000);
         const batch = db.batch();
         snapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
-        await batch.commit();
+        await runWithTimeout(batch.commit(), 10000);
         return { status: "success", message: "All bug reports cleared." };
     }
 
     if (action === "log_ad") {
-        await db.collection("ad_history").add({
+        db.collection("ad_history").add({
             adText: payload.adText || "",
             category: payload.category || "",
             status: payload.status || "",
             reason: payload.reason || "",
             timestamp: new Date().toISOString()
-        });
+        }).catch(err => console.error("Firestore log ad error:", err));
         return { status: "success", message: "Ad logged." };
     }
 
     if (action === "get_history") {
-        const snapshot = await db.collection("ad_history").get();
+        const snapshot = await runWithTimeout(db.collection("ad_history").get(), 10000);
         const history = [];
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -8423,7 +8443,7 @@ async function handleFirebaseRequest(payload) {
     }
 
     if (action === "get_custom_data") {
-        const doc = await db.collection("config").doc("custom_data").get();
+        const doc = await runWithTimeout(db.collection("config").doc("custom_data").get(), 6000);
         if (doc.exists) {
             return {
                 status: "success",
@@ -8441,7 +8461,7 @@ async function handleFirebaseRequest(payload) {
             templates: payload.templates || [],
             translations: payload.translations || {}
         };
-        await db.collection("config").doc("custom_data").set(updateData, { merge: true });
+        await runWithTimeout(db.collection("config").doc("custom_data").set(updateData, { merge: true }), 8000);
         return { status: "success", message: "Configurations saved successfully." };
     }
 
@@ -9635,7 +9655,7 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
-    overlay.style.zIndex = "20000";
+    overlay.style.zIndex = "100000";
     overlay.style.opacity = "0";
     overlay.style.transition = "opacity 0.3s ease";
 
@@ -9687,10 +9707,9 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     targetDoc.body.appendChild(overlay);
 
     // Fade-in animations
-    requestAnimationFrame(() => {
-        overlay.style.opacity = "1";
-        dialog.style.transform = "scale(1) translateY(0)";
-    });
+    void overlay.offsetHeight; // Force reflow to guarantee CSS transition works on all browsers
+    overlay.style.opacity = "1";
+    dialog.style.transform = "scale(1) translateY(0)";
 
     const cancelBtn = dialog.querySelector("#custom-confirm-cancel-btn");
     const okBtn = dialog.querySelector("#custom-confirm-ok-btn");
@@ -9753,7 +9772,7 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
-    overlay.style.zIndex = "20000";
+    overlay.style.zIndex = "100000";
     overlay.style.opacity = "0";
     overlay.style.transition = "opacity 0.3s ease";
 
@@ -9823,10 +9842,9 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
     targetDoc.body.appendChild(overlay);
 
     // Fade-in animations
-    requestAnimationFrame(() => {
-        overlay.style.opacity = "1";
-        dialog.style.transform = "scale(1) translateY(0)";
-    });
+    void overlay.offsetHeight; // Force reflow to guarantee CSS transition works on all browsers
+    overlay.style.opacity = "1";
+    dialog.style.transform = "scale(1) translateY(0)";
 
     const okBtn = dialog.querySelector("#custom-alert-ok-btn");
 
@@ -9862,55 +9880,81 @@ function applyAdminRolePermissions() {
     }
 
     const tabBackup = document.getElementById("tab-backup");
-    if (!tabBackup) return;
+    if (tabBackup) {
+        // Check if banner already exists
+        let lockBanner = document.getElementById("backup-lock-banner");
 
-    // Check if banner already exists
-    let lockBanner = document.getElementById("backup-lock-banner");
+        if (isAssistant) {
+            // Create banner if not exists
+            if (!lockBanner) {
+                lockBanner = document.createElement("div");
+                lockBanner.id = "backup-lock-banner";
+                lockBanner.innerHTML = `
+                    <div style="background: rgba(255, 59, 48, 0.1); border: 1px dashed rgba(255, 59, 48, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.05);">
+                        <div style="background: rgba(255, 59, 48, 0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #ff3b30; font-size: 18px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div>
+                            <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
+                            <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
+                        </div>
+                    </div>
+                `;
+                tabBackup.insertBefore(lockBanner, tabBackup.firstChild);
+            }
+
+            // Disable all inputs & buttons in tab-backup
+            const inputs = tabBackup.querySelectorAll("input, textarea, button");
+            inputs.forEach(el => {
+                el.disabled = true;
+                el.style.opacity = "0.5";
+                el.style.cursor = "not-allowed";
+            });
+            
+            // Specifically target clear bugs button to completely restrict
+            const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+            if (btnClearBugs) {
+                btnClearBugs.disabled = true;
+                btnClearBugs.style.opacity = "0.4";
+                btnClearBugs.style.cursor = "not-allowed";
+                btnClearBugs.classList.remove("glow-red");
+            }
+
+            const backupTextarea = document.getElementById("admin-backup-textarea");
+            if (backupTextarea) {
+                backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
+            }
+        } else {
+            // Super admin - remove banner if exists
+            if (lockBanner) {
+                lockBanner.remove();
+            }
+
+            // Enable all inputs & buttons in tab-backup
+            const inputs = tabBackup.querySelectorAll("input, textarea, button");
+            inputs.forEach(el => {
+                el.disabled = false;
+                el.style.opacity = "";
+                el.style.cursor = "";
+            });
+
+            const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+            if (btnClearBugs) {
+                btnClearBugs.classList.add("glow-red");
+            }
+
+            const backupTextarea = document.getElementById("admin-backup-textarea");
+            if (backupTextarea) {
+                backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
+            }
+        }
+    }
+
+    // Always apply Gemini API key restriction logic regardless of tabBackup
+    const inputKey = document.getElementById("input-ai-gemini-key");
+    const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
 
     if (isAssistant) {
-        // Create banner if not exists
-        if (!lockBanner) {
-            lockBanner = document.createElement("div");
-            lockBanner.id = "backup-lock-banner";
-            lockBanner.innerHTML = `
-                <div style="background: rgba(255, 59, 48, 0.1); border: 1px dashed rgba(255, 59, 48, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.05);">
-                    <div style="background: rgba(255, 59, 48, 0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #ff3b30; font-size: 18px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);">
-                        <i class="fa-solid fa-lock"></i>
-                    </div>
-                    <div>
-                        <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
-                        <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
-                    </div>
-                </div>
-            `;
-            tabBackup.insertBefore(lockBanner, tabBackup.firstChild);
-        }
-
-        // Disable all inputs & buttons in tab-backup
-        const inputs = tabBackup.querySelectorAll("input, textarea, button");
-        inputs.forEach(el => {
-            el.disabled = true;
-            el.style.opacity = "0.5";
-            el.style.cursor = "not-allowed";
-        });
-        
-        // Specifically target clear bugs button to completely restrict
-        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
-        if (btnClearBugs) {
-            btnClearBugs.disabled = true;
-            btnClearBugs.style.opacity = "0.4";
-            btnClearBugs.style.cursor = "not-allowed";
-            btnClearBugs.classList.remove("glow-red");
-        }
-
-        const backupTextarea = document.getElementById("admin-backup-textarea");
-        if (backupTextarea) {
-            backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
-        }
-
-        // Hide Gemini API key from assistant admins
-        const inputKey = document.getElementById("input-ai-gemini-key");
-        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
         if (inputKey) {
             inputKey.value = "••••••••••••••••••••••••••••••••";
             inputKey.type = "password";
@@ -9921,34 +9965,7 @@ function applyAdminRolePermissions() {
         if (btnToggleVisibility) {
             btnToggleVisibility.style.display = "none";
         }
-
     } else {
-        // Super admin - remove banner if exists
-        if (lockBanner) {
-            lockBanner.remove();
-        }
-
-        // Enable all inputs & buttons in tab-backup
-        const inputs = tabBackup.querySelectorAll("input, textarea, button");
-        inputs.forEach(el => {
-            el.disabled = false;
-            el.style.opacity = "";
-            el.style.cursor = "";
-        });
-
-        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
-        if (btnClearBugs) {
-            btnClearBugs.classList.add("glow-red");
-        }
-
-        const backupTextarea = document.getElementById("admin-backup-textarea");
-        if (backupTextarea) {
-            backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
-        }
-
-        // Restore access to Gemini API key for super admins
-        const inputKey = document.getElementById("input-ai-gemini-key");
-        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
         if (inputKey) {
             inputKey.disabled = false;
             inputKey.style.opacity = "";
@@ -15471,6 +15488,7 @@ function renderTriageCards(reports, container) {
 (function initTriagePanel() {
     const triageTabBtn = document.getElementById("tab-btn-bug-triage") || document.querySelector('.tab-btn[data-tab="tab-bug-triage"]');
     const refreshBtn = document.getElementById("btn-triage-refresh");
+    const clearAllBtn = document.getElementById("btn-triage-clear-all");
     const unlockLoginBtn = document.getElementById("btn-bug-unlock-login");
     
     if (triageTabBtn) {
@@ -15509,6 +15527,52 @@ function renderTriageCards(reports, container) {
                     }, 500);
                 }
                 loadAndRenderBugTriage();
+            } else {
+                showCustomNotification("Please authenticate as admin first.", "warning");
+            }
+        });
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener("click", () => {
+            if (sessionStorage.getItem("li_admin_authenticated") === "true") {
+                showCustomConfirmDialog(
+                    "Are you sure you want to permanently clear all bug reports? This action cannot be undone.",
+                    () => {
+                        clearAllBtn.disabled = true;
+                        clearAllBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Clearing...`;
+                        const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
+                        
+                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain" },
+                            body: JSON.stringify({
+                                action: "clear_bug_reports",
+                                passcode: passcode
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === "success") {
+                                showCustomNotification("All bug reports cleared successfully!", "success");
+                                loadAndRenderBugTriage();
+                            } else {
+                                showCustomNotification("Error clearing bug reports: " + (data.message || "Failed."), "error");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Error clearing bugs:", err);
+                            showCustomNotification("Error clearing bug reports.", "error");
+                        })
+                        .finally(() => {
+                            clearAllBtn.disabled = false;
+                            clearAllBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i> Clear All`;
+                        });
+                    },
+                    null,
+                    "Clear All",
+                    true
+                );
             } else {
                 showCustomNotification("Please authenticate as admin first.", "warning");
             }

@@ -8937,7 +8937,11 @@ async function handleFirebaseRequest(payload) {
             status: "success",
             approved: data.status === "approved",
             requestStatus: data.status || "pending",
-            role: data.role || "user"
+            role: data.role || "user",
+            firstname: data.firstname || "",
+            lastname: data.lastname || "",
+            id: data.id || "",
+            server: data.server || "EN3"
         };
     }
 
@@ -9059,8 +9063,12 @@ async function handleFirebaseRequest(payload) {
 
     if (action === "log_ad") {
         db.collection("ad_history").add({
-            adText: payload.adText || "",
-            category: payload.category || "",
+            firstname: payload.firstname || "Guest",
+            lastname: payload.lastname || "Editor",
+            server: payload.server || "EN3",
+            id: payload.id || "Unknown",
+            rawInput: payload.rawInput || payload.adText || "",
+            finalAd: payload.finalAd || "",
             status: payload.status || "",
             reason: payload.reason || "",
             timestamp: new Date().toISOString()
@@ -9075,8 +9083,12 @@ async function handleFirebaseRequest(payload) {
             const data = doc.data();
             history.push({
                 timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
-                adText: data.adText || "",
-                category: data.category || "",
+                firstname: data.firstname || "Guest",
+                lastname: data.lastname || "Editor",
+                server: data.server || "EN3",
+                id: data.id || "Unknown",
+                rawInput: data.rawInput || data.adText || "",
+                finalAd: data.finalAd || "",
                 status: data.status || "",
                 reason: data.reason || ""
             });
@@ -9198,6 +9210,11 @@ function initAccessGate() {
     const inputFirstname = document.getElementById("access-firstname");
     const inputLastname = document.getElementById("access-lastname");
     const inputId = document.getElementById("access-id");
+    
+    // Populate input fields if they exist in localStorage
+    if (inputFirstname) inputFirstname.value = localStorage.getItem("li_request_firstname") || "";
+    if (inputLastname) inputLastname.value = localStorage.getItem("li_request_lastname") || "";
+    if (inputId) inputId.value = localStorage.getItem("li_request_id") || "";
     
     const btnRequestSubmit = document.getElementById("btn-access-request-submit");
     const statusText = document.getElementById("access-status-text");
@@ -9353,6 +9370,12 @@ function initAccessGate() {
         .then(r => r.json())
         .then(data => {
             if (data.status === "success") {
+                // Restore details to localStorage if present in response
+                if (data.firstname) localStorage.setItem("li_request_firstname", data.firstname);
+                if (data.lastname) localStorage.setItem("li_request_lastname", data.lastname);
+                if (data.id) localStorage.setItem("li_request_id", data.id);
+                if (data.server) localStorage.setItem("li_request_server", data.server);
+
                 if (data.approved) {
                     localStorage.setItem("li_approved_token", "APPROVED");
                     document.documentElement.classList.add("user-approved");
@@ -9368,7 +9391,9 @@ function initAccessGate() {
                     if (userRole === "assistant_admin") {
                         // Auto-unlock admin panel for assistant admins
                         sessionStorage.setItem("li_admin_authenticated", "true");
-                        sessionStorage.setItem("li_admin_role", "assistant");
+                        if (sessionStorage.getItem("li_admin_role") !== "super") {
+                            sessionStorage.setItem("li_admin_role", "assistant");
+                        }
                         const adminTabBtn = document.getElementById("tab-btn-admin");
                         if (adminTabBtn) adminTabBtn.style.display = "";
                         const authContainer = document.getElementById("admin-auth-container");
@@ -9381,16 +9406,44 @@ function initAccessGate() {
                         renderCustomTemplates();
                         refreshMainHistory();
                         loadAndRenderAccessRequests(null, getOrCreateClientUuid(), false);
+                    } else {
+                        // If they were previously an assistant admin but are no longer approved as admin
+                        if (sessionStorage.getItem("li_admin_role") === "assistant") {
+                            sessionStorage.removeItem("li_admin_authenticated");
+                            sessionStorage.removeItem("li_admin_role");
+                            const adminTabBtn = document.getElementById("tab-btn-admin");
+                            if (adminTabBtn) adminTabBtn.style.display = "none";
+                            const adminTab = document.getElementById("tab-admin");
+                            if (adminTab && adminTab.classList.contains("active")) {
+                                const editorTabBtn = document.getElementById("tab-btn-editor");
+                                if (editorTabBtn) editorTabBtn.click();
+                            }
+                        }
                     }
                     if (showFeedback) {
                         showCustomNotification("Access granted successfully! Welcome to LifeInvader Ad Editor.", "success");
                     }
                 } else {
-                    // Bypass deauthorization if the user is authenticated as Admin
-                    if (localStorage.getItem("li_admin_authenticated") === "true" || sessionStorage.getItem("li_admin_authenticated") === "true") {
-                        console.log("Access status check: user is admin, bypassing deauthorization.");
+                    // Bypass deauthorization if the user is authenticated as Super Admin
+                    const isAdminSuper = sessionStorage.getItem("li_admin_role") === "super" || localStorage.getItem("li_admin_passcode");
+                    if (isAdminSuper) {
+                        console.log("Access status check: user is super admin, bypassing deauthorization.");
                         return;
                     }
+                    
+                    // If they were previously an assistant admin, deauthorize them now
+                    if (sessionStorage.getItem("li_admin_role") === "assistant") {
+                        sessionStorage.removeItem("li_admin_authenticated");
+                        sessionStorage.removeItem("li_admin_role");
+                        const adminTabBtn = document.getElementById("tab-btn-admin");
+                        if (adminTabBtn) adminTabBtn.style.display = "none";
+                        const adminTab = document.getElementById("tab-admin");
+                        if (adminTab && adminTab.classList.contains("active")) {
+                            const editorTabBtn = document.getElementById("tab-btn-editor");
+                            if (editorTabBtn) editorTabBtn.click();
+                        }
+                    }
+                    
                     localStorage.removeItem("li_approved_token");
                     document.documentElement.classList.remove("user-approved");
                     document.documentElement.classList.add("user-unauthorized");
@@ -9609,11 +9662,16 @@ function initAccessGate() {
                             localStorage.setItem("li_request_firstname", firstname);
                             localStorage.setItem("li_request_lastname", lastname);
                             localStorage.setItem("li_request_id", id);
+                            localStorage.setItem("li_request_server", server);
                             transitionToApproveScreen();
                             startPolling();
                         } else if (data.status === "already_approved") {
                             // User already has access - unlock directly
                             localStorage.setItem("li_approved_token", "APPROVED");
+                            localStorage.setItem("li_request_firstname", firstname);
+                            localStorage.setItem("li_request_lastname", lastname);
+                            localStorage.setItem("li_request_id", id);
+                            localStorage.setItem("li_request_server", server);
                             
                             // Clear polling if active
                             if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
@@ -9636,9 +9694,6 @@ function initAccessGate() {
                             showCustomAlertDialog("You already have access! Welcome back.", null, "success");
                         } else {
                             showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
-                            localStorage.removeItem("li_request_firstname");
-                            localStorage.removeItem("li_request_lastname");
-                            localStorage.removeItem("li_request_id");
                         }
                     })
                     .catch(err => {
@@ -9647,9 +9702,6 @@ function initAccessGate() {
                         btnRequestSubmit.disabled = false;
                         btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
                         showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
-                        localStorage.removeItem("li_request_firstname");
-                        localStorage.removeItem("li_request_lastname");
-                        localStorage.removeItem("li_request_id");
                     });
                 });
             } else {
@@ -9683,9 +9735,6 @@ function initAccessGate() {
     
     if (btnGoBack) {
         btnGoBack.addEventListener("click", () => {
-            localStorage.removeItem("li_request_firstname");
-            localStorage.removeItem("li_request_lastname");
-            localStorage.removeItem("li_request_id");
             if (statusPollInterval) {
                 clearInterval(statusPollInterval);
                 statusPollInterval = null;
@@ -12367,8 +12416,9 @@ function refreshMainHistory() {
                 tr.appendChild(tdTime);
                 
                 const tdEditor = document.createElement("td");
-                const nameDisplay = `${item.firstname} ${item.lastname}`.trim();
-                tdEditor.textContent = nameDisplay || "Unknown";
+                const serverTag = item.server ? ` <span style="font-size: 10px; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 3px; margin-left: 5px; border: 1px solid var(--border-color);">${item.server}</span>` : "";
+                const nameDisplay = `${item.firstname} ${item.lastname}`.trim() || "Unknown";
+                tdEditor.innerHTML = `${nameDisplay}${serverTag}`;
                 tr.appendChild(tdEditor);
                 
                 const tdId = document.createElement("td");

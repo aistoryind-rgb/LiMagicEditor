@@ -3895,6 +3895,49 @@ function isDuplicateTrainingEntry(newKey, newValue, dictionary) {
 }
 
 /* ==========================================================================
+   Number-Preserving Template Matching
+   When a semantic/token match differs only in numbers, substitute the
+   input's numbers into the output. e.g. "selling 6 charger" matched
+   to "selling 10 charger" → output becomes "Selling 6 chargers."
+   ========================================================================== */
+
+function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
+    const inputLower = inputText.toLowerCase().replace(/\s+/g, ' ').trim();
+    const keyLower = matchedKey.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Create structural templates by replacing all numbers with a placeholder
+    const inputTemplate = inputLower.replace(/\b\d+\b/g, '{#}');
+    const keyTemplate = keyLower.replace(/\b\d+\b/g, '{#}');
+    
+    // Check if the non-numeric structure is identical
+    if (getCanonicalKey(inputTemplate) !== getCanonicalKey(keyTemplate)) return matchedOutput;
+    
+    // Extract all numbers in positional order
+    const inputNums = inputLower.match(/\b\d+\b/g) || [];
+    const keyNums = keyLower.match(/\b\d+\b/g) || [];
+    
+    if (inputNums.length === 0 || keyNums.length === 0) return matchedOutput;
+    if (inputNums.length !== keyNums.length) return matchedOutput;
+    
+    // Check if any numbers actually differ
+    let hasDiff = false;
+    for (let i = 0; i < keyNums.length; i++) {
+        if (keyNums[i] !== inputNums[i]) { hasDiff = true; break; }
+    }
+    if (!hasDiff) return matchedOutput;
+    
+    // Substitute: replace each key number with the corresponding input number in the output
+    let result = matchedOutput;
+    for (let i = 0; i < keyNums.length; i++) {
+        if (keyNums[i] !== inputNums[i]) {
+            // Replace only the FIRST occurrence to avoid corrupting prices in the output
+            result = result.replace(new RegExp(`\\b${keyNums[i]}\\b`), inputNums[i]);
+        }
+    }
+    return result;
+}
+
+/* ==========================================================================
    findTrainedMapping — Uses SmartMatcher for trained translation lookup
    ========================================================================== */
 
@@ -3909,9 +3952,17 @@ function findTrainedMapping(rawText) {
     });
     
     if (result.found) {
+        let fixedText = result.value;
+        
+        // For non-exact matches, apply number substitution
+        // (if input and key have the same structure but different numbers)
+        if (result.matchType !== "exact") {
+            fixedText = applyNumberSubstitution(rawText, result.originalKey, fixedText);
+        }
+        
         return {
             found: true,
-            fixedText: result.value,
+            fixedText: fixedText,
             matchType: result.matchType,
             similarity: result.similarity,
             originalKey: result.originalKey

@@ -7066,6 +7066,81 @@ function updateUI(ctx) {
     });
 }
 
+// Inline Submit Bug Button
+function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
+    return new Promise((resolve) => {
+        const container = document.createElement("div");
+        container.style.position = "absolute";
+        container.style.left = "-9999px";
+        container.style.top = "0";
+        container.style.width = "520px";
+        container.style.padding = "24px";
+        container.style.backgroundColor = "#0a0b10";
+        container.style.color = "#f5f5f7";
+        container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
+        container.style.boxSizing = "border-box";
+        container.style.borderRadius = "12px";
+        container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
+        container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
+
+        container.innerHTML = `
+            <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
+                <span style="color: #ff453a;">●</span> LifeInvader False-Rejection Report
+            </h2>
+            
+            <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
+                A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
+            </p>
+            
+            <!-- Box 1: What the Editor Typed (Raw Input) -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                    What the Editor Typed
+                </div>
+                <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(rawAdText)}</div>
+            </div>
+            
+            <!-- Box 2: What the System Gave (Processed Output) -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                    What the System Returned / Expected Correction
+                </div>
+                <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${escapeHTML(rawAdText)}"<br>Rejection Reason: "${escapeHTML(rejectionReasonText)}"</div>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
+            <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
+                This is an automated notification from your LifeInvader Ads Assist Web App.
+            </p>
+        `;
+
+        document.body.appendChild(container);
+
+        setTimeout(() => {
+            if (window.html2canvas) {
+                window.html2canvas(container, {
+                    backgroundColor: "#0a0b10",
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                }).then((canvas) => {
+                    const dataUrl = canvas.toDataURL("image/png");
+                    document.body.removeChild(container);
+                    resolve(dataUrl);
+                }).catch((err) => {
+                    console.error("html2canvas generation error:", err);
+                    document.body.removeChild(container);
+                    resolve("");
+                });
+            } else {
+                console.warn("html2canvas is not loaded");
+                document.body.removeChild(container);
+                resolve("");
+            }
+        }, 100);
+    });
+}
+
 /* ==========================================================================
    Helper Routines
    ========================================================================== */
@@ -9235,80 +9310,7 @@ function initBugReport() {
         }
     } // end if (form)
 
-    // Inline Submit Bug Button
-    function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
-        return new Promise((resolve) => {
-            const container = document.createElement("div");
-            container.style.position = "absolute";
-            container.style.left = "-9999px";
-            container.style.top = "0";
-            container.style.width = "520px";
-            container.style.padding = "24px";
-            container.style.backgroundColor = "#0a0b10";
-            container.style.color = "#f5f5f7";
-            container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
-            container.style.boxSizing = "border-box";
-            container.style.borderRadius = "12px";
-            container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
-            container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
 
-            container.innerHTML = `
-                <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
-                    <span style="color: #ff453a;">●</span> LifeInvader False-Rejection Report
-                </h2>
-                
-                <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
-                    A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
-                </p>
-                
-                <!-- Box 1: What the Editor Typed (Raw Input) -->
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                        What the Editor Typed
-                    </div>
-                    <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(rawAdText)}</div>
-                </div>
-                
-                <!-- Box 2: What the System Gave (Processed Output) -->
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                        What the System Returned / Expected Correction
-                    </div>
-                    <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${escapeHTML(rawAdText)}"<br>Rejection Reason: "${escapeHTML(rejectionReasonText)}"</div>
-                </div>
-                
-                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
-                <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
-                    This is an automated notification from your LifeInvader Ads Assist Web App.
-                </p>
-            `;
-
-            document.body.appendChild(container);
-
-            setTimeout(() => {
-                if (window.html2canvas) {
-                    window.html2canvas(container, {
-                        backgroundColor: "#0a0b10",
-                        scale: 2,
-                        logging: false,
-                        useCORS: true
-                    }).then((canvas) => {
-                        const dataUrl = canvas.toDataURL("image/png");
-                        document.body.removeChild(container);
-                        resolve(dataUrl);
-                    }).catch((err) => {
-                        console.error("html2canvas generation error:", err);
-                        document.body.removeChild(container);
-                        resolve("");
-                    });
-                } else {
-                    console.warn("html2canvas is not loaded");
-                    document.body.removeChild(container);
-                    resolve("");
-                }
-            }, 100);
-        });
-    }
 
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {

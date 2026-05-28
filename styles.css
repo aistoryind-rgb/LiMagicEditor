@@ -1903,6 +1903,22 @@ textarea:focus, input:focus, select:focus {
     border-radius: 4.5px;
 }
 
+/* Sizing for Bug Triage Spark Button */
+.btn-triage-train-gemini.btn-spark-ai {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 11px;
+    border-radius: 8px;
+    height: 32px;
+    text-transform: uppercase;
+    color: #fff;
+    font-weight: 700;
+}
+
+.btn-triage-train-gemini.btn-spark-ai::after {
+    border-radius: 6.5px;
+}
+
 /* State themes for btn-spark-ai */
 .btn-spark-ai.glow-green::before {
     background: conic-gradient(from 0deg, #30d158, #2ec4b6, #34d399, #2ec4b6, #30d158);

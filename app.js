@@ -15874,10 +15874,8 @@ function renderTriageCards(reports, container) {
 
 
                     <!-- Row 2b: AI Training Engine -->
-                    <button type="button" class="btn-triage-train-gemini" style="
-                        width: 100%; background: linear-gradient(135deg, rgba(167, 139, 250, 0.12), rgba(167, 139, 250, 0.04)); border: 1px solid rgba(167, 139, 250, 0.25); color: #a78bfa; padding: 8px 12px; border-radius: 8px; font-family: var(--font-heading); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;
-                    ">
-                        <i class="fa-solid fa-sparkles"></i> Train via Gemini Spark
+                    <button type="button" class="btn-spark-ai magic-mode btn-triage-train-gemini">
+                        <i class="fa-solid fa-sparkles"></i> Spark
                     </button>
                     
                     <!-- Row 3: Advanced Overrides -->

@@ -13303,6 +13303,7 @@ function resolveBugReport(report, card, isIgnore = false) {
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
             action: "resolve_bug_report",
+            id: report.id,
             rawInput: report.rawInput,
             timestamp: report.timestamp,
             passcode: passcode,

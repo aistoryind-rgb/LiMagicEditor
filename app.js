@@ -9334,8 +9334,11 @@ async function handleFirebaseRequest(payload) {
             isSuperAdmin = true;
         } else if (payload.authUuid || payload.clientUuid) {
             const adminDoc = await runWithTimeout(db.collection("access_requests").doc(payload.authUuid || payload.clientUuid).get(), 6000);
-            if (adminDoc.exists && adminDoc.data().status === "approved" && adminDoc.data().role === "assistant_admin") {
-                authorized = true;
+            if (adminDoc.exists && adminDoc.data().status === "approved") {
+                const userRole = (adminDoc.data().role || "").toLowerCase().trim();
+                if (userRole === "assistant_admin" || userRole === "admin") {
+                    authorized = true;
+                }
             }
         }
         if (!authorized) {
@@ -9352,7 +9355,7 @@ async function handleFirebaseRequest(payload) {
                 lastname: data.lastname || "",
                 id: data.id || "",
                 server: data.server || "",
-                clientUuid: data.clientUuid || "",
+                clientUuid: data.clientUuid || doc.id || "",
                 status: data.status || "pending",
                 role: data.role || "user",
                 screenshotBase64: ""
@@ -9810,9 +9813,9 @@ function initAccessGate() {
                         }, 10000);
                     }
                     // Store role for assistant admin auto-unlock
-                    const userRole = (data.role || "user").toLowerCase();
+                    const userRole = (data.role || "user").toLowerCase().trim();
                     sessionStorage.setItem("li_user_role", userRole);
-                    if (userRole === "assistant_admin") {
+                    if (userRole === "assistant_admin" || userRole === "admin") {
                         // Auto-unlock admin panel for assistant admins
                         sessionStorage.setItem("li_admin_authenticated", "true");
                         if (sessionStorage.getItem("li_admin_role") !== "super") {
@@ -9849,7 +9852,7 @@ function initAccessGate() {
                     }
                 } else {
                     // Bypass deauthorization if the user is authenticated as Super Admin
-                    const isAdminSuper = sessionStorage.getItem("li_admin_role") === "super" || localStorage.getItem("li_admin_passcode");
+                    const isAdminSuper = sessionStorage.getItem("li_admin_role") === "super" || sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
                     if (isAdminSuper) {
                         console.log("Access status check: user is super admin, bypassing deauthorization.");
                         return;
@@ -11081,7 +11084,10 @@ function initAdminPanel() {
         renderCustomTranslations();
         renderCustomTemplates();
         refreshMainHistory();
-        const storedPasscode = sessionStorage.getItem("li_admin_passcode");
+        const storedPasscode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
+        if (storedPasscode && !sessionStorage.getItem("li_admin_passcode")) {
+            sessionStorage.setItem("li_admin_passcode", storedPasscode);
+        }
         const authUuid = isAssistant ? getOrCreateClientUuid() : null;
         loadAndRenderAccessRequests(storedPasscode || null, authUuid, !isAssistant);
         restoreAdminSubtab();
@@ -11843,11 +11849,12 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
         return;
     }
 
-    // Deduplicate pending requests by ID (keep the latest one)
+    // Deduplicate pending requests by ID (keep the latest one, fallback to clientUuid)
     const uniqueRequestsMap = new Map();
     requests.forEach(req => {
-        if (req.id) {
-            uniqueRequestsMap.set(req.id, req);
+        const dedupeKey = (req.id || "").toString().toLowerCase().trim() || req.clientUuid;
+        if (dedupeKey) {
+            uniqueRequestsMap.set(dedupeKey, req);
         }
     });
     const uniqueRequests = Array.from(uniqueRequestsMap.values());
@@ -12019,11 +12026,12 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
         return;
     }
 
-    // Deduplicate approved users by ID (keep the latest request for each unique ID)
+    // Deduplicate approved users by ID (keep the latest request for each unique ID, fallback to clientUuid)
     const uniqueRequestsMap = new Map();
     requests.forEach(req => {
-        if (req.id) {
-            uniqueRequestsMap.set(req.id, req);
+        const dedupeKey = (req.id || "").toString().toLowerCase().trim() || req.clientUuid;
+        if (dedupeKey) {
+            uniqueRequestsMap.set(dedupeKey, req);
         }
     });
     const uniqueRequests = Array.from(uniqueRequestsMap.values());
@@ -14403,7 +14411,7 @@ function loadAndRenderBugTriage() {
     const container = document.getElementById("admin-triage-list-container");
     if (!container) return;
     
-    const passcode = sessionStorage.getItem("li_admin_passcode");
+    const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
     const authUuid = getOrCreateClientUuid();
     
     // Show loading state
@@ -14734,7 +14742,7 @@ function resolveBugReport(report, card, isIgnore = false) {
         return;
     }
     
-    const passcode = sessionStorage.getItem("li_admin_passcode");
+    const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
     const authUuid = getOrCreateClientUuid();
     
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {

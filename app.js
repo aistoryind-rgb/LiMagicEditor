@@ -4331,50 +4331,46 @@ function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
 }
 
 /* ==========================================================================
-   findTrainedMapping — Uses SmartMatcher for trained translation lookup
+   findTrainedMapping — STRICT exact/canonical lookup only.
+   Trained translations are specific corrections for specific raw inputs.
+   They must NEVER fire on loosely similar or partially matching inputs.
+   Only Tier 1 (exact) and Tier 2 (canonical — minor punctuation/case differences)
+   are allowed. No price-stripping, no token coverage, no fuzzy matching.
    ========================================================================== */
 
 function findTrainedMapping(rawText) {
     if (!rawText || !customTranslations) return { found: false };
-    
-    const inputAction = detectActionCategory(rawText);
-    
-    // Filter customTranslations to match the action category
-    const filteredTranslations = {};
-    for (const [key, val] of Object.entries(customTranslations)) {
-        if (detectActionCategory(key) === inputAction) {
-            filteredTranslations[key] = val;
-        }
-    }
-    
-    const result = smartDictLookup(rawText, filteredTranslations, {
-        fuzzyThreshold: 0.75,
-        stripPrices: true,
-        minTokenCoverage: 0.70,
-        extractValue: true
-    });
-    
-    if (result.found) {
-        let fixedText = result.value;
-        
-        // For non-exact matches, apply number substitution
-        if (result.matchType !== "exact") {
-            const substituted = applyNumberSubstitution(rawText, result.originalKey, fixedText);
-            if (substituted === null) {
-                return { found: false };
-            }
-            fixedText = substituted;
-        }
-        
+
+    const trimmedInput = rawText.replace(/\s+/g, ' ').trim().toLowerCase();
+
+    // --- Tier 1: Exact match ---
+    if (customTranslations[trimmedInput]) {
         return {
             found: true,
-            fixedText: fixedText,
-            matchType: result.matchType,
-            similarity: result.similarity,
-            originalKey: result.originalKey
+            fixedText: extractTranslationValue(customTranslations[trimmedInput]),
+            matchType: "exact",
+            similarity: 100,
+            originalKey: trimmedInput
         };
     }
-    
+
+    // --- Tier 2: Canonical match ---
+    // Strips punctuation/extra spaces but KEEPS all words and numbers.
+    // Allows "sell gun-shop" to match "sell gun shop" but NOT "sell gun shop 300m".
+    const canonicalInput = getCanonicalKey(trimmedInput);
+    for (const [key, val] of Object.entries(customTranslations)) {
+        if (getCanonicalKey(key) === canonicalInput) {
+            return {
+                found: true,
+                fixedText: extractTranslationValue(val),
+                matchType: "canonical",
+                similarity: 99,
+                originalKey: key
+            };
+        }
+    }
+
+    // No match — let the standard validation pipeline handle it.
     return { found: false };
 }
 
@@ -16437,73 +16433,21 @@ function findLocalFuzzyMatch(rawText) {
     const entries = Object.entries(customTranslations);
     if (entries.length === 0) return null;
 
-    let bestMatch = null;
-    let highestScore = 0;
+    // --- Tier 1: Exact match ---
+    if (customTranslations[rawClean]) {
+        return { text: extractTranslationValue(customTranslations[rawClean]), rawMatched: rawClean, score: 100 };
+    }
 
+    // --- Tier 2: Canonical match (minor punctuation/case only) ---
+    const canonicalInput = getCanonicalKey(rawClean);
     for (const [trainedRaw, corrValue] of entries) {
-        // 1. Canonical match
-        if (getCanonicalKey(rawClean) === getCanonicalKey(trainedRaw)) {
-            return { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: 100 };
-        }
-        
-        // 2. Semantic canonical match (price-stripped)
-        const semInput = getSemanticCanonicalKey(rawClean);
-        const semKey = getSemanticCanonicalKey(trainedRaw);
-        if (semInput && semKey && semInput === semKey && semInput.length >= 4) {
-            let corrText = extractTranslationValue(corrValue);
-            const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
-            if (substituted !== null) {
-                return { text: substituted, rawMatched: trainedRaw, score: 95 };
-            }
-        }
-        
-        // 3. Token coverage scoring (compound-aware, order-independent)
-        const inputTokens = extractMeaningfulTokens(rawClean);
-        const keyTokens = extractMeaningfulTokens(trainedRaw);
-        if (inputTokens.length > 0 && keyTokens.length > 0) {
-            const fwd = computeTokenCoverage(inputTokens, keyTokens);
-            const rev = computeTokenCoverage(keyTokens, inputTokens);
-            const tokenScore = (fwd + rev) / 2;
-            const maxTokens = Math.max(inputTokens.length, keyTokens.length);
-            let requiredScore = 0.70;
-            if (maxTokens <= 2) {
-                requiredScore = 0.90;
-            } else if (maxTokens === 3) {
-                requiredScore = 0.80;
-            }
-            if (tokenScore >= requiredScore && tokenScore > highestScore) {
-                let corrText = extractTranslationValue(corrValue);
-                const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
-                if (substituted !== null) {
-                    highestScore = tokenScore;
-                    bestMatch = { text: substituted, rawMatched: trainedRaw, score: Math.round(tokenScore * 100) };
-                }
-            }
-        }
-        
-        // 4. Token Jaccard fallback
-        const tokens1 = new Set(extractMeaningfulTokens(rawClean));
-        const tokens2 = new Set(extractMeaningfulTokens(trainedRaw));
-        if (tokens1.size > 0 && tokens2.size > 0) {
-            const intersection = new Set([...tokens1].filter(x => {
-                for (const t2 of tokens2) {
-                    if (tokenFuzzyMatch(x, t2) >= 0.70) return true;
-                }
-                return false;
-            }));
-            const union = new Set([...tokens1, ...tokens2]);
-            const score = intersection.size / union.size;
-            if (score > highestScore && score >= 0.60) {
-                let corrText = extractTranslationValue(corrValue);
-                const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
-                if (substituted !== null) {
-                    highestScore = score;
-                    bestMatch = { text: substituted, rawMatched: trainedRaw, score: Math.round(score * 100) };
-                }
-            }
+        if (getCanonicalKey(trainedRaw) === canonicalInput) {
+            return { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: 99 };
         }
     }
-    return bestMatch;
+
+    // No match — the standard pipeline or AI copilot should handle suggestions instead.
+    return null;
 }
 
 /**

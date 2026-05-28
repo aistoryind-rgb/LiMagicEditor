@@ -19,5 +19,9 @@ service cloud.firestore {
     match /config/{docId} {
       allow read, write: if true;
     }
+
+    match /system_logs/{logId} {
+      allow read, create, update, delete: if true;
+    }
   }
 }

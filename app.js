@@ -9170,6 +9170,36 @@ async function handleFirebaseRequest(payload) {
         return { status: "success", message: "Configurations saved successfully." };
     }
 
+    if (action === "log_system_event") {
+        db.collection("system_logs").add({
+            actorName: payload.actorName || "Unknown Admin",
+            actorId: payload.actorId || "Unknown ID",
+            targetTab: payload.targetTab || "General",
+            actionType: payload.actionType || "Action",
+            details: payload.details || "",
+            timestamp: new Date().toISOString()
+        }).catch(err => console.error("Firestore log system event error:", err));
+        return { status: "success", message: "System event logged." };
+    }
+
+    if (action === "get_system_logs") {
+        const snapshot = await runWithTimeout(db.collection("system_logs").get(), 10000);
+        const logs = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            logs.push({
+                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
+                actorName: data.actorName || "Unknown Admin",
+                actorId: data.actorId || "Unknown ID",
+                targetTab: data.targetTab || "General",
+                actionType: data.actionType || "Action",
+                details: data.details || ""
+            });
+        });
+        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return { status: "success", logs: logs };
+    }
+
     if (action === "validate_key") {
         const approvalKey = payload.approvalKey || "";
         if (!approvalKey) {
@@ -9235,7 +9265,7 @@ async function handleFirebaseRequest(payload) {
 
 
 function getOrCreateClientUuid() {
-    let uuid = sessionStorage.getItem("li_client_uuid");
+    let uuid = localStorage.getItem("li_client_uuid") || sessionStorage.getItem("li_client_uuid");
     if (!uuid) {
         if (window.crypto && typeof window.crypto.randomUUID === "function") {
             uuid = window.crypto.randomUUID();
@@ -9247,7 +9277,15 @@ function getOrCreateClientUuid() {
             }
             uuid = temp;
         }
+        localStorage.setItem("li_client_uuid", uuid);
         sessionStorage.setItem("li_client_uuid", uuid);
+    } else {
+        if (!localStorage.getItem("li_client_uuid")) {
+            localStorage.setItem("li_client_uuid", uuid);
+        }
+        if (!sessionStorage.getItem("li_client_uuid")) {
+            sessionStorage.setItem("li_client_uuid", uuid);
+        }
     }
     return uuid;
 }
@@ -10526,6 +10564,9 @@ function initAdminPanel() {
     // Activity Log Sub-Tabs Switch
     const logSubtabBtns = document.querySelectorAll(".log-subtab-btn");
     const logSubtabContents = document.querySelectorAll(".log-subtab-content");
+    const logsSearchInput = document.getElementById("logs-search-input");
+    const btnClearLogsSearch = document.getElementById("btn-clear-logs-search");
+
     if (logSubtabBtns.length > 0 && logSubtabContents.length > 0) {
         logSubtabBtns.forEach(btn => {
             btn.addEventListener("click", () => {
@@ -10541,7 +10582,26 @@ function initAdminPanel() {
                         content.classList.add("hide");
                     }
                 });
+
+                if (logsSearchInput) {
+                    logsSearchInput.value = "";
+                }
+                if (btnClearLogsSearch) {
+                    btnClearLogsSearch.classList.add("hide");
+                }
+                filterLogs();
             });
+        });
+    }
+
+    if (logsSearchInput) {
+        logsSearchInput.addEventListener("input", filterLogs);
+    }
+    if (btnClearLogsSearch && logsSearchInput) {
+        btnClearLogsSearch.addEventListener("click", () => {
+            logsSearchInput.value = "";
+            btnClearLogsSearch.classList.add("hide");
+            filterLogs();
         });
     }
 
@@ -10695,6 +10755,7 @@ function initAdminPanel() {
                 renderCustomSpelling();
                 formSpelling.reset();
                 if (typeof processAd === "function") processAd();
+                logSystemEventToBackend("Custom Templates", "Train Spelling", `Trained spelling correction: "${wrong}" -> "${right}"`);
             }
         });
     }
@@ -10733,6 +10794,7 @@ function initAdminPanel() {
                 }
                 if (typeof processAd === "function") processAd();
                 showCustomNotification(`Successfully imported ${addedCount} spelling corrections!`, "success");
+                logSystemEventToBackend("Custom Templates", "Import Spelling (Bulk)", `Bulk imported ${addedCount} spelling corrections`);
             } else {
                 showCustomAlertDialog("No valid corrections found. Make sure the format is 'wrong,right' with one entry per line.", null, "warning");
             }
@@ -10752,6 +10814,7 @@ function initAdminPanel() {
                 saveCustomDataToBackend();
                 renderCustomTemplates();
                 formTemplate.reset();
+                logSystemEventToBackend("Custom Templates", "Train Template", `Trained template in category '${category}'${shorthand ? ` with shorthand '${shorthand}'` : ''}: "${text}"`);
             }
         });
     }
@@ -11453,6 +11516,7 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
             .then(data => {
                 if (data.status === "success") {
                     loadAndRenderAccessRequests(passcode, authUuid, false);
+                    logSystemEventToBackend("Pending Requests", "Approve Access", `Approved access request for ${req.firstname} ${req.lastname} (ID: ${req.id}, Server: ${req.server || "EN3"})`);
                 } else {
                     showCustomAlertDialog("Approval failed: " + data.message, null, "error");
                     btnApprove.disabled = false;
@@ -11496,6 +11560,7 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
             .then(data => {
                 if (data.status === "success") {
                     loadAndRenderAccessRequests(passcode, authUuid, false);
+                    logSystemEventToBackend("Pending Requests", "Reject Access", `Rejected access request for ${req.firstname} ${req.lastname} (ID: ${req.id}, Server: ${req.server || "EN3"})`);
                 } else {
                     showCustomAlertDialog("Rejection failed: " + data.message, null, "error");
                     btnReject.disabled = false;
@@ -11676,6 +11741,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                         .then(data => {
                             if (data.status === "success") {
                                 loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                                logSystemEventToBackend("Users", newRole === "assistant_admin" ? "Promote User" : "Demote User", `Changed role for ${req.firstname} ${req.lastname} (ID: ${req.id}) to ${newRole === "assistant_admin" ? "Admin" : "User"}`);
                             } else {
                                 showCustomAlertDialog("Role change failed: " + data.message, null, "error");
                                 btnRole.disabled = false;
@@ -11733,6 +11799,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
                         .then(data => {
                             if (data.status === "success") {
                                 loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
+                                logSystemEventToBackend("Users", "Revoke Access", `Permanently revoked system access for ${req.firstname} ${req.lastname} (ID: ${req.id}, Server: ${req.server || "EN3"})`);
                             } else {
                                 showCustomAlertDialog("Revocation failed: " + data.message, null, "error");
                                 btnRevoke.disabled = false;
@@ -11809,6 +11876,7 @@ function renderCustomSpelling() {
             saveCustomDataToBackend();
             renderCustomSpelling();
             if (typeof processAd === "function") processAd();
+            logSystemEventToBackend("Custom Templates", "Delete Spelling", `Deleted spelling correction: "${wrong}" -> "${right}"`);
         });
         tdAction.appendChild(btnDel);
         tr.appendChild(tdAction);
@@ -12188,10 +12256,14 @@ function renderCustomTemplates() {
         btnDel.style.border = "1px solid rgba(255, 59, 48, 0.2)";
         btnDel.innerHTML = `<i class="fa-solid fa-trash"></i>`;
         btnDel.addEventListener("click", () => {
+            const deleted = customTemplates[index];
             customTemplates.splice(index, 1);
             localStorage.setItem("li_custom_templates", JSON.stringify(customTemplates));
             saveCustomDataToBackend();
             renderCustomTemplates();
+            if (deleted) {
+                logSystemEventToBackend("Custom Templates", "Delete Template", `Deleted template in category '${deleted.category}'${deleted.shorthand ? ` with shorthand '${deleted.shorthand}'` : ''}: "${deleted.text}"`);
+            }
         });
         tdAction.appendChild(btnDel);
         tr.appendChild(tdAction);
@@ -12305,6 +12377,50 @@ function logAdToBackend(rawInput, finalAd, status) {
     })
     .catch(err => {
         console.error("Network error logging ad:", err);
+    });
+}
+
+function logSystemEventToBackend(targetTab, actionType, details) {
+    if (!CONFIG.GOOGLE_SCRIPT_URL) return;
+    
+    let actorName = "Dopamine (Super Admin)";
+    let actorId = "Creator";
+    
+    const role = sessionStorage.getItem("li_admin_role");
+    if (role === "assistant") {
+        const fname = localStorage.getItem("li_request_firstname") || "";
+        const lname = localStorage.getItem("li_request_lastname") || "";
+        actorName = `${fname} ${lname}`.trim() || "Assistant Admin";
+        actorId = localStorage.getItem("li_request_id") || "Unknown ID";
+    } else {
+        const fname = localStorage.getItem("li_request_firstname") || "";
+        const lname = localStorage.getItem("li_request_lastname") || "";
+        if (fname || lname) {
+            actorName = `${fname} ${lname} (Super Admin)`.trim();
+            actorId = localStorage.getItem("li_request_id") || "Creator";
+        }
+    }
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+            action: "log_system_event",
+            actorName: actorName,
+            actorId: actorId,
+            targetTab: targetTab,
+            actionType: actionType,
+            details: details
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status !== "success") {
+            console.error("Failed to log system event:", data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Network error logging system event:", err);
     });
 }
 
@@ -12440,6 +12556,7 @@ function refreshUserLogs() {
                 
                 tbody.appendChild(tr);
             });
+            filterLogs();
         } else {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff453a; padding: 20px;">Error: ${data.message}</td></tr>`;
         }
@@ -12450,8 +12567,165 @@ function refreshUserLogs() {
     });
 }
 
+function refreshSystemLogs() {
+    const tbody = document.getElementById("system-logs-table-body");
+    if (!tbody) return;
+    
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;"><i class="fa-solid fa-sync fa-spin"></i> Loading system logs...</td></tr>`;
+    
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Server URL not configured.</td></tr>`;
+        return;
+    }
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "get_system_logs" })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            const logs = data.logs || [];
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">No system activity logs found.</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = "";
+            logs.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.style.cursor = "pointer";
+                tr.title = "Click to copy details";
+                tr.className = "system-log-row-item";
+                
+                const tdTime = document.createElement("td");
+                tdTime.textContent = item.timestamp || "";
+                tr.appendChild(tdTime);
+                
+                const tdActor = document.createElement("td");
+                tdActor.textContent = item.actorName || "Unknown Admin";
+                tdActor.style.fontWeight = "600";
+                tr.appendChild(tdActor);
+                
+                const tdId = document.createElement("td");
+                tdId.textContent = item.actorId || "Unknown ID";
+                tr.appendChild(tdId);
+                
+                const tdTab = document.createElement("td");
+                const tabSpan = document.createElement("span");
+                tabSpan.style.fontSize = "10px";
+                tabSpan.style.fontWeight = "600";
+                tabSpan.style.padding = "2px 6px";
+                tabSpan.style.borderRadius = "4px";
+                tabSpan.style.background = "rgba(255, 255, 255, 0.05)";
+                tabSpan.style.color = "var(--text-secondary)";
+                tabSpan.textContent = item.targetTab ? item.targetTab.toUpperCase() : "GENERAL";
+                tdTab.appendChild(tabSpan);
+                tr.appendChild(tdTab);
+                
+                const tdAction = document.createElement("td");
+                const actionSpan = document.createElement("span");
+                actionSpan.style.fontSize = "10px";
+                actionSpan.style.fontWeight = "700";
+                actionSpan.style.padding = "2px 6px";
+                actionSpan.style.borderRadius = "4px";
+                
+                const act = (item.actionType || "ACTION").toLowerCase();
+                if (act.includes("approve") || act.includes("promote") || act.includes("train")) {
+                    actionSpan.style.background = "rgba(48, 209, 88, 0.1)";
+                    actionSpan.style.color = "#30d158";
+                } else if (act.includes("reject") || act.includes("revoke") || act.includes("delete") || act.includes("clear")) {
+                    actionSpan.style.background = "rgba(255, 69, 58, 0.1)";
+                    actionSpan.style.color = "#ff453a";
+                } else {
+                    actionSpan.style.background = "rgba(10, 132, 255, 0.1)";
+                    actionSpan.style.color = "#0a84ff";
+                }
+                actionSpan.textContent = (item.actionType || "ACTION").toUpperCase();
+                tdAction.appendChild(actionSpan);
+                tr.appendChild(tdAction);
+                
+                const tdDetails = document.createElement("td");
+                tdDetails.textContent = item.details || "";
+                tdDetails.style.maxWidth = "300px";
+                tdDetails.style.overflow = "hidden";
+                tdDetails.style.textOverflow = "ellipsis";
+                tdDetails.style.whiteSpace = "nowrap";
+                tdDetails.title = item.details || "";
+                tr.appendChild(tdDetails);
+                
+                tr.addEventListener("click", () => {
+                    navigator.clipboard.writeText(item.details || "").then(() => {
+                        const originalBg = tr.style.background;
+                        tr.style.background = "rgba(10, 132, 255, 0.2)";
+                        showHistoryToast("Log details copied!");
+                        setTimeout(() => {
+                            tr.style.background = originalBg;
+                        }, 1000);
+                    });
+                });
+                
+                tbody.appendChild(tr);
+            });
+            filterLogs();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff453a; padding: 20px;">Error: ${data.message}</td></tr>`;
+        }
+    })
+    .catch(err => {
+        console.error("Error fetching system logs:", err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff453a; padding: 20px;">Network error loading system logs.</td></tr>`;
+    });
+}
+
+function filterLogs() {
+    const input = document.getElementById("logs-search-input");
+    const clearBtn = document.getElementById("btn-clear-logs-search");
+    if (!input) return;
+    
+    const filter = input.value.toLowerCase().trim();
+    if (filter) {
+        if (clearBtn) clearBtn.classList.remove("hide");
+    } else {
+        if (clearBtn) clearBtn.classList.add("hide");
+    }
+    
+    // Filter active subtab table rows
+    const activeSubtab = document.querySelector(".log-subtab-btn.active");
+    if (!activeSubtab) return;
+    const logType = activeSubtab.getAttribute("data-log-type");
+    
+    let rows = [];
+    if (logType === "ads") {
+        rows = document.querySelectorAll("#history-table-body tr");
+    } else if (logType === "users") {
+        rows = document.querySelectorAll("#user-logs-table-body tr");
+    } else if (logType === "system") {
+        rows = document.querySelectorAll("#system-logs-table-body tr");
+    }
+    
+    rows.forEach(row => {
+        if (row.cells.length === 1 && (row.textContent.includes("load") || row.textContent.includes("No ") || row.textContent.includes("Error"))) {
+            return;
+        }
+        
+        let textContent = "";
+        for (let i = 0; i < row.cells.length; i++) {
+            textContent += " " + row.cells[i].textContent.toLowerCase();
+        }
+        
+        if (textContent.includes(filter)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
 function refreshMainHistory() {
     refreshUserLogs();
+    refreshSystemLogs();
     
     const tbody = document.getElementById("history-table-body");
     if (!tbody) return;
@@ -12557,6 +12831,7 @@ function refreshMainHistory() {
                 
                 tbody.appendChild(tr);
             });
+            filterLogs();
         } else {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #f87171; padding: 20px;">Error: ${data.message}</td></tr>`;
         }

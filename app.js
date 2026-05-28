@@ -1777,7 +1777,7 @@ function getClosestMatch(input, list, threshold = 0.6) {
 }
 
 function correctSpelling(text, ctx) {
-    let corrected = text;
+    return text;
 
     // Protect price values (e.g. 5m, 5mil, 500k, $5 Million) from spelling correction
     const protectedPrices = [];
@@ -9237,7 +9237,7 @@ async function handleFirebaseRequest(payload) {
 
 
 function getOrCreateClientUuid() {
-    let uuid = localStorage.getItem("li_client_uuid");
+    let uuid = sessionStorage.getItem("li_client_uuid");
     if (!uuid) {
         if (window.crypto && typeof window.crypto.randomUUID === "function") {
             uuid = window.crypto.randomUUID();
@@ -9249,7 +9249,7 @@ function getOrCreateClientUuid() {
             }
             uuid = temp;
         }
-        localStorage.setItem("li_client_uuid", uuid);
+        sessionStorage.setItem("li_client_uuid", uuid);
     }
     return uuid;
 }
@@ -9406,7 +9406,7 @@ function initAccessGate() {
 
     let statusPollInterval = null;
 
-    function checkCurrentAccessStatus(showFeedback = false) {
+    function checkCurrentAccessStatus(showFeedback = false, registerSession = false) {
         if (!CONFIG.GOOGLE_SCRIPT_URL) return;
 
         const clientUuid = getOrCreateClientUuid();
@@ -9416,7 +9416,8 @@ function initAccessGate() {
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify({
                 action: "check_access",
-                clientUuid: clientUuid
+                clientUuid: clientUuid,
+                registerSession: registerSession
             })
         })
         .then(r => r.json())
@@ -9433,9 +9434,13 @@ function initAccessGate() {
                     document.documentElement.classList.add("user-approved");
                     document.documentElement.classList.remove("user-unauthorized");
                     if (gate) gate.classList.add("hide");
-                    if (statusPollInterval) {
-                        clearInterval(statusPollInterval);
-                        statusPollInterval = null;
+                    
+                    // Keep polling running for approved sessions to detect lockouts
+                    if (!statusPollInterval) {
+                        statusPollInterval = setInterval(() => {
+                            if (document.hidden) return;
+                            checkCurrentAccessStatus(false, false);
+                        }, 10000);
                     }
                     // Store role for assistant admin auto-unlock
                     const userRole = (data.role || "user").toLowerCase();
@@ -9554,6 +9559,7 @@ function initAccessGate() {
         document.documentElement.classList.remove("user-unauthorized");
         if (gate) gate.classList.add("hide");
         checkCurrentAccessStatus(false, true);
+        startPolling();
     } else {
         document.documentElement.classList.remove("user-approved");
         document.documentElement.classList.add("user-unauthorized");
@@ -9734,16 +9740,14 @@ function initAccessGate() {
                             localStorage.setItem("li_request_id", id);
                             localStorage.setItem("li_request_server", server);
                             
-                            // Clear polling if active
-                            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
-                                clearInterval(statusPollInterval);
-                                statusPollInterval = null;
-                            }
-
                             // Unlock DOM instantly
                             document.documentElement.classList.add("user-approved");
                             document.documentElement.classList.remove("user-unauthorized");
                             if (gate) gate.classList.add("hide");
+                            
+                            // Activate session & start polling to enforce tab locking
+                            checkCurrentAccessStatus(false, true);
+                            startPolling();
                             
                             // Update URL query string dynamically without reload
                             try {
@@ -13697,7 +13701,7 @@ function loadAndRenderBugTriage() {
     if (!container) return;
     
     const passcode = sessionStorage.getItem("li_admin_passcode");
-    const authUuid = localStorage.getItem("li_client_uuid");
+    const authUuid = getOrCreateClientUuid();
     
     // Show loading state
     container.innerHTML = `
@@ -14028,7 +14032,7 @@ function resolveBugReport(report, card, isIgnore = false) {
     }
     
     const passcode = sessionStorage.getItem("li_admin_passcode");
-    const authUuid = localStorage.getItem("li_client_uuid");
+    const authUuid = getOrCreateClientUuid();
     
     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
         method: "POST",

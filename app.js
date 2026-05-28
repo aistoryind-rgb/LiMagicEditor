@@ -2835,59 +2835,22 @@ function submitSparkTraining(source) {
 
     showCustomNotification("Submitting Spark training to database...", "info");
 
-    generateBugReportCardBlob(rawAdText, activeCategory, "Spark Correction Training", timestamp).then((screenshotBase64) => {
-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain"
-            },
-            body: JSON.stringify({
-                action: "bug_report",
-                category: activeCategory,
-                rawInput: rawAdText,
-                expectedOutput: expectedOutput,
-                screenshotBase64: screenshotBase64
-            })
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain"
+        },
+        body: JSON.stringify({
+            action: "bug_report",
+            category: activeCategory,
+            rawInput: rawAdText,
+            expectedOutput: expectedOutput,
+            screenshotBase64: ""
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success" || data.status === "already_submitted") {
-                if (mainBtn) {
-                    mainBtn.dataset.state = "trained";
-                    mainBtn.disabled = true;
-                    mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    mainBtn.classList.remove("glow-green", "glow-red");
-                    mainBtn.classList.add("glow-teal");
-                    mainBtn.style.background = "";
-                    mainBtn.style.border = "";
-                    mainBtn.style.color = "";
-                }
-                if (pipBtn) {
-                    pipBtn.dataset.state = "trained";
-                    pipBtn.disabled = true;
-                    pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    pipBtn.classList.remove("glow-green", "glow-red");
-                    pipBtn.classList.add("glow-teal");
-                    pipBtn.style.background = "";
-                    pipBtn.style.border = "";
-                    pipBtn.style.color = "";
-                }
-                showCustomNotification("Spark training submitted successfully! ⏳", "success");
-            } else {
-                if (mainBtn) {
-                    mainBtn.disabled = false;
-                    mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                }
-                if (pipBtn) {
-                    pipBtn.disabled = false;
-                    pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                }
-                showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
-            }
-        })
-        .catch(err => {
-            console.error("Training upload error:", err);
-            // Fallback success
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success" || data.status === "already_submitted") {
             if (mainBtn) {
                 mainBtn.dataset.state = "trained";
                 mainBtn.disabled = true;
@@ -2909,7 +2872,42 @@ function submitSparkTraining(source) {
                 pipBtn.style.color = "";
             }
             showCustomNotification("Spark training submitted successfully! ⏳", "success");
-        });
+        } else {
+            if (mainBtn) {
+                mainBtn.disabled = false;
+                mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+            }
+            if (pipBtn) {
+                pipBtn.disabled = false;
+                pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+            }
+            showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
+        }
+    })
+    .catch(err => {
+        console.error("Training upload error:", err);
+        // Fallback success
+        if (mainBtn) {
+            mainBtn.dataset.state = "trained";
+            mainBtn.disabled = true;
+            mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+            mainBtn.classList.remove("glow-green", "glow-red");
+            mainBtn.classList.add("glow-teal");
+            mainBtn.style.background = "";
+            mainBtn.style.border = "";
+            mainBtn.style.color = "";
+        }
+        if (pipBtn) {
+            pipBtn.dataset.state = "trained";
+            pipBtn.disabled = true;
+            pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+            pipBtn.classList.remove("glow-green", "glow-red");
+            pipBtn.classList.add("glow-teal");
+            pipBtn.style.background = "";
+            pipBtn.style.border = "";
+            pipBtn.style.color = "";
+        }
+        showCustomNotification("Spark training submitted successfully! ⏳", "success");
     });
 }
 
@@ -7639,80 +7637,7 @@ function updateUI(ctx) {
     });
 }
 
-// Inline Submit Bug Button
-function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
-    return new Promise((resolve) => {
-        const container = document.createElement("div");
-        container.style.position = "absolute";
-        container.style.left = "-9999px";
-        container.style.top = "0";
-        container.style.width = "520px";
-        container.style.padding = "24px";
-        container.style.backgroundColor = "#0a0b10";
-        container.style.color = "#f5f5f7";
-        container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
-        container.style.boxSizing = "border-box";
-        container.style.borderRadius = "12px";
-        container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
-        container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
 
-        container.innerHTML = `
-            <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
-                <span style="color: #ff453a;">●</span> LifeInvader False-Rejection Report
-            </h2>
-            
-            <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
-                A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
-            </p>
-            
-            <!-- Box 1: What the Editor Typed (Raw Input) -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                    What the Editor Typed
-                </div>
-                <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(rawAdText)}</div>
-            </div>
-            
-            <!-- Box 2: What the System Gave (Processed Output) -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                    What the System Returned / Expected Correction
-                </div>
-                <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${escapeHTML(rawAdText)}"<br>Rejection Reason: "${escapeHTML(rejectionReasonText)}"</div>
-            </div>
-            
-            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
-            <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
-                This is an automated notification from your LifeInvader Ads Assist Web App.
-            </p>
-        `;
-
-        document.body.appendChild(container);
-
-        setTimeout(() => {
-            if (window.html2canvas) {
-                window.html2canvas(container, {
-                    backgroundColor: "#0a0b10",
-                    scale: 2,
-                    logging: false,
-                    useCORS: true
-                }).then((canvas) => {
-                    const dataUrl = canvas.toDataURL("image/png");
-                    document.body.removeChild(container);
-                    resolve(dataUrl);
-                }).catch((err) => {
-                    console.error("html2canvas generation error:", err);
-                    document.body.removeChild(container);
-                    resolve("");
-                });
-            } else {
-                console.warn("html2canvas is not loaded");
-                document.body.removeChild(container);
-                resolve("");
-            }
-        }, 100);
-    });
-}
 
 /* ==========================================================================
    Helper Routines
@@ -8921,9 +8846,6 @@ async function handleFirebaseRequest(payload) {
             role: payload.role || "user",
             timestamp: timestamp
         };
-        if (payload.screenshotBase64 && payload.screenshotBase64.length < 700000) {
-            requestData.screenshot = payload.screenshotBase64;
-        }
         await runWithTimeout(docRef.set(requestData, { merge: true }), 6000);
         
         return { status: "success", message: "Access request submitted successfully." };
@@ -9026,7 +8948,7 @@ async function handleFirebaseRequest(payload) {
                 clientUuid: data.clientUuid || "",
                 status: data.status || "pending",
                 role: data.role || "user",
-                screenshotBase64: data.screenshot || ""
+                screenshotBase64: ""
             });
         });
         // Sort requests by timestamp desc
@@ -9073,7 +8995,7 @@ async function handleFirebaseRequest(payload) {
             rawInput: payload.rawInput || "",
             expectedOutput: payload.expectedOutput || "",
             source: payload.source || "bug_report",
-            screenshot: payload.screenshotBase64 || "",
+            screenshot: "",
             timestamp: new Date().toISOString()
         }).catch(err => console.error("Firestore bug report write error:", err));
         return { status: "success", message: "Bug report submitted." };
@@ -9586,97 +9508,6 @@ function initAccessGate() {
         }, 10000);
     }
     
-    function generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp) {
-        return new Promise((resolve) => {
-            const container = document.createElement("div");
-            container.style.position = "absolute";
-            container.style.left = "-9999px";
-            container.style.top = "0";
-            container.style.width = "480px";
-            container.style.padding = "24px";
-            container.style.backgroundColor = "#0a0a0c";
-            container.style.color = "#f5f5f7";
-            container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
-            container.style.boxSizing = "border-box";
-            container.style.borderRadius = "16px";
-            container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
-            container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
-
-            container.innerHTML = `
-                <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 16px 0; font-family: 'Outfit', sans-serif;">
-                    LifeInvader Access Request
-                </h2>
-                <p style="font-size: 14px; color: #8e8e93; line-height: 1.5; margin: 0 0 20px 0;">
-                    A new request to access the <strong style="color: #ffffff;">LifeInvader Ads Assist</strong> portal has been submitted.
-                </p>
-                
-                <div style="background-color: #121214; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
-                    <table cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 14px; color: #e1e1e6;">
-                        <tr>
-                            <td style="font-weight: 600; width: 120px; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Name:</td>
-                            <td style="color: #ffffff; padding: 4px 0;">${firstname} ${lastname}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">In-Game ID:</td>
-                            <td style="font-family: monospace; font-size: 15px; color: #30d158; font-weight: 700; padding: 4px 0;">${id}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Hardware ID:</td>
-                            <td style="font-family: monospace; font-size: 12px; color: #a1a1a6; word-break: break-all; padding: 4px 0;">${clientUuid}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 600; color: #8e8e93; font-family: 'Outfit', sans-serif; padding: 4px 0;">Timestamp:</td>
-                            <td style="color: #a1a1a6; padding: 4px 0;">${timestamp}</td>
-                        </tr>
-                    </table>
-                </div>
-                
-                <p style="font-size: 14px; color: #8e8e93; font-weight: 600; margin: 0 0 16px 0; font-family: 'Outfit', sans-serif;">
-                    Process this request immediately using the actions below:
-                </p>
-                
-                <div style="display: flex; gap: 15px; margin-bottom: 24px;">
-                    <div style="flex: 1; background-color: #30d158; color: #ffffff; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; text-align: center; border: 1px solid #24b046; font-family: 'Outfit', sans-serif;">
-                        Approve Access
-                    </div>
-                    <div style="flex: 1; background-color: #ff453a; color: #ffffff; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; text-align: center; border: 1px solid #e0352b; font-family: 'Outfit', sans-serif;">
-                        Reject Access
-                    </div>
-                </div>
-                
-                <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0 0 16px 0;">
-                <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center;">
-                    This is an automated notification from your LifeInvader Ads Assist Web App.
-                </p>
-            `;
-
-            document.body.appendChild(container);
-
-            setTimeout(() => {
-                if (window.html2canvas) {
-                    window.html2canvas(container, {
-                        backgroundColor: "#0a0a0c",
-                        scale: 2,
-                        logging: false,
-                        useCORS: true
-                    }).then((canvas) => {
-                        const dataUrl = canvas.toDataURL("image/png");
-                        document.body.removeChild(container);
-                        resolve(dataUrl);
-                    }).catch((err) => {
-                        console.error("html2canvas generation error:", err);
-                        document.body.removeChild(container);
-                        resolve("");
-                    });
-                } else {
-                    console.warn("html2canvas is not loaded");
-                    document.body.removeChild(container);
-                    resolve("");
-                }
-            }, 100);
-        });
-    }
-
     let isSubmitting = false;
     
     if (btnRequestSubmit) {
@@ -9706,68 +9537,66 @@ function initAccessGate() {
                 const timestamp = new Date().toLocaleString();
                 const clientUuid = getOrCreateClientUuid();
                 
-                generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp).then((screenshotBase64) => {
-                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain" },
-                        body: JSON.stringify({
-                            action: "access_request",
-                            firstname: firstname,
-                            lastname: lastname,
-                            server: server,
-                            id: id,
-                            clientUuid: clientUuid,
-                            screenshotBase64: screenshotBase64
-                        })
+                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({
+                        action: "access_request",
+                        firstname: firstname,
+                        lastname: lastname,
+                        server: server,
+                        id: id,
+                        clientUuid: clientUuid,
+                        screenshotBase64: ""
                     })
-                    .then(r => r.json())
-                    .then(data => {
-                        isSubmitting = false;
-                        btnRequestSubmit.disabled = false;
-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                        if (data.status === "success") {
-                            localStorage.setItem("li_request_firstname", firstname);
-                            localStorage.setItem("li_request_lastname", lastname);
-                            localStorage.setItem("li_request_id", id);
-                            localStorage.setItem("li_request_server", server);
-                            transitionToApproveScreen();
-                            startPolling();
-                        } else if (data.status === "already_approved") {
-                            // User already has access - unlock directly
-                            localStorage.setItem("li_approved_token", "APPROVED");
-                            localStorage.setItem("li_request_firstname", firstname);
-                            localStorage.setItem("li_request_lastname", lastname);
-                            localStorage.setItem("li_request_id", id);
-                            localStorage.setItem("li_request_server", server);
-                            
-                            // Unlock DOM instantly
-                            document.documentElement.classList.add("user-approved");
-                            document.documentElement.classList.remove("user-unauthorized");
-                            if (gate) gate.classList.add("hide");
-                            
-                            // Activate session & start polling to enforce tab locking
-                            checkCurrentAccessStatus(false, true);
-                            startPolling();
-                            
-                            // Update URL query string dynamically without reload
-                            try {
-                                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
-                            } catch(e) {
-                                console.error("replaceState failed:", e);
-                            }
-
-                            showCustomAlertDialog("You already have access! Welcome back.", null, "success");
-                        } else {
-                            showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
+                })
+                .then(r => r.json())
+                .then(data => {
+                    isSubmitting = false;
+                    btnRequestSubmit.disabled = false;
+                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                    if (data.status === "success") {
+                        localStorage.setItem("li_request_firstname", firstname);
+                        localStorage.setItem("li_request_lastname", lastname);
+                        localStorage.setItem("li_request_id", id);
+                        localStorage.setItem("li_request_server", server);
+                        transitionToApproveScreen();
+                        startPolling();
+                    } else if (data.status === "already_approved") {
+                        // User already has access - unlock directly
+                        localStorage.setItem("li_approved_token", "APPROVED");
+                        localStorage.setItem("li_request_firstname", firstname);
+                        localStorage.setItem("li_request_lastname", lastname);
+                        localStorage.setItem("li_request_id", id);
+                        localStorage.setItem("li_request_server", server);
+                        
+                        // Unlock DOM instantly
+                        document.documentElement.classList.add("user-approved");
+                        document.documentElement.classList.remove("user-unauthorized");
+                        if (gate) gate.classList.add("hide");
+                        
+                        // Activate session & start polling to enforce tab locking
+                        checkCurrentAccessStatus(false, true);
+                        startPolling();
+                        
+                        // Update URL query string dynamically without reload
+                        try {
+                            window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
+                        } catch(e) {
+                            console.error("replaceState failed:", e);
                         }
-                    })
-                    .catch(err => {
-                        console.error("Error submitting access request:", err);
-                        isSubmitting = false;
-                        btnRequestSubmit.disabled = false;
-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                        showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
-                    });
+
+                        showCustomAlertDialog("You already have access! Welcome back.", null, "success");
+                    } else {
+                        showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
+                    }
+                })
+                .catch(err => {
+                    console.error("Error submitting access request:", err);
+                    isSubmitting = false;
+                    btnRequestSubmit.disabled = false;
+                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                    showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
                 });
             } else {
                 showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
@@ -9812,19 +9641,11 @@ function initAccessGate() {
 
 // Approval validation is now handled server-side via the validate_key action
 
-let uploadedScreenshotBase64 = "";
-
 function initBugReport() {
     const form = document.getElementById("form-bug-report");
     const selectCategory = document.getElementById("bug-category");
     const textRawInput = document.getElementById("bug-raw-input");
     const textExpected = document.getElementById("bug-expected");
-    
-    const fileInput = document.getElementById("bug-screenshot-file");
-    const dragDropZone = document.getElementById("bug-drag-drop-zone");
-    const previewContainer = document.getElementById("bug-preview-container");
-    const imgPreview = document.getElementById("bug-screenshot-preview");
-    const btnRemove = document.getElementById("btn-remove-screenshot");
     
     const feedbackOverlay = document.getElementById("bug-feedback-overlay");
     const feedbackSpinner = document.getElementById("bug-feedback-spinner");
@@ -9847,65 +9668,6 @@ function initBugReport() {
             });
         }
     
-        if (fileInput) {
-            fileInput.addEventListener("change", (e) => {
-                handleFileSelect(e.target.files);
-            });
-        }
-    
-        // Drag & Drop
-        if (dragDropZone) {
-            dragDropZone.addEventListener("click", (e) => {
-                if (previewContainer && previewContainer.classList.contains("hide") && e.target !== btnRemove) {
-                    fileInput.click();
-                }
-            });
-        
-            dragDropZone.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                dragDropZone.classList.add("dragover");
-            });
-        
-            dragDropZone.addEventListener("dragleave", () => {
-                dragDropZone.classList.remove("dragover");
-            });
-        
-            dragDropZone.addEventListener("drop", (e) => {
-                e.preventDefault();
-                dragDropZone.classList.remove("dragover");
-                handleFileSelect(e.dataTransfer.files);
-            });
-        }
-    
-        function handleFileSelect(files) {
-            if (files && files.length > 0) {
-                const file = files[0];
-                if (!file.type.startsWith("image/")) {
-                    showCustomNotification("Only image files are allowed.", "warning");
-                    return;
-                }
-            
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadedScreenshotBase64 = e.target.result;
-                    if (imgPreview) imgPreview.src = uploadedScreenshotBase64;
-                    if (previewContainer) previewContainer.classList.remove("hide");
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-    
-        // Remove screenshot
-        if (btnRemove) {
-            btnRemove.addEventListener("click", (e) => {
-                e.stopPropagation();
-                uploadedScreenshotBase64 = "";
-                if (fileInput) fileInput.value = "";
-                if (imgPreview) imgPreview.src = "";
-                if (previewContainer) previewContainer.classList.add("hide");
-            });
-        }
-    
         // Form submission
         form.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -9924,7 +9686,7 @@ function initBugReport() {
             if (feedbackSpinner) feedbackSpinner.classList.remove("hide");
             if (feedbackSuccess) feedbackSuccess.classList.add("hide");
             if (btnFeedbackClose) btnFeedbackClose.classList.add("hide");
-            if (feedbackText) feedbackText.textContent = "Uploading report & screenshot...";
+            if (feedbackText) feedbackText.textContent = "Uploading report...";
         
             if (!CONFIG.GOOGLE_SCRIPT_URL) {
                 setTimeout(() => {
@@ -9946,7 +9708,7 @@ function initBugReport() {
                     category: category,
                     rawInput: rawInput,
                     expectedOutput: expectedOutput,
-                    screenshotBase64: uploadedScreenshotBase64
+                    screenshotBase64: ""
                 })
             })
             .then(response => response.json())
@@ -9954,7 +9716,7 @@ function initBugReport() {
                 if (feedbackSpinner) feedbackSpinner.classList.add("hide");
                 if (data.status === "success") {
                     if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
-                    if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Email sent & screenshot saved to Google Drive.";
+                    if (feedbackText) feedbackText.textContent = "Bug report submitted successfully! Email sent.";
                 } else if (data.status === "already_submitted") {
                     if (feedbackSuccess) feedbackSuccess.classList.remove("hide");
                     if (feedbackText) feedbackText.textContent = data.message || "Bug report already submitted. A fix is expected within 10 minutes.";
@@ -9965,9 +9727,6 @@ function initBugReport() {
             
                 if (data.status === "success" || data.status === "already_submitted") {
                     form.reset();
-                    uploadedScreenshotBase64 = "";
-                    if (previewContainer) previewContainer.classList.add("hide");
-                    if (imgPreview) imgPreview.src = "";
                 }
             })
             .catch(err => {
@@ -9978,9 +9737,6 @@ function initBugReport() {
                 if (btnFeedbackClose) btnFeedbackClose.classList.remove("hide");
             
                 form.reset();
-                uploadedScreenshotBase64 = "";
-                if (previewContainer) previewContainer.classList.add("hide");
-                if (imgPreview) imgPreview.src = "";
             });
         });
     
@@ -10041,54 +9797,52 @@ function initBugReport() {
                         return;
                     }
                     
-                    generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp).then((screenshotBase64) => {
-                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "text/plain"
-                            },
-                            body: JSON.stringify({
-                                action: "bug_report",
-                                category: activeCategory,
-                                rawInput: rawAdText,
-                                expectedOutput: expectedOutput,
-                                screenshotBase64: screenshotBase64
-                            })
+                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain"
+                        },
+                        body: JSON.stringify({
+                            action: "bug_report",
+                            category: activeCategory,
+                            rawInput: rawAdText,
+                            expectedOutput: expectedOutput,
+                            screenshotBase64: ""
                         })
-                        .then(response => response.json())
-                        .then(data => {
-                            btnSubmitBugInline.classList.remove("submitting");
-                            btnSubmitBugInline.classList.remove("btn-submitting");
-                            
-                            if (data.status === "success") {
-                                // Transition to blue "Bug Sent" state
-                                btnSubmitBugInline.classList.remove("glow-red");
-                                btnSubmitBugInline.classList.add("btn-sent");
-                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
-                                showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
-                            } else if (data.status === "already_submitted") {
-                                // Transition to blue "Bug Sent" state since it's already reported
-                                btnSubmitBugInline.classList.remove("glow-red");
-                                btnSubmitBugInline.classList.add("btn-sent");
-                                btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
-                                showCustomNotification(data.message || "Bug report already submitted. A fix is expected within 10 minutes.", "warning");
-                            } else {
-                                btnSubmitBugInline.classList.add("glow-red");
-                                btnSubmitBugInline.innerHTML = originalHtml;
-                                showCustomNotification("Error submitting bug report: " + (data.message || "Failed to submit."), "error");
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Bug report upload error:", err);
-                            btnSubmitBugInline.classList.remove("submitting");
-                            btnSubmitBugInline.classList.remove("btn-submitting");
-                            
-                            // Revert/Fallback success
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        btnSubmitBugInline.classList.remove("submitting");
+                        btnSubmitBugInline.classList.remove("btn-submitting");
+                        
+                        if (data.status === "success") {
+                            // Transition to blue "Bug Sent" state
                             btnSubmitBugInline.classList.remove("glow-red");
                             btnSubmitBugInline.classList.add("btn-sent");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
                             showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
-                        });
+                        } else if (data.status === "already_submitted") {
+                            // Transition to blue "Bug Sent" state since it's already reported
+                            btnSubmitBugInline.classList.remove("glow-red");
+                            btnSubmitBugInline.classList.add("btn-sent");
+                            btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                            showCustomNotification(data.message || "Bug report already submitted. A fix is expected within 10 minutes.", "warning");
+                        } else {
+                            btnSubmitBugInline.classList.add("glow-red");
+                            btnSubmitBugInline.innerHTML = originalHtml;
+                            showCustomNotification("Error submitting bug report: " + (data.message || "Failed to submit."), "error");
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Bug report upload error:", err);
+                        btnSubmitBugInline.classList.remove("submitting");
+                        btnSubmitBugInline.classList.remove("btn-submitting");
+                        
+                        // Revert/Fallback success
+                        btnSubmitBugInline.classList.remove("glow-red");
+                        btnSubmitBugInline.classList.add("btn-sent");
+                        btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
+                        showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
                     });
                 };
                 compileAndSend();
@@ -10988,7 +10742,7 @@ function initAdminPanel() {
                     isHolding = false;
                     
                     showCustomConfirmDialog(
-                        "Are you sure you want to permanently clear all logged bug reports and delete their screenshot images from Google Drive? This action cannot be undone.",
+                        "Are you sure you want to permanently clear all logged bug reports? This action cannot be undone.",
                         () => {
                             triggerClearBugs();
                         },
@@ -11049,7 +10803,7 @@ function initAdminPanel() {
                     btnClearBugs.style.borderColor = "#30d158";
                     btnClearBugs.style.boxShadow = "0 4px 20px rgba(48, 209, 88, 0.5)";
                     btnClearBugs.innerHTML = `<i class="fa-solid fa-circle-check"></i> Bug report cleared`;
-                    showCustomNotification(data.message || "Successfully cleared all bug reports and screenshots.", "success");
+                    showCustomNotification(data.message || "Successfully cleared all bug reports.", "success");
                     
                     // Keep green for 3 seconds, then return to normal
                     setTimeout(() => {
@@ -15835,21 +15589,7 @@ function renderTriageCards(reports, container) {
                     <div class="gemini-copilot-chat-history" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 11px; padding-right: 4px;">
                         ${chatTurnsHtml}
                     </div>
-                    <!-- Image Preview Bar (initially hidden or shown if pendingAttachment) -->
-                    <div class="gemini-copilot-image-preview-bar" style="${report.pendingAttachment ? "display: flex;" : "display: none;"} align-items: center; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 6px 10px; border-radius: 6px; margin-top: 4px;">
-                        <div style="position: relative; width: 40px; height: 40px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-                            <img class="img-gemini-copilot-preview" src="${report.pendingAttachment ? report.pendingAttachment.dataUrl : ""}" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <span style="font-size: 10.5px; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="txt-gemini-copilot-filename">attached_screenshot.png</span>
-                        <button type="button" class="btn-gemini-copilot-clear-preview" style="background: none; border: none; color: #ff453a; cursor: pointer; font-size: 11px;"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-
                     <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; position: relative;">
-                        <!-- Hidden file input -->
-                        <input type="file" class="input-gemini-copilot-file" accept="image/*" style="display: none;">
-                        
-                        <!-- Attachment button -->
-                        <button type="button" class="btn-gemini-copilot-attach" style="padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); color: ${report.pendingAttachment ? "#30d158" : "var(--text-muted)"}; border-color: ${report.pendingAttachment ? "rgba(48, 209, 88, 0.4)" : "rgba(255,255,255,0.06)"}; font-size: 11px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Attach screenshot"><i class="fa-solid fa-paperclip"></i></button>
 
                         <input type="text" class="input-gemini-copilot-chat" placeholder="Tell Gemini how to fix... (e.g. 'make price $10k')" style="flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(167,139,250,0.25); background: rgba(0,0,0,0.3); color: var(--text-primary); font-size: 11.5px; outline: none; font-family: var(--font-heading);">
                         
@@ -16117,57 +15857,7 @@ function renderTriageCards(reports, container) {
                 });
             }
 
-            // ── Screenshot Attachment & Preview Bindings ──
-            const copilotFileInput = card.querySelector(".input-gemini-copilot-file");
-            const copilotAttachBtn = card.querySelector(".btn-gemini-copilot-attach");
-            const copilotPreviewBar = card.querySelector(".gemini-copilot-image-preview-bar");
-            const copilotPreviewImg = card.querySelector(".img-gemini-copilot-preview");
-            const copilotFilenameSpan = card.querySelector(".txt-gemini-copilot-filename");
-            const copilotClearPreviewBtn = card.querySelector(".btn-gemini-copilot-clear-preview");
 
-            if (copilotAttachBtn && copilotFileInput) {
-                copilotAttachBtn.addEventListener("click", () => {
-                    copilotFileInput.click();
-                });
-
-                copilotFileInput.addEventListener("change", (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const dataUrl = event.target.result;
-                            const base64Data = dataUrl.split(",")[1];
-                            const mimeType = dataUrl.split(",")[0].split(":")[1].split(";")[0];
-                            
-                            report.pendingAttachment = {
-                                mimeType,
-                                data: base64Data,
-                                dataUrl
-                            };
-                            
-                            if (copilotPreviewImg) copilotPreviewImg.src = dataUrl;
-                            if (copilotFilenameSpan) copilotFilenameSpan.textContent = file.name;
-                            if (copilotPreviewBar) copilotPreviewBar.style.display = "flex";
-                            
-                            copilotAttachBtn.style.color = "#30d158";
-                            copilotAttachBtn.style.borderColor = "rgba(48, 209, 88, 0.4)";
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-            }
-
-            if (copilotClearPreviewBtn) {
-                copilotClearPreviewBtn.addEventListener("click", () => {
-                    report.pendingAttachment = null;
-                    if (copilotFileInput) copilotFileInput.value = "";
-                    if (copilotPreviewBar) copilotPreviewBar.style.display = "none";
-                    if (copilotAttachBtn) {
-                        copilotAttachBtn.style.color = "var(--text-muted)";
-                        copilotAttachBtn.style.borderColor = "rgba(255, 255, 255, 0.06)";
-                    }
-                });
-            }
             
             // ── Manual Train Toggle Button ──
             if (manualToggleBtn && manualPanel) {

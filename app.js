@@ -2979,7 +2979,7 @@ function initAdProcessing() {
 
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
     if (btnGeminiAssist) {
-        setupHoldToTriggerButton(btnGeminiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
+        btnGeminiAssist.addEventListener("click", () => {
             if (btnGeminiAssist.dataset.state === "train") {
                 submitSparkTraining("main");
             } else {
@@ -8126,7 +8126,12 @@ function initFloatingClipboard() {
     const btnFloat = document.getElementById("btn-float-pip");
     if (!btnFloat) return;
 
-    btnFloat.addEventListener("click", async () => {
+    btnFloat.addEventListener("click", (e) => {
+        e.preventDefault();
+    });
+
+    const originalHtml = `<i class="fa-solid fa-wand-magic-sparkles"></i> Magic Editor Mode`;
+    setupReleaseToTriggerHoldButton(btnFloat, originalHtml, async () => {
         if (!('documentPictureInPicture' in window)) {
             showCustomAlertDialog("Magic Editor Mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.", null, "warning");
             return;
@@ -8567,53 +8572,19 @@ function initFloatingClipboard() {
             };
 
             // Magic Mode header hover behavior
-            let hoverTimer = null;
+            // Symmetrical hold to toggle layout mode
             if (pipToggleMode) {
-                pipToggleMode.addEventListener("mouseenter", () => {
-                    if (pipLayoutMode === "magic") {
-                        hoverTimer = setTimeout(() => {
-                            pipToggleMode.classList.add("reveal-pro");
-                            pipToggleMode.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
-                        }, 1000);
-                    }
-                });
-                pipToggleMode.addEventListener("mouseleave", () => {
-                    if (hoverTimer) {
-                        clearTimeout(hoverTimer);
-                        hoverTimer = null;
-                    }
-                    if (pipLayoutMode === "magic") {
-                        pipToggleMode.classList.remove("reveal-pro");
-                        pipToggleMode.innerHTML = `MAGIC MODE`;
-                    }
-                });
-                pipToggleMode.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    if (pipToggleMode.classList.contains("reveal-pro")) {
-                        switchToProMode();
-                    }
-                });
+                pipToggleMode.addEventListener("click", (e) => e.stopPropagation());
+                setupReleaseToTriggerHoldButton(pipToggleMode, `MAGIC MODE`, () => {
+                    switchToProMode();
+                }, 1500, "Release for PRO MODE");
             }
 
-            // Compact Pro Mode header hover behavior
             if (pipCompactToggle) {
-                pipCompactToggle.addEventListener("mouseenter", () => {
-                    if (pipLayoutMode === "pro") {
-                        pipCompactToggle.classList.add("reveal-magic");
-                        pipCompactToggle.innerHTML = `MAGIC MODE`;
-                    }
-                });
-                pipCompactToggle.addEventListener("mouseleave", () => {
-                    if (pipLayoutMode === "pro") {
-                        pipCompactToggle.classList.remove("reveal-magic");
-                        pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
-                    }
-                });
-                pipCompactToggle.addEventListener("click", () => {
-                    if (pipLayoutMode === "pro") {
-                        switchToMagicMode();
-                    }
-                });
+                pipCompactToggle.addEventListener("click", (e) => e.stopPropagation());
+                setupReleaseToTriggerHoldButton(pipCompactToggle, `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`, () => {
+                    switchToMagicMode();
+                }, 1500, "Release for MAGIC MODE");
             }
 
             // Sync initial values from main page
@@ -9159,7 +9130,7 @@ function initFloatingClipboard() {
 
             const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
             if (pipBtnAiAssist) {
-                setupHoldToTriggerButton(pipBtnAiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
+                pipBtnAiAssist.addEventListener("click", () => {
                     if (pipBtnAiAssist.dataset.state === "train") {
                         submitSparkTraining("pip");
                     } else {
@@ -9223,7 +9194,7 @@ function initFloatingClipboard() {
             console.error("Failed to open Picture-in-Picture window:", error);
             showCustomAlertDialog("Failed to open floating window: " + error.message, null, "error");
         }
-    });
+    }, 1500, "Release to Open");
 }
 
 const FALLBACK_GEMINI_KEY = ["AIzaSyC", "4sbWW3XEW", "iadIl6Nooh", "I0NlKezpur", "z54"].join("");
@@ -15410,6 +15381,69 @@ function updateAIGeminiStatusDisplay() {
             activeKeyWrapper.style.display = "none";
         }
     }
+}
+
+function setupReleaseToTriggerHoldButton(btn, originalHtml, onTriggerComplete, holdDuration = 1000, triggerText = "Release to Activate") {
+    if (!btn) return;
+    
+    let progressInterval = null;
+    let startTime = null;
+    let isHolding = false;
+    
+    const resetState = (e) => {
+        if (!isHolding) return;
+        isHolding = false;
+        
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = null;
+        
+        const elapsed = startTime ? (Date.now() - startTime) : 0;
+        startTime = null;
+        
+        btn.style.background = "";
+        btn.style.boxShadow = "";
+        btn.innerHTML = originalHtml;
+        
+        if (elapsed >= holdDuration && e.type !== "mouseleave" && e.type !== "touchcancel") {
+            onTriggerComplete(e);
+        }
+    };
+    
+    const startHolding = (e) => {
+        if (e.type.startsWith("mouse") && e.button !== 0) return;
+        if (btn.disabled) return;
+        
+        e.preventDefault();
+        isHolding = true;
+        startTime = Date.now();
+        
+        btn.style.boxShadow = "0 0 15px rgba(168, 85, 247, 0.4)";
+        
+        const updateProgress = () => {
+            const elapsed = Date.now() - startTime;
+            const pct = Math.min((elapsed / holdDuration) * 100, 100);
+            const remainingSecs = Math.max(((holdDuration - elapsed) / 1000), 0).toFixed(1);
+            
+            btn.style.background = `linear-gradient(90deg, rgba(168, 85, 247, 0.4) ${pct}%, rgba(168, 85, 247, 0.15) ${pct}%)`;
+            
+            if (pct >= 100) {
+                btn.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #c084fc;"></i> ${triggerText}`;
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #c084fc;"></i> Hold ${remainingSecs}s`;
+            }
+        };
+        
+        updateProgress();
+        progressInterval = setInterval(updateProgress, 50);
+    };
+    
+    btn.addEventListener("mousedown", startHolding);
+    btn.addEventListener("touchstart", startHolding, { passive: false });
+    
+    btn.addEventListener("mouseup", resetState);
+    btn.addEventListener("mouseleave", resetState);
+    btn.addEventListener("touchend", resetState);
+    btn.addEventListener("touchcancel", resetState);
 }
 
 function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {

@@ -3661,9 +3661,6 @@ function tokenFuzzyMatch(tokenA, tokenB) {
     const a = tokenA.toLowerCase();
     const b = tokenB.toLowerCase();
     if (a === b) return 1.0;
-    // One token is contained within the other (compound word detection)
-    if (b.includes(a) && a.length >= 3) return 0.85;
-    if (a.includes(b) && b.length >= 3) return 0.85;
     // Levenshtein similarity
     const dist = levenshteinDistance(a, b);
     const maxLen = Math.max(a.length, b.length);
@@ -3673,7 +3670,7 @@ function tokenFuzzyMatch(tokenA, tokenB) {
 
 /**
  * Compute token coverage score: what fraction of inputTokens are matched
- * by the keyTokens (including fuzzy matching and compound word splitting).
+ * by the keyTokens (including fuzzy matching).
  * Word-order independent. Returns 0.0 to 1.0.
  */
 function computeTokenCoverage(inputTokens, keyTokens) {
@@ -3683,22 +3680,10 @@ function computeTokenCoverage(inputTokens, keyTokens) {
     let matchedCount = 0;
     let totalScore = 0;
     
-    // Expand key tokens: split any compound words
-    const expandedKeyTokens = [];
-    for (const kt of keyTokens) {
-        expandedKeyTokens.push(kt);
-        const splits = splitCompoundWord(kt);
-        for (const pair of splits) {
-            if (Array.isArray(pair)) {
-                expandedKeyTokens.push(pair[0], pair[1]);
-            }
-        }
-    }
-    
     for (const inputTok of inputTokens) {
         let bestTokScore = 0;
         // Direct fuzzy match against key tokens
-        for (const keyTok of expandedKeyTokens) {
+        for (const keyTok of keyTokens) {
             const score = tokenFuzzyMatch(inputTok, keyTok);
             if (score > bestTokScore) bestTokScore = score;
         }
@@ -3902,39 +3887,67 @@ function isDuplicateTrainingEntry(newKey, newValue, dictionary) {
    ========================================================================== */
 
 function applyNumberSubstitution(inputText, matchedKey, matchedOutput) {
-    const inputLower = inputText.toLowerCase().replace(/\s+/g, ' ').trim();
-    const keyLower = matchedKey.toLowerCase().replace(/\s+/g, ' ').trim();
+    // Strip prices first to avoid price numbers interfering with quantity/ID numbers
+    const cleanInput = stripPricesFromText(inputText).toLowerCase().replace(/\s+/g, ' ').trim();
+    const cleanKey = stripPricesFromText(matchedKey).toLowerCase().replace(/\s+/g, ' ').trim();
     
-    // Create structural templates by replacing all numbers with a placeholder
-    const inputTemplate = inputLower.replace(/\b\d+\b/g, '{#}');
-    const keyTemplate = keyLower.replace(/\b\d+\b/g, '{#}');
+    // Extract remaining numbers in positional order
+    const inputNums = cleanInput.match(/\b\d+\b/g) || [];
+    const keyNums = cleanKey.match(/\b\d+\b/g) || [];
     
-    // Check if the non-numeric structure is identical
-    if (getCanonicalKey(inputTemplate) !== getCanonicalKey(keyTemplate)) return matchedOutput;
+    // If neither has numbers, then there's nothing to substitute (trivial match success)
+    if (inputNums.length === 0 && keyNums.length === 0) {
+        return matchedOutput;
+    }
     
-    // Extract all numbers in positional order
-    const inputNums = inputLower.match(/\b\d+\b/g) || [];
-    const keyNums = keyLower.match(/\b\d+\b/g) || [];
+    // If number counts differ, they represent different structures, so reject
+    if (inputNums.length !== keyNums.length) {
+        return null;
+    }
     
-    if (inputNums.length === 0 || keyNums.length === 0) return matchedOutput;
-    if (inputNums.length !== keyNums.length) return matchedOutput;
+    // Create structural templates by replacing all remaining numbers with a placeholder
+    const inputTemplate = cleanInput.replace(/\b\d+\b/g, '{#}');
+    const keyTemplate = cleanKey.replace(/\b\d+\b/g, '{#}');
+    
+    // Normalize templates (toLowerCase, strip plurals 's\b', strip non-alphanumeric)
+    const canonInput = inputTemplate.toLowerCase().replace(/s\b/g, "").replace(/[^a-z0-9]/g, "");
+    const canonKey = keyTemplate.toLowerCase().replace(/s\b/g, "").replace(/[^a-z0-9]/g, "");
+    
+    // Fuzzy compare templates structure
+    const dist = levenshteinDistance(canonInput, canonKey);
+    const maxLen = Math.max(canonInput.length, canonKey.length);
+    const similarity = maxLen > 0 ? (1 - dist / maxLen) : 0;
+    
+    if (similarity < 0.80) {
+        return null;
+    }
     
     // Check if any numbers actually differ
     let hasDiff = false;
     for (let i = 0; i < keyNums.length; i++) {
-        if (keyNums[i] !== inputNums[i]) { hasDiff = true; break; }
+        if (keyNums[i] !== inputNums[i]) {
+            hasDiff = true;
+            break;
+        }
     }
     if (!hasDiff) return matchedOutput;
     
     // Substitute: replace each key number with the corresponding input number in the output
     let result = matchedOutput;
+    let substitutionSuccessful = true;
+    
     for (let i = 0; i < keyNums.length; i++) {
         if (keyNums[i] !== inputNums[i]) {
-            // Replace only the FIRST occurrence to avoid corrupting prices in the output
-            result = result.replace(new RegExp(`\\b${keyNums[i]}\\b`), inputNums[i]);
+            const regex = new RegExp(`\\b${keyNums[i]}\\b`);
+            if (regex.test(result)) {
+                result = result.replace(regex, inputNums[i]);
+            } else {
+                substitutionSuccessful = false;
+            }
         }
     }
-    return result;
+    
+    return substitutionSuccessful ? result : null;
 }
 
 /* ==========================================================================
@@ -3955,9 +3968,12 @@ function findTrainedMapping(rawText) {
         let fixedText = result.value;
         
         // For non-exact matches, apply number substitution
-        // (if input and key have the same structure but different numbers)
         if (result.matchType !== "exact") {
-            fixedText = applyNumberSubstitution(rawText, result.originalKey, fixedText);
+            const substituted = applyNumberSubstitution(rawText, result.originalKey, fixedText);
+            if (substituted === null) {
+                return { found: false };
+            }
+            fixedText = substituted;
         }
         
         return {
@@ -15364,7 +15380,11 @@ function findLocalFuzzyMatch(rawText) {
         const semInput = getSemanticCanonicalKey(rawClean);
         const semKey = getSemanticCanonicalKey(trainedRaw);
         if (semInput && semKey && semInput === semKey && semInput.length >= 4) {
-            return { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: 95 };
+            let corrText = extractTranslationValue(corrValue);
+            const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
+            if (substituted !== null) {
+                return { text: substituted, rawMatched: trainedRaw, score: 95 };
+            }
         }
         
         // 3. Token coverage scoring (compound-aware, order-independent)
@@ -15375,12 +15395,16 @@ function findLocalFuzzyMatch(rawText) {
             const rev = computeTokenCoverage(keyTokens, inputTokens);
             const tokenScore = Math.max(fwd, rev);
             if (tokenScore > highestScore && tokenScore >= 0.65) {
-                highestScore = tokenScore;
-                bestMatch = { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: Math.round(tokenScore * 100) };
+                let corrText = extractTranslationValue(corrValue);
+                const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
+                if (substituted !== null) {
+                    highestScore = tokenScore;
+                    bestMatch = { text: substituted, rawMatched: trainedRaw, score: Math.round(tokenScore * 100) };
+                }
             }
         }
         
-        // 4. Fuzzy token Jaccard fallback
+        // 4. Token Jaccard fallback
         const tokens1 = new Set(extractMeaningfulTokens(rawClean));
         const tokens2 = new Set(extractMeaningfulTokens(trainedRaw));
         if (tokens1.size > 0 && tokens2.size > 0) {
@@ -15393,8 +15417,12 @@ function findLocalFuzzyMatch(rawText) {
             const union = new Set([...tokens1, ...tokens2]);
             const score = intersection.size / union.size;
             if (score > highestScore && score >= 0.60) {
-                highestScore = score;
-                bestMatch = { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: Math.round(score * 100) };
+                let corrText = extractTranslationValue(corrValue);
+                const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
+                if (substituted !== null) {
+                    highestScore = score;
+                    bestMatch = { text: substituted, rawMatched: trainedRaw, score: Math.round(score * 100) };
+                }
             }
         }
     }

@@ -2118,7 +2118,7 @@ function correctSpelling(text, ctx) {
     }
 
     // Price correction
-    const priceMatch = corrected.match(/\b(negable|negotiabl|negotiab|nego|negoitable|negotable|negotiabe|negotiate|negotiat|negtable)\b/gi);
+    const priceMatch = corrected.match(/\b(negable|negotiabl|negotiab|nego|negoitable|negotable|negotiabe|negotiate|negotiat|negtable|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi);
     if (priceMatch) {
         const uniqueMatches = [...new Set(priceMatch.map(m => m.toLowerCase()))];
         uniqueMatches.forEach(m => {
@@ -2126,7 +2126,7 @@ function correctSpelling(text, ctx) {
                 ctx.logs.push({ text: `Spelling correction: <strong>${m}</strong> corrected to <strong>negotiable</strong>`, type: 'correction' });
             }
         });
-        corrected = corrected.replace(/\b(negable|negotiabl|negotiab|nego|negoitable|negotable|negotiabe|negotiate|negotiat|negtable)\b/gi, "negotiable");
+        corrected = corrected.replace(/\b(negable|negotiabl|negotiab|nego|negoitable|negotable|negotiabe|negotiate|negotiat|negtable|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi, "negotiable");
     }
 
     // Upgrades fuzzy matches / corrections
@@ -3860,7 +3860,7 @@ function isTemplateAd(text) {
     }
     
     let cleanText = text.replace(/^(?:[a-zA-Z0-9\s\u2116#\-:()&]+)?(?:template|temp)\s+\d+[-\s]*/i, "").trim();
-    let tempText = cleanText.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg)\b/gi, "")
+    let tempText = cleanText.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi, "")
                             .replace(/\b(?:for|at|price|budget)?\s*[\$\d\.,kKmMbB\s]+(?:each)?\b/gi, "")
                             .replace(/\b\d+\s*[%]?\s*and\s*\d+\s*[%]?\s*juices?\b/gi, "")
                             .trim();
@@ -4104,8 +4104,15 @@ function smartDictLookup(input, dictionary, options = {}) {
             const keyCoversInput = computeTokenCoverage(keyTokens, inputTokens);
             // Use average coverage to ensure bidirectional token relevance and prevent small keys from matching large inputs
             const score = (inputCoversKey + keyCoversInput) / 2;
+            const maxTokens = Math.max(inputTokens.length, keyTokens.length);
+            let requiredScore = minTokenCoverage;
+            if (maxTokens <= 2) {
+                requiredScore = 0.90;
+            } else if (maxTokens === 3) {
+                requiredScore = 0.80;
+            }
             
-            if (score >= minTokenCoverage && score > highestTokenScore) {
+            if (score >= requiredScore && score > highestTokenScore) {
                 highestTokenScore = score;
                 bestTokenMatch = {
                     found: true, value: getVal(val),
@@ -4995,7 +5002,7 @@ function detectCategory(text) {
         // 2. Try standard matching if shorthand didn't resolve
         if (matchedIndex === -1) {
             let cleanText = text.replace(/^(?:[a-zA-Z0-9\s\u2116#\-:()&]+)?(?:template|temp)\s+\d+[-\s]*/i, "").trim();
-            let tempText = cleanText.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg)\b/gi, "")
+            let tempText = cleanText.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi, "")
                                     .replace(/\b(?:for|at|price|budget)?\s*[\$\d\.,kKmMbB\s]+(?:each)?\b/gi, "")
                                     .replace(/\b\d+\s*[%]?\s*and\s*\d+\s*[%]?\s*juices?\b/gi, "")
                                     .trim();
@@ -5344,7 +5351,7 @@ function parsePriceAndBudget(text, action, ctx) {
     
     // Check if explicitly negotiable
     let isNegotiable = false;
-    const negoRegex = /\b(?:negotiable|negotiab|nego)\b/gi;
+    const negoRegex = /\b(?:negotiable|negotiab|nego|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi;
     const negoMatch = text.match(negoRegex);
     if (negoMatch) {
         isNegotiable = true;
@@ -6403,6 +6410,13 @@ function formatBusinessesAd(adBody, action, ctx) {
         }
     }
     
+    const lowerBody = body.toLowerCase().trim();
+    if (lowerBody === "business" || lowerBody === "private business" || lowerBody.startsWith("business ") || lowerBody.startsWith("private business ")) {
+        if (!lowerBody.startsWith("a ") && !lowerBody.startsWith("an ")) {
+            body = "a " + body;
+        }
+    }
+    
     return body;
 }
 
@@ -6536,7 +6550,7 @@ function formatTemplateAd(adBody, category, ctx) {
     }
 
     let cleanAdBody = adBody.replace(/^(?:[a-zA-Z0-9\s\u2116#\-:()&]+)?(?:template|temp)\s+\d+[-\s]*/i, "").trim();
-    let tempAdBody = cleanAdBody.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg)\b/gi, "")
+    let tempAdBody = cleanAdBody.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg|nogotaible|nogotable|nogotiable|negotioble|negotoable)\b/gi, "")
                                 .replace(/\b(?:for|at|price|budget)?\s*[\$\d\.,kKmMbB\s]+(?:each)?\b/gi, "")
                                 .replace(/\b\d+\s*[%]?\s*and\s*\d+\s*[%]?\s*juices?\b/gi, "")
                                 .trim();
@@ -6564,7 +6578,7 @@ function maskPhrases(text) {
     result = result.replace(/\b(\d+%\s+and\s+\d+%)(?!\w)/gi, (match) => {
         return "__PCT_AND_PCT_START__" + match.replace(/\s+/g, "_") + "__PCT_AND_PCT_END__";
     });
-    result = result.replace(/\bflame\s+and\s+water\b/gi, "__FLAME_AND_WATER__");
+    result = result.replace(/\b(?:flame|fire)\s+(?:and|&)\s+waters?\b/gi, "__FLAME_AND_WATER__");
     result = result.replace(/\battack\s+and\s+protection\b/gi, "__ATTACK_AND_PROTECTION__");
     result = result.replace(/\bprotection\s+and\s+immunity\b/gi, "__PROTECTION_AND_IMMUNITY__");
     result = result.replace(/\b(prime(?:\s+platinum)?\s*(?:with\s+)?\d+\s*(?:days?)?\s*and\s*\d+\s*days?)\b/gi, (match) => {
@@ -7215,9 +7229,10 @@ function fuzzyCorrectItemName(rawItem, ctx) {
                 canonical = "Secret ticket";
             }
         }
-        else if (cleanLower.includes("regular") || (cleanLower.includes("lottery") && !cleanLower.includes("rare") && !cleanLower.includes("flame"))) canonical = "regular lottery ticket";
+        else if (cleanLower.includes("flame") || cleanLower.includes("water") || cleanLower.includes("fire")) canonical = "flame and water lottery ticket";
+        else if (cleanLower.includes("royal") || cleanLower.includes("artifact")) canonical = "Royal Artifacts lottery ticket";
         else if (cleanLower.includes("rare")) canonical = "rare lottery ticket";
-        else if (cleanLower.includes("flame") || cleanLower.includes("water")) canonical = "flame and water lottery ticket";
+        else if (cleanLower.includes("regular") || (cleanLower.includes("lottery") && !cleanLower.includes("rare") && !cleanLower.includes("flame") && !cleanLower.includes("water") && !cleanLower.includes("fire") && !cleanLower.includes("royal") && !cleanLower.includes("artifact"))) canonical = "regular lottery ticket";
         else canonical = "lottery ticket";
 
         let qty = parseQuantity(rawItem);
@@ -7657,11 +7672,46 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         }
     }
 
-    // 7. Fallback: Automatically match against all official database items from ITEMS_DB
+    // 7. Fallback: Automatically match against all official database items from ITEMS_DB, BUSINESSES_DB, CLOTHING_DB, and VEHICLE_DB
     const allOfficialItems = [];
     if (typeof ITEMS_DB !== "undefined") {
         for (const cat in ITEMS_DB) {
-            ITEMS_DB[cat].forEach(item => allOfficialItems.push(item));
+            ITEMS_DB[cat].forEach(item => {
+                if (item && !allOfficialItems.includes(item)) {
+                    allOfficialItems.push(item);
+                }
+            });
+        }
+    }
+    if (typeof BUSINESSES_DB !== "undefined") {
+        BUSINESSES_DB.forEach(item => {
+            if (item && !allOfficialItems.includes(item)) {
+                allOfficialItems.push(item);
+            }
+        });
+    }
+    if (typeof CLOTHING_DB !== "undefined") {
+        for (const gender in CLOTHING_DB) {
+            for (const cat in CLOTHING_DB[gender]) {
+                if (Array.isArray(CLOTHING_DB[gender][cat])) {
+                    CLOTHING_DB[gender][cat].forEach(item => {
+                        if (item && !allOfficialItems.includes(item)) {
+                            allOfficialItems.push(item);
+                        }
+                    });
+                }
+            }
+        }
+    }
+    if (typeof VEHICLE_DB !== "undefined") {
+        for (const cat in VEHICLE_DB) {
+            if (Array.isArray(VEHICLE_DB[cat])) {
+                VEHICLE_DB[cat].forEach(item => {
+                    if (item && !allOfficialItems.includes(item)) {
+                        allOfficialItems.push(item);
+                    }
+                });
+            }
         }
     }
     const cleanAliases = allOfficialItems.map(cleanItemForFuzzy);
@@ -8126,12 +8176,7 @@ function initFloatingClipboard() {
     const btnFloat = document.getElementById("btn-float-pip");
     if (!btnFloat) return;
 
-    btnFloat.addEventListener("click", (e) => {
-        e.preventDefault();
-    });
-
-    const originalHtml = `<i class="fa-solid fa-wand-magic-sparkles"></i> Magic Editor Mode`;
-    setupReleaseToTriggerHoldButton(btnFloat, originalHtml, async () => {
+    btnFloat.addEventListener("click", async (e) => {
         if (!('documentPictureInPicture' in window)) {
             showCustomAlertDialog("Magic Editor Mode (Document Picture-in-Picture) is not supported in this browser.\n\nPlease use a modern version of Microsoft Edge or Google Chrome on Windows 10/11.", null, "warning");
             return;
@@ -8574,17 +8619,17 @@ function initFloatingClipboard() {
             // Magic Mode header hover behavior
             // Symmetrical hold to toggle layout mode
             if (pipToggleMode) {
-                pipToggleMode.addEventListener("click", (e) => e.stopPropagation());
-                setupReleaseToTriggerHoldButton(pipToggleMode, `MAGIC MODE`, () => {
+                pipToggleMode.addEventListener("click", (e) => {
+                    e.stopPropagation();
                     switchToProMode();
-                }, 1500, "Release for PRO MODE");
+                });
             }
 
             if (pipCompactToggle) {
-                pipCompactToggle.addEventListener("click", (e) => e.stopPropagation());
-                setupReleaseToTriggerHoldButton(pipCompactToggle, `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`, () => {
+                pipCompactToggle.addEventListener("click", (e) => {
+                    e.stopPropagation();
                     switchToMagicMode();
-                }, 1500, "Release for MAGIC MODE");
+                });
             }
 
             // Sync initial values from main page
@@ -9194,7 +9239,7 @@ function initFloatingClipboard() {
             console.error("Failed to open Picture-in-Picture window:", error);
             showCustomAlertDialog("Failed to open floating window: " + error.message, null, "error");
         }
-    }, 1500, "Release to Open");
+    });
 }
 
 const FALLBACK_GEMINI_KEY = ["AIzaSyC", "4sbWW3XEW", "iadIl6Nooh", "I0NlKezpur", "z54"].join("");
@@ -14113,42 +14158,42 @@ function validateWordAgainstPolicy(word) {
 function getMockBugReports() {
     return [
         {
-            timestamp: new Date(Date.now() - 120000).toLocaleString(),
+            timestamp: "2026-05-28 12:00:00",
             category: "Clothing",
             rawInput: "want to buy orange Lui Vi jacket",
             expectedOutput: "Buying orange Louis Vuitton jacket",
             rowIndex: 5
         },
         {
-            timestamp: new Date(Date.now() - 240000).toLocaleString(),
+            timestamp: "2026-05-28 11:50:00",
             category: "Other",
             rawInput: "buying sim card 7777777",
             expectedOutput: '[Inline False-Rejection Report]\nRaw Ad Content: "buying sim card 7777777"\nRejection Reason: "None"',
             rowIndex: 6
         },
         {
-            timestamp: new Date(Date.now() - 360000).toLocaleString(),
+            timestamp: "2026-05-28 11:40:00",
             category: "Vehicles",
             rawInput: "selling blue lambergini aventdor",
             expectedOutput: "Selling blue Lamborghini Aventador",
             rowIndex: 4
         },
         {
-            timestamp: new Date(Date.now() - 600000).toLocaleString(),
+            timestamp: "2026-05-28 11:30:00",
             category: "Weapons",
             rawInput: "buying glock 19 with silncer",
             expectedOutput: "Buying Glock 19 with silencer",
             rowIndex: 3
         },
         {
-            timestamp: new Date(Date.now() - 900000).toLocaleString(),
+            timestamp: "2026-05-28 11:20:00",
             category: "Electronics",
             rawInput: "sell iphone 15 pro max with airpods pro",
             expectedOutput: "Selling iPhone 15 Pro Max with AirPods Pro",
             rowIndex: 2
         },
         {
-            timestamp: new Date(Date.now() - 1800000).toLocaleString(),
+            timestamp: "2026-05-28 11:10:00",
             category: "Properties",
             rawInput: "renting 2bhk aparment in downtown",
             expectedOutput: "Renting 2BHK apartment in Downtown",
@@ -14440,8 +14485,8 @@ function loadAndRenderBugTriage() {
     
     const filterAndRender = (reports) => {
         const filtered = reports.filter(report => {
-            const reportKey = report.rawInput + "|" + (report.timestamp || "");
-            return !resolvedBugReportsCache.includes(reportKey);
+            const cleanRaw = report.rawInput.trim().toLowerCase();
+            return !resolvedBugReportsCache.includes(cleanRaw);
         });
         renderTriageCards(filtered, container);
     };
@@ -14527,7 +14572,9 @@ function learnFromSimilarExample(rawText, similarText, category, dict = customSp
             const dist = levenshteinDistance(rawTok, cleanSimTok);
             // Strict edit distance threshold based on candidate length to avoid false matches
             let allowedDist = 0;
-            if (rawTok.length >= 8) {
+            if (rawTok.length >= 10) {
+                allowedDist = 3;
+            } else if (rawTok.length >= 7) {
                 allowedDist = 2;
             } else if (rawTok.length >= 4) {
                 allowedDist = 1;
@@ -14717,7 +14764,7 @@ function trainFromDatabase(rawText, dbType, dict = customSpelling) {
 
 function resolveBugReport(report, card, isIgnore = false) {
     // Add to local cache immediately to prevent reappearing
-    const reportKey = report.rawInput + "|" + (report.timestamp || "");
+    const reportKey = report.rawInput.trim().toLowerCase();
     if (!resolvedBugReportsCache.includes(reportKey)) {
         resolvedBugReportsCache.push(reportKey);
         localStorage.setItem("li_resolved_bug_reports", JSON.stringify(resolvedBugReportsCache));
@@ -16365,8 +16412,15 @@ function findLocalFuzzyMatch(rawText) {
         if (inputTokens.length > 0 && keyTokens.length > 0) {
             const fwd = computeTokenCoverage(inputTokens, keyTokens);
             const rev = computeTokenCoverage(keyTokens, inputTokens);
-            const tokenScore = Math.max(fwd, rev);
-            if (tokenScore > highestScore && tokenScore >= 0.65) {
+            const tokenScore = (fwd + rev) / 2;
+            const maxTokens = Math.max(inputTokens.length, keyTokens.length);
+            let requiredScore = 0.70;
+            if (maxTokens <= 2) {
+                requiredScore = 0.90;
+            } else if (maxTokens === 3) {
+                requiredScore = 0.80;
+            }
+            if (tokenScore >= requiredScore && tokenScore > highestScore) {
                 let corrText = extractTranslationValue(corrValue);
                 const substituted = applyNumberSubstitution(rawClean, trainedRaw, corrText);
                 if (substituted !== null) {

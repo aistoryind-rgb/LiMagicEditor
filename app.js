@@ -2073,6 +2073,54 @@ function correctSpelling(text, ctx) {
         }
     }
 
+    // Pass 2: Fuzzy fallback — catch remaining misspellings the exact regex missed
+    const correctedWords = corrected.split(/\s+/);
+    for (let wi = 0; wi < correctedWords.length; wi++) {
+        const word = correctedWords[wi].toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!word || word.length < 3 || _smartMatcherStopwords.has(word)) continue;
+        // Skip if already a known correct word in the dictionary values
+        let isKnownCorrect = false;
+        for (const [, right] of sortedEntries) {
+            if (right.toLowerCase() === word) { isKnownCorrect = true; break; }
+        }
+        if (isKnownCorrect) continue;
+
+        // Try canonical match (strip spaces/special chars)
+        let fuzzyMatched = false;
+        const canonWord = word.replace(/[^a-z0-9]/g, '');
+        for (const [wrong, right] of sortedEntries) {
+            const canonWrong = wrong.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (canonWrong.length >= 3 && canonWord === canonWrong && word !== wrong.toLowerCase()) {
+                const origWord = correctedWords[wi];
+                correctedWords[wi] = right;
+                ctx.logs.push({ text: `Smart spelling: <strong>${origWord}</strong> corrected to <strong>${right}</strong>`, type: 'correction' });
+                fuzzyMatched = true;
+                break;
+            }
+        }
+        if (fuzzyMatched) continue;
+
+        // Try Levenshtein fuzzy (80% similarity, single words only)
+        let bestMatch = null;
+        let bestSim = 0;
+        for (const [wrong, right] of sortedEntries) {
+            if (wrong.includes(' ')) continue;
+            const dist = levenshteinDistance(word, wrong.toLowerCase());
+            const maxLen = Math.max(word.length, wrong.length);
+            const sim = maxLen > 0 ? (1 - dist / maxLen) : 0;
+            if (sim >= 0.80 && sim > bestSim) {
+                bestSim = sim;
+                bestMatch = { wrong, right };
+            }
+        }
+        if (bestMatch) {
+            const origWord = correctedWords[wi];
+            correctedWords[wi] = bestMatch.right;
+            ctx.logs.push({ text: `Fuzzy spelling (${Math.round(bestSim * 100)}%): <strong>${origWord}</strong> → <strong>${bestMatch.right}</strong>`, type: 'correction' });
+        }
+    }
+    corrected = correctedWords.join(' ');
+
     // Space out adjacent digit + days (e.g. 7days -> 7 days)
     corrected = corrected.replace(/\b(\d+)\s*days?\b/gi, "$1 days");
     corrected = corrected.replace(/\b(\d+)\s*beds*\b/gi, "$1 beds");
@@ -3529,6 +3577,11 @@ function isTemplateAd(text) {
     return getClosestMatch(cleanText, combinedTemplates, 0.65) !== null;
 }
 
+/* ==========================================================================
+   🧠 SmartMatcher — Centralized Intelligent Matching Engine
+   All dictionary lookups in the system route through these utilities.
+   ========================================================================== */
+
 function getCanonicalKey(text) {
     if (!text) return "";
     return text.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -3560,74 +3613,218 @@ function extractTranslationValue(val) {
     return val;
 }
 
-function findTrainedMapping(rawText) {
-    if (!rawText || !customTranslations) return { found: false };
+/**
+ * Extracts meaningful tokens from text, stripping stopwords, prices, and noise.
+ * Used for token-level comparison across the brain.
+ */
+const _smartMatcherStopwords = new Set([
+    "selling", "buying", "trading", "renting", "hiring", "sell", "buy", "trade",
+    "rent", "hire", "want", "with", "budget", "price", "negotiable", "each",
+    "respectively", "quality", "years", "experience", "and", "the", "for",
+    "near", "a", "an", "of", "to", "at", "in", "on", "or", "out", "per",
+    "week", "month", "day", "looking", "search", "searching", "find", "finding"
+]);
+
+function extractMeaningfulTokens(text) {
+    if (!text) return [];
+    return stripPricesFromText(text)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter(t => t.length >= 2 && !_smartMatcherStopwords.has(t));
+}
+
+/**
+ * Splits compound words into possible sub-tokens.
+ * e.g. "gunstore" → ["gun", "store"], "carshop" → ["car", "shop"]
+ */
+function splitCompoundWord(word) {
+    if (!word || word.length < 4) return [word];
+    const results = [];
+    // Try all possible splits of 2+ chars on each side
+    for (let i = 2; i <= word.length - 2; i++) {
+        const left = word.substring(0, i);
+        const right = word.substring(i);
+        if (left.length >= 2 && right.length >= 2) {
+            results.push([left, right]);
+        }
+    }
+    return results;
+}
+
+/**
+ * Checks if tokenA fuzzy-matches tokenB (single tokens).
+ * Returns similarity score 0-1, or 0 if no match.
+ */
+function tokenFuzzyMatch(tokenA, tokenB) {
+    if (!tokenA || !tokenB) return 0;
+    const a = tokenA.toLowerCase();
+    const b = tokenB.toLowerCase();
+    if (a === b) return 1.0;
+    // One token is contained within the other (compound word detection)
+    if (b.includes(a) && a.length >= 3) return 0.85;
+    if (a.includes(b) && b.length >= 3) return 0.85;
+    // Levenshtein similarity
+    const dist = levenshteinDistance(a, b);
+    const maxLen = Math.max(a.length, b.length);
+    const sim = maxLen > 0 ? (1 - dist / maxLen) : 0;
+    return sim >= 0.70 ? sim : 0;
+}
+
+/**
+ * Compute token coverage score: what fraction of inputTokens are matched
+ * by the keyTokens (including fuzzy matching and compound word splitting).
+ * Word-order independent. Returns 0.0 to 1.0.
+ */
+function computeTokenCoverage(inputTokens, keyTokens) {
+    if (inputTokens.length === 0) return 0;
+    if (keyTokens.length === 0) return 0;
     
-    const trimmedRaw = rawText.replace(/\s+/g, ' ').trim().toLowerCase();
+    let matchedCount = 0;
+    let totalScore = 0;
     
-    // Tier 1: Exact Match (spaces normalized)
-    if (customTranslations[trimmedRaw]) {
+    // Expand key tokens: split any compound words
+    const expandedKeyTokens = [];
+    for (const kt of keyTokens) {
+        expandedKeyTokens.push(kt);
+        const splits = splitCompoundWord(kt);
+        for (const pair of splits) {
+            if (Array.isArray(pair)) {
+                expandedKeyTokens.push(pair[0], pair[1]);
+            }
+        }
+    }
+    
+    for (const inputTok of inputTokens) {
+        let bestTokScore = 0;
+        // Direct fuzzy match against key tokens
+        for (const keyTok of expandedKeyTokens) {
+            const score = tokenFuzzyMatch(inputTok, keyTok);
+            if (score > bestTokScore) bestTokScore = score;
+        }
+        if (bestTokScore > 0) {
+            matchedCount++;
+            totalScore += bestTokScore;
+        }
+    }
+    
+    // Coverage = matched/total, weighted by match quality
+    const coverage = matchedCount / inputTokens.length;
+    const avgQuality = matchedCount > 0 ? (totalScore / matchedCount) : 0;
+    return coverage * avgQuality;
+}
+
+/**
+ * Master smart lookup function. Searches a dictionary using all intelligence tiers.
+ * @param {string} input - The raw input text
+ * @param {Object} dictionary - Key→value dictionary to search
+ * @param {Object} options - { fuzzyThreshold, stripPrices, minTokenCoverage, extractValue }
+ * @returns {{ found, value, matchType, similarity, originalKey }}
+ */
+function smartDictLookup(input, dictionary, options = {}) {
+    const {
+        fuzzyThreshold = 0.75,
+        stripPrices = true,
+        minTokenCoverage = 0.70,
+        extractValue = false
+    } = options;
+    
+    if (!input || !dictionary) return { found: false };
+    
+    const trimmedInput = input.replace(/\s+/g, ' ').trim().toLowerCase();
+    const getVal = extractValue ? extractTranslationValue : (v) => v;
+    
+    // Tier 1: Exact Match
+    if (dictionary[trimmedInput]) {
         return {
-            found: true,
-            fixedText: extractTranslationValue(customTranslations[trimmedRaw]),
-            matchType: "exact",
-            originalKey: trimmedRaw
+            found: true, value: getVal(dictionary[trimmedInput]),
+            matchType: "exact", originalKey: trimmedInput
         };
     }
     
-    const entries = Object.entries(customTranslations);
+    const entries = Object.entries(dictionary);
     if (entries.length === 0) return { found: false };
     
-    // Tier 2: Canonical Match (ignores space/punctuation shifts, keeps numbers)
-    const canonicalInput = getCanonicalKey(rawText);
+    // Tier 2: Canonical Match (strip spaces/punctuation, keep numbers)
+    const canonicalInput = getCanonicalKey(input);
     if (canonicalInput) {
         for (const [key, val] of entries) {
             if (getCanonicalKey(key) === canonicalInput) {
                 return {
-                    found: true,
-                    fixedText: extractTranslationValue(val),
-                    matchType: "canonical",
-                    originalKey: key
+                    found: true, value: getVal(val),
+                    matchType: "canonical", originalKey: key
                 };
             }
         }
     }
     
-    // Tier 3: Semantic Canonical Match (strips prices/numbers, then compares core words)
-    const semanticInput = getSemanticCanonicalKey(rawText);
-    if (semanticInput && semanticInput.length >= 4) {
+    // Tier 3: Semantic Canonical (strip prices + spaces)
+    if (stripPrices) {
+        const semanticInput = getSemanticCanonicalKey(input);
+        if (semanticInput && semanticInput.length >= 4) {
+            for (const [key, val] of entries) {
+                if (getSemanticCanonicalKey(key) === semanticInput) {
+                    return {
+                        found: true, value: getVal(val),
+                        matchType: "semantic", originalKey: key
+                    };
+                }
+            }
+        }
+    }
+    
+    // Tier 4: Token Coverage Scoring (word-order independent, compound-aware)
+    const inputTokens = extractMeaningfulTokens(input);
+    let bestTokenMatch = null;
+    let highestTokenScore = 0;
+    
+    if (inputTokens.length >= 1) {
         for (const [key, val] of entries) {
-            const semanticKey = getSemanticCanonicalKey(key);
-            if (semanticKey === semanticInput) {
-                return {
-                    found: true,
-                    fixedText: extractTranslationValue(val),
-                    matchType: "semantic",
+            const keyTokens = extractMeaningfulTokens(key);
+            if (keyTokens.length === 0) continue;
+            
+            // Score: how well do input tokens cover key tokens?
+            const inputCoversKey = computeTokenCoverage(inputTokens, keyTokens);
+            // Also check reverse: how well do key tokens cover input tokens?
+            const keyCoversInput = computeTokenCoverage(keyTokens, inputTokens);
+            // Use the better of the two (handles both shorter and longer inputs)
+            const score = Math.max(inputCoversKey, keyCoversInput);
+            
+            if (score >= minTokenCoverage && score > highestTokenScore) {
+                highestTokenScore = score;
+                bestTokenMatch = {
+                    found: true, value: getVal(val),
+                    matchType: "token-coverage",
+                    similarity: Math.round(score * 100),
                     originalKey: key
                 };
             }
         }
     }
     
-    // Tier 4: Fuzzy Match (Levenshtein on price-stripped + canonical forms)
-    let bestMatch = null;
-    let highestSimilarity = 0;
+    if (bestTokenMatch && highestTokenScore >= minTokenCoverage) {
+        return bestTokenMatch;
+    }
     
-    const strippedInput = stripPricesFromText(rawText).toLowerCase().replace(/\s+/g, ' ').trim();
+    // Tier 5: Fuzzy String Match (Levenshtein on price-stripped forms)
+    let bestFuzzy = null;
+    let highestFuzzySim = 0;
+    
+    const strippedInput = (stripPrices ? stripPricesFromText(input) : input)
+        .toLowerCase().replace(/\s+/g, ' ').trim();
     
     for (const [key, val] of entries) {
-        const strippedKey = stripPricesFromText(key).toLowerCase().replace(/\s+/g, ' ').trim();
+        const strippedKey = (stripPrices ? stripPricesFromText(key) : key)
+            .toLowerCase().replace(/\s+/g, ' ').trim();
         
-        // Compare stripped versions (price-unaware)
         const dist = levenshteinDistance(strippedInput, strippedKey);
         const maxLength = Math.max(strippedInput.length, strippedKey.length);
         const similarity = maxLength > 0 ? (1 - dist / maxLength) : 0;
         
-        if (similarity >= 0.75 && similarity > highestSimilarity) {
-            highestSimilarity = similarity;
-            bestMatch = {
-                found: true,
-                fixedText: extractTranslationValue(val),
+        if (similarity >= fuzzyThreshold && similarity > highestFuzzySim) {
+            highestFuzzySim = similarity;
+            bestFuzzy = {
+                found: true, value: getVal(val),
                 matchType: "fuzzy",
                 similarity: Math.round(similarity * 100),
                 originalKey: key
@@ -3635,8 +3832,90 @@ function findTrainedMapping(rawText) {
         }
     }
     
-    if (bestMatch) {
-        return bestMatch;
+    if (bestFuzzy) {
+        return bestFuzzy;
+    }
+    
+    return { found: false };
+}
+
+/**
+ * Check if a training entry is a duplicate of an existing one.
+ * @param {string} newKey - The proposed new dictionary key
+ * @param {string} newValue - The proposed new value
+ * @param {Object} dictionary - The existing dictionary to check against
+ * @returns {{ isDuplicate, reason, existingKey }}
+ */
+function isDuplicateTrainingEntry(newKey, newValue, dictionary) {
+    if (!newKey || !dictionary) return { isDuplicate: false };
+    
+    const normKey = newKey.toLowerCase().replace(/\s+/g, ' ').trim();
+    const normVal = (newValue || "").toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Check 1: Input equals output (redundant)
+    if (normKey === normVal) {
+        return { isDuplicate: true, reason: "Input is identical to output" };
+    }
+    
+    // Check 2: Exact key already exists
+    if (dictionary[normKey]) {
+        return { isDuplicate: true, reason: "Exact key already exists", existingKey: normKey };
+    }
+    
+    // Check 3: Canonical duplicate
+    const canonKey = getCanonicalKey(newKey);
+    for (const existing of Object.keys(dictionary)) {
+        if (getCanonicalKey(existing) === canonKey) {
+            return { isDuplicate: true, reason: "Canonical duplicate exists", existingKey: existing };
+        }
+    }
+    
+    // Check 4: Semantic duplicate (price-stripped)
+    const semKey = getSemanticCanonicalKey(newKey);
+    if (semKey && semKey.length >= 4) {
+        for (const existing of Object.keys(dictionary)) {
+            if (getSemanticCanonicalKey(existing) === semKey) {
+                return { isDuplicate: true, reason: "Semantic duplicate exists", existingKey: existing };
+            }
+        }
+    }
+    
+    // Check 5: Fuzzy near-duplicate (90%+)
+    for (const existing of Object.keys(dictionary)) {
+        const cleanExisting = existing.toLowerCase().replace(/\s+/g, ' ').trim();
+        const dist = levenshteinDistance(normKey, cleanExisting);
+        const maxLen = Math.max(normKey.length, cleanExisting.length);
+        const sim = maxLen > 0 ? (1 - dist / maxLen) : 0;
+        if (sim >= 0.90) {
+            return { isDuplicate: true, reason: "Near-duplicate exists (≥90% similar)", existingKey: existing };
+        }
+    }
+    
+    return { isDuplicate: false };
+}
+
+/* ==========================================================================
+   findTrainedMapping — Uses SmartMatcher for trained translation lookup
+   ========================================================================== */
+
+function findTrainedMapping(rawText) {
+    if (!rawText || !customTranslations) return { found: false };
+    
+    const result = smartDictLookup(rawText, customTranslations, {
+        fuzzyThreshold: 0.75,
+        stripPrices: true,
+        minTokenCoverage: 0.70,
+        extractValue: true
+    });
+    
+    if (result.found) {
+        return {
+            found: true,
+            fixedText: result.value,
+            matchType: result.matchType,
+            similarity: result.similarity,
+            originalKey: result.originalKey
+        };
     }
     
     return { found: false };
@@ -3727,11 +4006,15 @@ function runValidationPipeline(ctx, override) {
     if (match.found) {
         let logMsg = "";
         if (match.matchType === "exact") {
-            logMsg = `Matched trained translation: <strong>${match.fixedText}</strong>`;
+            logMsg = `🧠 Matched trained translation: <strong>${match.fixedText}</strong>`;
         } else if (match.matchType === "canonical") {
-            logMsg = `Matched trained translation (normalized): <strong>${match.fixedText}</strong>`;
+            logMsg = `🧠 Matched trained translation (normalized): <strong>${match.fixedText}</strong>`;
+        } else if (match.matchType === "semantic") {
+            logMsg = `🧠 Matched trained translation (semantic, price-stripped): <strong>${match.fixedText}</strong>`;
+        } else if (match.matchType === "token-coverage") {
+            logMsg = `🧠 Matched trained translation (intelligent token match, ${match.similarity}%): <strong>${match.fixedText}</strong>`;
         } else if (match.matchType === "fuzzy") {
-            logMsg = `Matched trained translation (fuzzy, ${match.similarity}% similarity): <strong>${match.fixedText}</strong>`;
+            logMsg = `🧠 Matched trained translation (fuzzy, ${match.similarity}%): <strong>${match.fixedText}</strong>`;
         }
         ctx.logs.push({ text: logMsg, type: 'policy' });
         ctx.finalText = match.fixedText;
@@ -4486,10 +4769,38 @@ function checkProhibitedItems(text, ctx) {
         const escaped = item.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(`\\b${escaped}\\b`, "i");
         if (regex.test(lower)) {
-            // Exclude weapon shop / ammunition store businesses
-            if ((item === "ammunition" || item === "ammo" || item === "rifle") && 
-                (lower.includes("store") || lower.includes("shop") || lower.includes("club") || lower.includes("rifleclub"))) {
-                continue;
+            // Context-aware business whitelist — don't blacklist legitimate business names
+            const businessContextWords = ["store", "shop", "business", "club", "market", "company", "station", "studio", "salon"];
+            const isInBusinessContext = businessContextWords.some(bw => lower.includes(bw));
+            if (isInBusinessContext) {
+                const knownBusinessPhrases = [
+                    "ammunition store", "ammo store", "gun store", "weapon store",
+                    "drug lab", "burger shop", "fight club", "rifle club",
+                    "gas station", "electric station", "service station"
+                ];
+                const inputCanonical = lower.replace(/[^a-z0-9\s]/g, '');
+                const itemInBusinessPhrase = knownBusinessPhrases.some(phrase => inputCanonical.includes(phrase));
+                // Also check trained translations for business context
+                let itemInTrainedMapping = false;
+                if (typeof customTranslations !== 'undefined' && customTranslations) {
+                    const itemClean = item.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    for (const trainedKey of Object.keys(customTranslations)) {
+                        const trainedClean = trainedKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (trainedClean.includes(itemClean)) {
+                            const inputSemantic = getSemanticCanonicalKey(lower);
+                            const trainedSemantic = getSemanticCanonicalKey(trainedKey);
+                            if (inputSemantic.includes(trainedSemantic.substring(0, 6)) ||
+                                trainedSemantic.includes(inputSemantic.substring(0, 6))) {
+                                itemInTrainedMapping = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (itemInBusinessPhrase || itemInTrainedMapping) {
+                    ctx.logs.push({ text: `Blacklist bypassed: <strong>${item}</strong> in business context`, type: 'policy' });
+                    continue;
+                }
             }
             ctx.status = "blacklisted";
             ctx.blacklistReason = `The advertisement contains illegal item/term: "${item.toUpperCase()}" which triggers an immediate phone blacklist.`;
@@ -14993,24 +15304,47 @@ function findLocalFuzzyMatch(rawText) {
     let highestScore = 0;
 
     for (const [trainedRaw, corrValue] of entries) {
-        // Compute token Jaccard similarity
-        const tokens1 = new Set(rawClean.split(" "));
-        const tokens2 = new Set(trainedRaw.split(" "));
+        // 1. Canonical match
+        if (getCanonicalKey(rawClean) === getCanonicalKey(trainedRaw)) {
+            return { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: 100 };
+        }
         
-        const intersection = new Set([...tokens1].filter(x => tokens2.has(x)));
-        const union = new Set([...tokens1, ...tokens2]);
-        const score = intersection.size / union.size;
-
-        if (score > highestScore && score >= 0.75) { // 75% token similarity threshold
-            highestScore = score;
-            let corrText = corrValue;
-            if (corrValue && corrValue.startsWith("{") && corrValue.endsWith("}")) {
-                try {
-                    const parsed = JSON.parse(corrValue);
-                    corrText = parsed.text || corrValue;
-                } catch(e) {}
+        // 2. Semantic canonical match (price-stripped)
+        const semInput = getSemanticCanonicalKey(rawClean);
+        const semKey = getSemanticCanonicalKey(trainedRaw);
+        if (semInput && semKey && semInput === semKey && semInput.length >= 4) {
+            return { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: 95 };
+        }
+        
+        // 3. Token coverage scoring (compound-aware, order-independent)
+        const inputTokens = extractMeaningfulTokens(rawClean);
+        const keyTokens = extractMeaningfulTokens(trainedRaw);
+        if (inputTokens.length > 0 && keyTokens.length > 0) {
+            const fwd = computeTokenCoverage(inputTokens, keyTokens);
+            const rev = computeTokenCoverage(keyTokens, inputTokens);
+            const tokenScore = Math.max(fwd, rev);
+            if (tokenScore > highestScore && tokenScore >= 0.65) {
+                highestScore = tokenScore;
+                bestMatch = { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: Math.round(tokenScore * 100) };
             }
-            bestMatch = { text: corrText, rawMatched: trainedRaw, score: Math.round(score * 100) };
+        }
+        
+        // 4. Fuzzy token Jaccard fallback
+        const tokens1 = new Set(extractMeaningfulTokens(rawClean));
+        const tokens2 = new Set(extractMeaningfulTokens(trainedRaw));
+        if (tokens1.size > 0 && tokens2.size > 0) {
+            const intersection = new Set([...tokens1].filter(x => {
+                for (const t2 of tokens2) {
+                    if (tokenFuzzyMatch(x, t2) >= 0.70) return true;
+                }
+                return false;
+            }));
+            const union = new Set([...tokens1, ...tokens2]);
+            const score = intersection.size / union.size;
+            if (score > highestScore && score >= 0.60) {
+                highestScore = score;
+                bestMatch = { text: extractTranslationValue(corrValue), rawMatched: trainedRaw, score: Math.round(score * 100) };
+            }
         }
     }
     return bestMatch;

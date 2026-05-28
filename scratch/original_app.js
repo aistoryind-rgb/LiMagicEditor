@@ -1,69 +1,8 @@
-/**
+﻿/**
  * LifeInvader EN3 Advertisement Editor - Core Application Logic
  */
 
-// Safe localStorage and sessionStorage shadowing for incognito mode and storage-restricted environments
-var localStorage;
-var sessionStorage;
-try {
-    localStorage = window.localStorage;
-    localStorage.getItem('__storage_test__');
-} catch (e) {
-    var mockStorage = {};
-    localStorage = {
-        getItem: function(key) { return key in mockStorage ? mockStorage[key] : null; },
-        setItem: function(key, value) { mockStorage[key] = String(value); },
-        removeItem: function(key) { delete mockStorage[key]; },
-        clear: function() { mockStorage = {}; },
-        key: function(i) { return Object.keys(mockStorage)[i] || null; },
-        get length() { return Object.keys(mockStorage).length; }
-    };
-}
-
-try {
-    sessionStorage = window.sessionStorage;
-    sessionStorage.getItem('__storage_test__');
-} catch (e) {
-    var mockSession = {};
-    sessionStorage = {
-        getItem: function(key) { return key in mockSession ? mockSession[key] : null; },
-        setItem: function(key, value) { mockSession[key] = String(value); },
-        removeItem: function(key) { delete mockSession[key]; },
-        clear: function() { mockSession = {}; },
-        key: function(i) { return Object.keys(mockSession)[i] || null; },
-        get length() { return Object.keys(mockSession).length; }
-    };
-}
-
-// Parse URL parameters to restore state in incognito/private mode
-(function() {
-    try {
-        var urlParams = new URLSearchParams(window.location.search);
-        var changed = false;
-        if (urlParams.get("approved") === "true") {
-            localStorage.setItem("li_approved_token", "APPROVED");
-        }
-        if (urlParams.get("admin") === "true") {
-            localStorage.setItem("li_admin_authenticated", "true");
-            sessionStorage.setItem("li_admin_authenticated", "true");
-            var key = urlParams.get("passcode");
-            if (key) {
-                localStorage.setItem("li_admin_passcode", key);
-                sessionStorage.setItem("li_admin_passcode", key);
-                urlParams.delete("passcode");
-                changed = true;
-            }
-        }
-        if (changed) {
-            var newSearch = urlParams.toString();
-            var newUrl = window.location.pathname + (newSearch ? "?" + newSearch : "");
-            window.history.replaceState({}, document.title, newUrl);
-        }
-    } catch (e) {
-        console.error("Failed to parse URL parameters:", e);
-    }
-})();
-
+// Datasets will be injected here during build
 const VEHICLE_DB = {
     "helicopters":  [
                         "Buzzard",
@@ -1282,7 +1221,7 @@ const DEFAULT_PRESETS = [
     { label: "Buy: Truffade Chiron", raw: "buying truffade chiron", count: 9 },
     { label: "Buy: Cage Pet", raw: "buying pet", count: 8 },
     { label: "Sell: Cage Pet", raw: "selling pet 600k", count: 7 },
-    { label: "Sell: House №1406", raw: "selling house 1406", count: 6 },
+    { label: "Sell: House Ôäû1406", raw: "selling house 1406", count: 6 },
     { label: "Dating: Girlfriend", raw: "looking for girlfriend", count: 5 },
     { label: "Sell: SIM Card", raw: "selling sim card 1111113", count: 4 },
     { label: "Buy: SIM Card", raw: "buying sim card 7777777", count: 3 },
@@ -1475,9 +1414,6 @@ function initTabs() {
             } else if (tabId === "tab-bug-triage") {
                 refreshBugTriageTabVisibility();
             }
-            
-            // Remember the last navigated tab
-            localStorage.setItem("li_last_navigated_tab", tabId);
         });
     });
 
@@ -1488,17 +1424,6 @@ function initTabs() {
     const btnRefreshHistory = document.getElementById("btn-refresh-history");
     if (btnRefreshHistory) {
         btnRefreshHistory.addEventListener("click", refreshMainHistory);
-    }
-
-    // Restore last navigated tab
-    const lastTab = localStorage.getItem("li_last_navigated_tab");
-    if (lastTab) {
-        const targetBtn = document.querySelector(`.tab-btn[data-tab="${lastTab}"]`);
-        if (targetBtn) {
-            setTimeout(() => {
-                targetBtn.click();
-            }, 100);
-        }
     }
 }
 
@@ -2098,7 +2023,7 @@ function correctSpelling(text, ctx) {
         ctx.logs.push({ text: `Spelling correction: <strong>charging</strong> corrected to <strong>chargers</strong>`, type: 'correction' });
     }
 
-    // Format property and shop numbers to use № symbol
+    // Format property and shop numbers to use Ôäû symbol
     corrected = corrected.replace(/\b(house|apartment|mansion|penthouse|shop)\s*(?:no\.?|number|num\.?|#)?\s*(\d+)\b/gi, (match, prop, num) => {
         return `${prop} \u2116${num}`;
     });
@@ -2257,7 +2182,7 @@ function matchVehicle(inputText) {
     const actionPrefixes = /^(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)\s+(?:a\s+|an\s+)?/i;
     const actionSuffixes = /\s+(?:buying|selling or trading|selling|trading|renting out|renting|wtb|wts|wtt|buy|sell|trade|rent|looking to purchase|looking to buy|want to buy|searching for|looking for|searching|look for|looking|search|look)$/i;
     
-    let cleanInput = mapVehicleBrands(inputText.trim().toLowerCase().replace(/['"“”]/g, ''));
+    let cleanInput = mapVehicleBrands(inputText.trim().toLowerCase().replace(/['"ÔÇ£ÔÇØ]/g, ''));
     cleanInput = cleanInput.replace(actionPrefixes, "").replace(actionSuffixes, "").trim();
     
     // Shortcuts
@@ -2637,11 +2562,7 @@ function initAdProcessing() {
     const btnGeminiAssist = document.getElementById("btn-gemini-assist");
     if (btnGeminiAssist) {
         setupHoldToTriggerButton(btnGeminiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
-            if (btnGeminiAssist.dataset.state === "train") {
-                submitSparkTraining("main");
-            } else {
-                triggerLiveGeminiAssist();
-            }
+            triggerLiveGeminiAssist();
         });
     }
 }
@@ -2676,22 +2597,16 @@ function triggerLiveGeminiAssist() {
     }
 
     getGeminiSparkSuggestion(rawText, category, (suggestion) => {
-        if (suggestion && suggestion.text) {
-            if (mainBtn) {
-                mainBtn.disabled = false;
-                mainBtn.dataset.state = "train";
-                mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                mainBtn.classList.remove("glow-teal", "glow-red");
-                mainBtn.classList.add("glow-green");
-            }
-            if (pipBtn) {
-                pipBtn.disabled = false;
-                pipBtn.dataset.state = "train";
-                pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                pipBtn.classList.remove("glow-teal", "glow-red");
-                pipBtn.classList.add("glow-green");
-            }
+        if (mainBtn) {
+            mainBtn.disabled = false;
+            mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+        }
+        if (pipBtn) {
+            pipBtn.disabled = false;
+            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+        }
 
+        if (suggestion && suggestion.text) {
             const processedEl = document.getElementById("processed-ad-text");
             if (processedEl) {
                 processedEl.textContent = suggestion.text;
@@ -2712,162 +2627,17 @@ function triggerLiveGeminiAssist() {
                     updatePipDisplay();
                 }
 
-                showCustomNotification("Gemini Spark correction applied! Click 'Train' to save to database.", "success");
+                showCustomNotification("Gemini Spark correction applied!", "success");
             }
         } else {
-            if (mainBtn) {
-                mainBtn.disabled = false;
-                mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-            }
-            if (pipBtn) {
-                pipBtn.disabled = false;
-                pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-            }
             showCustomNotification("Failed to retrieve AI suggestion. Please check API Key.", "error");
         }
     });
 }
 
-function resetSparkButtonsToDefaultState() {
-    const mainBtn = document.getElementById("btn-gemini-assist");
-    if (mainBtn && mainBtn.dataset.state !== "spark") {
-        mainBtn.dataset.state = "spark";
-        mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-        mainBtn.classList.remove("glow-green", "glow-teal", "glow-red");
-        mainBtn.style.background = "";
-        mainBtn.style.border = "";
-        mainBtn.style.color = "";
-        mainBtn.style.boxShadow = "";
-        mainBtn.disabled = false;
-    }
-    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
-        const pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
-        if (pipBtn && pipBtn.dataset.state !== "spark") {
-            pipBtn.dataset.state = "spark";
-            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
-            pipBtn.classList.remove("glow-green", "glow-teal", "glow-red");
-            pipBtn.style.background = "";
-            pipBtn.style.border = "";
-            pipBtn.style.color = "";
-            pipBtn.style.boxShadow = "";
-            pipBtn.disabled = false;
-        }
-    }
-}
 
-function submitSparkTraining(source) {
-    const rawAdEl = document.getElementById("raw-ad");
-    const rawAdText = rawAdEl ? rawAdEl.value.trim() : "";
-    const processedAdEl = document.getElementById("processed-ad-text");
-    const correctedText = processedAdEl ? processedAdEl.textContent.trim() : "";
-    const activeCategory = processedAdEl ? (processedAdEl.getAttribute("data-active-category") || "Other") : "Other";
-    const timestamp = new Date().toLocaleString();
-
-    const expectedOutput = `[Spark Training Report]\nRaw Ad Content: "${rawAdText}"\nCorrect Text: "${correctedText}"`;
-
-    if (!CONFIG.GOOGLE_SCRIPT_URL) {
-        showCustomNotification("Google Apps Script URL not configured.", "error");
-        return;
-    }
-
-    const mainBtn = document.getElementById("btn-gemini-assist");
-    let pipBtn = null;
-    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
-        pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
-    }
-
-    if (mainBtn) {
-        mainBtn.disabled = true;
-        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
-    }
-    if (pipBtn) {
-        pipBtn.disabled = true;
-        pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
-    }
-
-    showCustomNotification("Submitting Spark training to database...", "info");
-
-    generateBugReportCardBlob(rawAdText, activeCategory, "Spark Correction Training", timestamp).then((screenshotBase64) => {
-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain"
-            },
-            body: JSON.stringify({
-                action: "bug_report",
-                category: activeCategory,
-                rawInput: rawAdText,
-                expectedOutput: expectedOutput,
-                screenshotBase64: screenshotBase64
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success" || data.status === "already_submitted") {
-                if (mainBtn) {
-                    mainBtn.dataset.state = "trained";
-                    mainBtn.disabled = true;
-                    mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    mainBtn.classList.remove("glow-green", "glow-red");
-                    mainBtn.classList.add("glow-teal");
-                    mainBtn.style.background = "";
-                    mainBtn.style.border = "";
-                    mainBtn.style.color = "";
-                }
-                if (pipBtn) {
-                    pipBtn.dataset.state = "trained";
-                    pipBtn.disabled = true;
-                    pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                    pipBtn.classList.remove("glow-green", "glow-red");
-                    pipBtn.classList.add("glow-teal");
-                    pipBtn.style.background = "";
-                    pipBtn.style.border = "";
-                    pipBtn.style.color = "";
-                }
-                showCustomNotification("Spark training submitted successfully! ⏳", "success");
-            } else {
-                if (mainBtn) {
-                    mainBtn.disabled = false;
-                    mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                }
-                if (pipBtn) {
-                    pipBtn.disabled = false;
-                    pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-                }
-                showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
-            }
-        })
-        .catch(err => {
-            console.error("Training upload error:", err);
-            // Fallback success
-            if (mainBtn) {
-                mainBtn.dataset.state = "trained";
-                mainBtn.disabled = true;
-                mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                mainBtn.classList.remove("glow-green", "glow-red");
-                mainBtn.classList.add("glow-teal");
-                mainBtn.style.background = "";
-                mainBtn.style.border = "";
-                mainBtn.style.color = "";
-            }
-            if (pipBtn) {
-                pipBtn.dataset.state = "trained";
-                pipBtn.disabled = true;
-                pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-                pipBtn.classList.remove("glow-green", "glow-red");
-                pipBtn.classList.add("glow-teal");
-                pipBtn.style.background = "";
-                pipBtn.style.border = "";
-                pipBtn.style.color = "";
-            }
-            showCustomNotification("Spark training submitted successfully! ⏳", "success");
-        });
-    });
-}
 
 function processAd() {
-    resetSparkButtonsToDefaultState();
-    
     const rawAd = document.getElementById("raw-ad").value;
     const overrideCategory = document.getElementById("category-override").value;
     
@@ -3052,137 +2822,137 @@ const OFFICIAL_TEMPLATES = [
     "Earn $10,000 daily task bonus! Join Office (\u2116 85235) and receive $10,000 for each task, up to $120,000 per day. Email guzm4n58.",
     
     // Store 24/7 Templates
-    "Hurry! Store 24/7 №1 (GPS 23) is offering 50% off on everything. Grab your favorite items now. Shop smart, save big!",
-    "Why wait? 24/7 Store №1 (GPS 23) is the cheapest in the city. Visit us anytime, 80% discount on Bulk Orders! Contact (creegaint).",
-    "Spankys 24/7 №2 (GPS №24) offers cheapest prices and instant delivery on big orders. All day support via mail. Call 99-84-146 or (ganguly07).",
-    "Store №2 (GPS №24) Spankys 24/7 runs all day with cheapest rates. Bulk orders get instant delivery. Contact 99-84-146 or (ganguly07).",
-    "Beast24/7Store №3 (GPS 25) Always open,Cheapest in city We guarantee low price on all products,open round the clock,for more queries contact-beasto001",
-    "Revolutionize your shopping at 24/7 store (GPS №25) deals up to 50% off! Get pickaxes, maps, flowers, tents and more essentials for your daily tasks!",
-    "24 Store №26! offers 25% off on bulk orders! For more details or to place an order, call 5111110 or email us at (17uv). Dont miss out on the savings.",
-    "Bulk buyers save big at 24 Store №26! Get 25% off on bulk purchases. Reach out at 5111110 or email ( 17uv ) for details and orders.",
+    "Hurry! Store 24/7 Ôäû1 (GPS 23) is offering 50% off on everything. Grab your favorite items now. Shop smart, save big!",
+    "Why wait? 24/7 Store Ôäû1 (GPS 23) is the cheapest in the city. Visit us anytime, 80% discount on Bulk Orders! Contact (creegaint).",
+    "Spankys 24/7 Ôäû2 (GPS Ôäû24) offers cheapest prices and instant delivery on big orders. All day support via mail. Call 99-84-146 or (ganguly07).",
+    "Store Ôäû2 (GPS Ôäû24) Spankys 24/7 runs all day with cheapest rates. Bulk orders get instant delivery. Contact 99-84-146 or (ganguly07).",
+    "Beast24/7Store Ôäû3 (GPS 25) Always open,Cheapest in city We guarantee low price on all products,open round the clock,for more queries contact-beasto001",
+    "Revolutionize your shopping at 24/7 store (GPS Ôäû25) deals up to 50% off! Get pickaxes, maps, flowers, tents and more essentials for your daily tasks!",
+    "24 Store Ôäû26! offers 25% off on bulk orders! For more details or to place an order, call 5111110 or email us at (17uv). Dont miss out on the savings.",
+    "Bulk buyers save big at 24 Store Ôäû26! Get 25% off on bulk purchases. Reach out at 5111110 or email ( 17uv ) for details and orders.",
     "If you are out of city need groceries, Get up to 60% Discount Today: Visit Shop No. 5 (GPS No 27). Contact: 15-01-505 For Bulk deal in Cheap Price.",
     "Kingdom Grocery Shop No. 5 (GPS No 27), Offering Lowest Prices and Up to 60% Off on Bulk Deals. Contact: 15-01-505 (drakes2030)",
-    "Discover amazing prices at Pearl 24/7 Store №28! Always open, always ready for Los Santos!",
-    "Pearl 24/7 Store №28 offers -50% discounts in-store! Dont miss -80% bulk deals! Call us: 5550069!",
-    "Need a shop near Sandy Shores? We are the cheapest 24/7 of SH side! (GPS №29) We offer 50% sale for all products",
+    "Discover amazing prices at Pearl 24/7 Store Ôäû28! Always open, always ready for Los Santos!",
+    "Pearl 24/7 Store Ôäû28 offers -50% discounts in-store! Dont miss -80% bulk deals! Call us: 5550069!",
+    "Need a shop near Sandy Shores? We are the cheapest 24/7 of SH side! (GPS Ôäû29) We offer 50% sale for all products",
     "Attention Solar Panel Plantation Owners! Maximize your profits with cheapest solar panels! Contact for bulk orders (azuujah)",
     "Hello Los Santos. ZO-ZO 24/7 (Shop No30) Waiting For You On Bulk Orders. 50% To 80% OFF Each Order. Keep Smile With Order Now.",
-    "Enjoy a massive 50% discount on store items at 24/7 Store №8 (GPS №30), at Grand Senora Desert. Call 98-54-268 for details.",
-    "Mighty Cyber  24/7 Store №.9 (GPS 78) is offering 50% discount for all products.",
-    "Welcome to 24/7 Store №9 (GPS 78) is offering  discount for all products. Bulk Orders? Reach out (shodangaming) at mail and get exclusive deals!",
+    "Enjoy a massive 50% discount on store items at 24/7 Store Ôäû8 (GPS Ôäû30), at Grand Senora Desert. Call 98-54-268 for details.",
+    "Mighty Cyber  24/7 Store Ôäû.9 (GPS 78) is offering 50% discount for all products.",
+    "Welcome to 24/7 Store Ôäû9 (GPS 78) is offering  discount for all products. Bulk Orders? Reach out (shodangaming) at mail and get exclusive deals!",
     "Why pay more? Evox Store No.10 (GPS N119) is open 24/7 with up to 90% off lowest prices, day or night!",
     "Evox Imrane 24/7 Store No.10 (GPS N119)  50% off today! Bulk orders? Email us at mails (evox.co)  to save more!",
-    "Need something quick? Visit Conco 24/7 Store №11 (GPS №120) for fast access anytime. Always stocked for daily needs. Dial 18-09-842 (montalliago)",
-    "Buying in bulk? Visit Conco 24/7 Store №11 (GPS №120) and save more with bulk discounts. Always stocked and ready. Call 18-09-842 (montalliago)",
-    "Kings 24/7 Store №121 Get up to 80% off on bulk orders. Quality guaranteed. Open daily with great value on all your essential everyday items.",
-    "Kings 24/7 Store №121 Day or night our shelves stay full. From groceries to daily must haves we are always stocked and ready when you walk in.",
+    "Need something quick? Visit Conco 24/7 Store Ôäû11 (GPS Ôäû120) for fast access anytime. Always stocked for daily needs. Dial 18-09-842 (montalliago)",
+    "Buying in bulk? Visit Conco 24/7 Store Ôäû11 (GPS Ôäû120) and save more with bulk discounts. Always stocked and ready. Call 18-09-842 (montalliago)",
+    "Kings 24/7 Store Ôäû121 Get up to 80% off on bulk orders. Quality guaranteed. Open daily with great value on all your essential everyday items.",
+    "Kings 24/7 Store Ôäû121 Day or night our shelves stay full. From groceries to daily must haves we are always stocked and ready when you walk in.",
     "Come down to BestMoney 24/7 (GPS 123) for the cheapest prices in Paleto Bay! Need bulk orders? We got you covered.",
     "Traveling through Paleto Bay? Stop by Store No13 (GPS123), open 24/7 with travel essentials at great prices. Your one-stop shop on the highway!",
     "Go Grab 24/7, Shop No125, affordable prices with 50% off on all orders! Bulk orders? Enjoy special rates! Contact mails (190uzair)",
     "Go Grab 24/7, Shop No125 always in stock, located in the ghetto, Welcome for bulk orders, Contact us on mails (190uzair)",
-    "Do you need items to complete your tasks?  Head to Molotov 24/7 store in Mirror park (GPS №128) for the lowest prices in city.",
-    "Lottery tickets, backpacks, solar panels, fishing rods or flowers? Molotov 24/7 (GPS №128) is always stocked and 50%! Contact us for bulk orders!",
-    "The holiday season is here! Get your fireworks for New Year! Only at 24/7 Store near the beach! №129",
-    "Wifey got your credit card? Her expenses making you broke! No worries The Beach 24/7 Store №129 now offers 50% discount.",
-    "Get nonstop cheap rates at Joy Virellii 24/7 Store №18 (GPS №139). Bulk orders welcome. Contact  29-29-290 or masthangaming786 today.",
-    "Bulk orders at guaranteed low price. Joy Virellii 24/7 Store №18 (GPS №139). Contact 29-29-290 or masthangaming786 for details now.",
+    "Do you need items to complete your tasks?  Head to Molotov 24/7 store in Mirror park (GPS Ôäû128) for the lowest prices in city.",
+    "Lottery tickets, backpacks, solar panels, fishing rods or flowers? Molotov 24/7 (GPS Ôäû128) is always stocked and 50%! Contact us for bulk orders!",
+    "The holiday season is here! Get your fireworks for New Year! Only at 24/7 Store near the beach! Ôäû129",
+    "Wifey got your credit card? Her expenses making you broke! No worries The Beach 24/7 Store Ôäû129 now offers 50% discount.",
+    "Get nonstop cheap rates at Joy Virellii 24/7 Store Ôäû18 (GPS Ôäû139). Bulk orders welcome. Contact  29-29-290 or masthangaming786 today.",
+    "Bulk orders at guaranteed low price. Joy Virellii 24/7 Store Ôäû18 (GPS Ôäû139). Contact 29-29-290 or masthangaming786 for details now.",
     "Running low on budget? Then look no further! 24/7 Store No19 (GPS 140) is offering 24/7 the best quality goods with 50% off!",
     "Why wait? 24/7 store No19 (GPS 140) is the cheapest in the city. Visit us anytime, 50% discount on Bulk Orders! Contact (only696).",
     "Shopiva 24/7 (No.141) has 50% OFF Bulk orders. We are Open Day and Night providing premium service. Contact .proden to get your stock quickly.",
     "Shopiva 24/7 store (GPS 141) is now offering lowest price guaranteed in the whole city!! Visit now located at the core of Los Santos near Hotel!!",
-    "Mall 24/7 Store №270 Save BIG on everything -50% in-store, -80% on bulk orders, LOWEST prices in the heart of the city.",
-    "Mall 24/7 Store №270 is at -50% OFF! Make easy money with solar panels and mushroom seeds at the LOWEST prices in the city!",
+    "Mall 24/7 Store Ôäû270 Save BIG on everything -50% in-store, -80% on bulk orders, LOWEST prices in the heart of the city.",
+    "Mall 24/7 Store Ôäû270 is at -50% OFF! Make easy money with solar panels and mushroom seeds at the LOWEST prices in the city!",
     
     // Gas Station Templates
     "Cheapest Means Best! Come Gas Station NO 3 (GPS No4) inside city FUEL $8!",
     "Gas Station NO 3 (GPS No4) Repair kit $70 Canister $140 For bulk orders (mail devrimcicoban)",
-    "We make your gas stop easier, Sahara Royal Gas Station №6 will make sure every drop counts!!",
-    "Planning a trip? Need fuel cans and repair kits in case of emergency? Gas Station №6 is here with 50% discount. Every drop counts!!!",
-    "Are you run out of fule? Do not worry, just come in Indian oil station №7 (On GPS) is providing high quality fuel in every drop! And visit again.",
-    "New in this city? Why are you pay $20 for fuel ? Come to Indian oil gas station №7 (On GPS ). Pay only $8 per liter and save your money.",
-    "Do you need high quality fuel for your car? Ron Gas station №8 will provide you excellent fuel for your cars Only $20 per liter. Make your car happy.",
-    "Ron Gas station №8 offering 50% discount today. Come get your high quality fuel for your car.",
-    "Visit Gas station №6 (GPS №9) will provide $10 per liter, $100 repair kit and $200 canister cheapest fuel in the city.",
-    "Gas station №6 (GPS №9) provides cheapest fuel in the city. Provide only $100 repair kit and $200 canister. For bulk orders, contact (nudhory).",
+    "We make your gas stop easier, Sahara Royal Gas Station Ôäû6 will make sure every drop counts!!",
+    "Planning a trip? Need fuel cans and repair kits in case of emergency? Gas Station Ôäû6 is here with 50% discount. Every drop counts!!!",
+    "Are you run out of fule? Do not worry, just come in Indian oil station Ôäû7 (On GPS) is providing high quality fuel in every drop! And visit again.",
+    "New in this city? Why are you pay $20 for fuel ? Come to Indian oil gas station Ôäû7 (On GPS ). Pay only $8 per liter and save your money.",
+    "Do you need high quality fuel for your car? Ron Gas station Ôäû8 will provide you excellent fuel for your cars Only $20 per liter. Make your car happy.",
+    "Ron Gas station Ôäû8 offering 50% discount today. Come get your high quality fuel for your car.",
+    "Visit Gas station Ôäû6 (GPS Ôäû9) will provide $10 per liter, $100 repair kit and $200 canister cheapest fuel in the city.",
+    "Gas station Ôäû6 (GPS Ôäû9) provides cheapest fuel in the city. Provide only $100 repair kit and $200 canister. For bulk orders, contact (nudhory).",
     "Quality fuel and great service at Gas Station 10. Best prices and service in town. Visit Tsunami station today.",
     "Fuel your journey at Gas Station 10. Tsunami provides top-tier service and quality gas every day.",
     "Quality fuel and great service at Gas Station 11. Best prices and service in town. Visit Charon station today.",
     "Fuel your journey at Gas Station 11. Charon provides top-tier service and quality gas every day.",
-    "Visit Rich Man gas station (GPS №13) will provide $20 per liter, $350 repair kit and $500 canister cheapest fuel in Rich Man.",
+    "Visit Rich Man gas station (GPS Ôäû13) will provide $20 per liter, $350 repair kit and $500 canister cheapest fuel in Rich Man.",
     "Rich Man Gas Station (GPS 13) - 50% off all fuel! Cheapest in town, do not miss out! Bulk orders, contact (badpedro6)",
-    "Drive extra miles with Remix Gas station (№14). High quality fuel for a smooth ride, get your gas always for $10, $200 canisters and $100 repair kits.",
-    "Remix Gas station №14 The cheapest in the city, buy fuel canister and repair kit in bulk. Contact us by email on (b0n0is)",
-    "Running out of fuel on your road trip? Fill up at XR OIL GAS STATION (GPS №15)! Also offers premium fuel, gas canisters, and repair kits.",
-    "Looking for the cheapest fuel? XR OIL GAS STATION (GPS №15) offers fuel for just $5 and the lowest prices on gas canisters and repair kits.",
-    "Running out of fuel on your road trip? Fill up at KEK OIL GAS STATION (GPS №16)! Also offers premium fuel, gas canisters, and repair kits.",
-    "Looking for the cheapest fuel? KEK OIL GAS STATION (GPS №16) offers fuel for just $10 and the lowest prices on gas canisters and repair kits.",
-    "Empty tank? No panic! Liff Gas Station (№17) near Doc Highway offers best city prices fuel at $10 per liter, $300 repair kits and $500 canisters.",
-    "Liff Gas Station (№17), get the best cheapest fuel in the city with a 50% discount, where superior driving meets smart savings.",
-    "Driving near SAHP? Swing by the Cheapest Gas Station (GPS №18) - full stock, fast service, and everything your ride needs!",
+    "Drive extra miles with Remix Gas station (Ôäû14). High quality fuel for a smooth ride, get your gas always for $10, $200 canisters and $100 repair kits.",
+    "Remix Gas station Ôäû14 The cheapest in the city, buy fuel canister and repair kit in bulk. Contact us by email on (b0n0is)",
+    "Running out of fuel on your road trip? Fill up at XR OIL GAS STATION (GPS Ôäû15)! Also offers premium fuel, gas canisters, and repair kits.",
+    "Looking for the cheapest fuel? XR OIL GAS STATION (GPS Ôäû15) offers fuel for just $5 and the lowest prices on gas canisters and repair kits.",
+    "Running out of fuel on your road trip? Fill up at KEK OIL GAS STATION (GPS Ôäû16)! Also offers premium fuel, gas canisters, and repair kits.",
+    "Looking for the cheapest fuel? KEK OIL GAS STATION (GPS Ôäû16) offers fuel for just $10 and the lowest prices on gas canisters and repair kits.",
+    "Empty tank? No panic! Liff Gas Station (Ôäû17) near Doc Highway offers best city prices fuel at $10 per liter, $300 repair kits and $500 canisters.",
+    "Liff Gas Station (Ôäû17), get the best cheapest fuel in the city with a 50% discount, where superior driving meets smart savings.",
+    "Driving near SAHP? Swing by the Cheapest Gas Station (GPS Ôäû18) - full stock, fast service, and everything your ride needs!",
     "Running low? Gas Station (GPS NO-18)! Fuel up fast and grab essentials. For bulk deals, Contact us via mails (raveelkhan).",
-    "Brody Station $10-L deal! Brody Station №21! Open 24/7, lowest fuel price. Full stock, helipad, free delivery on bulk orders. Contact (bawan3) today!",
+    "Brody Station $10-L deal! Brody Station Ôäû21! Open 24/7, lowest fuel price. Full stock, helipad, free delivery on bulk orders. Contact (bawan3) today!",
     "Save on Fuel! $10-L at Brody Station No21! Open 24/7, lowest price guarantee. Helipad and free delivery for bulk orders. Reach out to (bawan3) now!",
     "Need a quick fuel stop? We got you covered at just $5 per litre! Top-quality fuel, and reliable support. Bulk orders? Contact Immortals Jaadu today!",
-    "Running low on fuel ? Stop by Immortals Fuel – fuel at only $5 per litre, plus repair kits $100 and canisters $200 available! DM for bulk orders now.",
-    "Welcome to Ron Gas Station №18 (GPS 115). Drive in for quality fuel, special discounts, and bulk order support. Contact (5andeep).",
-    "Drive smart with Ron Gas Station №18 (GPS 115). Fuel $15 per liter. Canister $350. Repair Kit $250. Discounts & bulk orders. Contact (5andeep).",
+    "Running low on fuel ? Stop by Immortals Fuel ÔÇô fuel at only $5 per litre, plus repair kits $100 and canisters $200 available! DM for bulk orders now.",
+    "Welcome to Ron Gas Station Ôäû18 (GPS 115). Drive in for quality fuel, special discounts, and bulk order support. Contact (5andeep).",
+    "Drive smart with Ron Gas Station Ôäû18 (GPS 115). Fuel $15 per liter. Canister $350. Repair Kit $250. Discounts & bulk orders. Contact (5andeep).",
     "Mobil Gas Station No17 (GPS 116). Fuel up fast with trusted service. Bulk fuel & offers available. Contact (amulyt).",
     "Mobil Gas Station No17 (GPS 116). Quick & reliable. Fuel $15/L, Canister $350, Repair Kit $250. Bulk deals available. Contact (amulyt).",
-    "Stuck in Paleto Bay? Visit Loves Gas Station №117! Fuel up at just $12/L. Great prices on all essentials!",
-    "Loves Fuel №117 – Just $12/L! Save more with bulk deals. Msg (rockyfearless) now to lock in your supply!",
-    "Surya Pluxury Gas Station №118 offers $5/L Fuel, $200 Canisters, $100 Repair Kits! Limited time only. Call now: 93-50-311",
-    "Tired of paying too much for good quality fuel? Jordan fuel works GPS №118 provides products in cheap and fuel at only $10 per litre inside city!",
+    "Stuck in Paleto Bay? Visit Loves Gas Station Ôäû117! Fuel up at just $12/L. Great prices on all essentials!",
+    "Loves Fuel Ôäû117 ÔÇô Just $12/L! Save more with bulk deals. Msg (rockyfearless) now to lock in your supply!",
+    "Surya Pluxury Gas Station Ôäû118 offers $5/L Fuel, $200 Canisters, $100 Repair Kits! Limited time only. Call now: 93-50-311",
+    "Tired of paying too much for good quality fuel? Jordan fuel works GPS Ôäû118 provides products in cheap and fuel at only $10 per litre inside city!",
     "SHER Gas Station Your One Stop Destination for Quality Fuel and Convenient Services. Visit us at GPS 124!",
     "Gas Station No. 124 offers cheap prices in the city. For more details, contact me in email yassir001.",
-    "Listen up riders! Need quality fuel? Visit Gas Station №21 (GPS №127) fuel up, grab kits, and get back in motion. PH: 22-64-883.",
-    "Running low? Dont push that luck. Visit Gas station №21 (GPS №127) for high quality fuel and canisters. Contact: 22-64-883.",
-    "Renegades Gas Station, in the middle of the map, GPS №136 offers the LOWEST Price Per Liter, just $7. For bulk orders, Contact HELLBRAZER or VAILLYRP.",
-    "Limited time discounts at Gas Station GPS №136 $7 Per Liter, cheap Repair Kits and Canisters! Do not miss out! Contact: (HELLBRAZER or VAILLYRP)",
+    "Listen up riders! Need quality fuel? Visit Gas Station Ôäû21 (GPS Ôäû127) fuel up, grab kits, and get back in motion. PH: 22-64-883.",
+    "Running low? Dont push that luck. Visit Gas station Ôäû21 (GPS Ôäû127) for high quality fuel and canisters. Contact: 22-64-883.",
+    "Renegades Gas Station, in the middle of the map, GPS Ôäû136 offers the LOWEST Price Per Liter, just $7. For bulk orders, Contact HELLBRAZER or VAILLYRP.",
+    "Limited time discounts at Gas Station GPS Ôäû136 $7 Per Liter, cheap Repair Kits and Canisters! Do not miss out! Contact: (HELLBRAZER or VAILLYRP)",
     "OILARC Gas Station No23 (GPS 137) Near Hospital of Sandy Shores, Providing 50% discount on Fuel and everything. For bulk orders mails (rupoj).",
     "Running low on fuel near Sandy shoes? Visit OILARC Gas station No23 (GPS 137) Providing fuel at $5 Per litre. For bulk orders mails (rupoj).",
     
     // Parking Templates
-    "With our parking number 1 (GPS №51)  we are offering 1000 per place! come take your car and dont miss this opportunity.",
-    "Party lovers unite! Go to Parking №2 - where events shine, parties pop and the beach view beats your dance moves.",
-    "Car fans unite! Go to Parking №2 - where engines roar, lights glow and every ride turns heads at the hottest beach meet.",
-    "Are you afraid of scratching your vehicles? Do not be afraid, use Ekip Parking Lot (GPS №53)",
-    "Unique Comfort and Security Only Book at EKIP Parking (GPS№53), Guarantee Luxury Care for Your Vehicle!",
-    "Are you afraid of scratching your vehicles? Dont be afraid, use Ekip Parking Lot (GPS №54)",
-    "Unique Comfort and Security Only Book at EKIP Parking (GPS №54), Guarantee Luxury Care for Your Vehicle!",
-    "Take your car from the garage, drive and park in luxury. Parking №5 (GPS №55) VIP style and security for $1.000",
-    "Dont look for a parking space in the crowd! Your car is safe with Parking №5 (GPS №55). Regular spaces and pocket friendly prices await you.",
-    "Tired of paying $15,000 to rent? Park 6 (GPS №56) is located under Vinewood. Only $1,000 to park your car for the whole day.",
+    "With our parking number 1 (GPS Ôäû51)  we are offering 1000 per place! come take your car and dont miss this opportunity.",
+    "Party lovers unite! Go to Parking Ôäû2 - where events shine, parties pop and the beach view beats your dance moves.",
+    "Car fans unite! Go to Parking Ôäû2 - where engines roar, lights glow and every ride turns heads at the hottest beach meet.",
+    "Are you afraid of scratching your vehicles? Do not be afraid, use Ekip Parking Lot (GPS Ôäû53)",
+    "Unique Comfort and Security Only Book at EKIP Parking (GPSÔäû53), Guarantee Luxury Care for Your Vehicle!",
+    "Are you afraid of scratching your vehicles? Dont be afraid, use Ekip Parking Lot (GPS Ôäû54)",
+    "Unique Comfort and Security Only Book at EKIP Parking (GPS Ôäû54), Guarantee Luxury Care for Your Vehicle!",
+    "Take your car from the garage, drive and park in luxury. Parking Ôäû5 (GPS Ôäû55) VIP style and security for $1.000",
+    "Dont look for a parking space in the crowd! Your car is safe with Parking Ôäû5 (GPS Ôäû55). Regular spaces and pocket friendly prices await you.",
+    "Tired of paying $15,000 to rent? Park 6 (GPS Ôäû56) is located under Vinewood. Only $1,000 to park your car for the whole day.",
     "Are you looking for safe, hygienic and economical parking? (No56) You are in the right place!",
-    "Looking for parking lots? Parking (GPS №57) is now offering 90% off and is only $1.000 per day.",
-    "Dont forget to visit us at Eileen Parking (GPS №57). Customer satisfaction is our top priority.",
-    "Parking №8 (GPS №58) Near City mall in the middle of the city is offering the cheapest rates in the city. Book your space today for only $1.000!",
-    "Parking №8 (GPS №58) Near City mall middle of the city is the best and safest place to park in city. Visit us today for cheap parking!",
-    "Secure the cheapest Parking №10 (GPS №79) in the city Center for just $1.000 each day. Prime location near beach market, affordable rates.",
-    "Looking for a parking? Limited offer, dont miss out just 1000$ at Playboys Parking! (GPS №79)",
-    "Dont look for a parking space in the crowd! Your car is safe with Parking №11 (GPS №80). Regular spaces and pocket friendly prices await you.",
-    "Unique Comfort and Security Only  Book at EKIP Parking (GPS №80), Guarantee Luxury Care for Your Vehicle!",
-    "Are you bored of paying $15.000 for renting? Parking 12 (GPS №81) is located in the center of the city Just $1.000 to have your car parked all day.",
+    "Looking for parking lots? Parking (GPS Ôäû57) is now offering 90% off and is only $1.000 per day.",
+    "Dont forget to visit us at Eileen Parking (GPS Ôäû57). Customer satisfaction is our top priority.",
+    "Parking Ôäû8 (GPS Ôäû58) Near City mall in the middle of the city is offering the cheapest rates in the city. Book your space today for only $1.000!",
+    "Parking Ôäû8 (GPS Ôäû58) Near City mall middle of the city is the best and safest place to park in city. Visit us today for cheap parking!",
+    "Secure the cheapest Parking Ôäû10 (GPS Ôäû79) in the city Center for just $1.000 each day. Prime location near beach market, affordable rates.",
+    "Looking for a parking? Limited offer, dont miss out just 1000$ at Playboys Parking! (GPS Ôäû79)",
+    "Dont look for a parking space in the crowd! Your car is safe with Parking Ôäû11 (GPS Ôäû80). Regular spaces and pocket friendly prices await you.",
+    "Unique Comfort and Security Only  Book at EKIP Parking (GPS Ôäû80), Guarantee Luxury Care for Your Vehicle!",
+    "Are you bored of paying $15.000 for renting? Parking 12 (GPS Ôäû81) is located in the center of the city Just $1.000 to have your car parked all day.",
     "Tired of your car not being where you left it? Use Parking 12 (GPS 81) For a very cheap price!",
     "Some security can only be found at Remix Parking Lot Guarding, cleaning and security. 50% cash back when dealing with us Contact me via (zekomyth)",
-    "Unique Comfort and Security Only  Book at Remix Parking (GPS №82), Guarantee Luxury Care for Your Vehicle! 50% cash back Contact me via (zekomyth)",
-    "Are you afraid of scratching your vehicles? Dont be afraid, use Ekip Parking Lot (GPS №83).",
-    "Unique Comfort and Security Only Book at EKIP Parking (GPS №83), Guarantee Luxury Care for Your Vehicle!",
-    "Are you bored of paying $15.000 for renting? Parking 15 (GPS №84) is located in the middle of the beach. Just $5.000 to have your car parked all day.",
-    "Are you bored of paying $15.000 for renting? Parking 15 (GPS №84) is located in the middle of the beach. Just $1.000 to have your car parked all day.",
-    "Parking space №16 (GPS №85) attached to the Train Station Apartment, is offering the cheapest rates in the city. Book your space today for only $1.000",
-    "Parking №16 (GPS №85) attached to the Train Station Apartment is the best and safest place to park in city. Visit us today for cheap parking!",
-    "Secure the cheapest Parking №17 (GPS №101) in the city Center for just $1.000 each day. Prime location, affordable rates. Reserve your spot now!",
-    "Homeless? Secure parking (GPS №101) for your car! Reserve now, park with ease. The citys cheapest at $1.000 a day!",
-    "Tired of circling the block in search of parking? Welcome to Parking (GPS №135), your hassle solution for suitable and secure parking, at $1.000 only!",
-    "Rockford Parking №18. (GPS №135). Just $1.000 per day near Hotel and LI. Offer for completing jobs task! Just contact me. (kosa.123).",
+    "Unique Comfort and Security Only  Book at Remix Parking (GPS Ôäû82), Guarantee Luxury Care for Your Vehicle! 50% cash back Contact me via (zekomyth)",
+    "Are you afraid of scratching your vehicles? Dont be afraid, use Ekip Parking Lot (GPS Ôäû83).",
+    "Unique Comfort and Security Only Book at EKIP Parking (GPS Ôäû83), Guarantee Luxury Care for Your Vehicle!",
+    "Are you bored of paying $15.000 for renting? Parking 15 (GPS Ôäû84) is located in the middle of the beach. Just $5.000 to have your car parked all day.",
+    "Are you bored of paying $15.000 for renting? Parking 15 (GPS Ôäû84) is located in the middle of the beach. Just $1.000 to have your car parked all day.",
+    "Parking space Ôäû16 (GPS Ôäû85) attached to the Train Station Apartment, is offering the cheapest rates in the city. Book your space today for only $1.000",
+    "Parking Ôäû16 (GPS Ôäû85) attached to the Train Station Apartment is the best and safest place to park in city. Visit us today for cheap parking!",
+    "Secure the cheapest Parking Ôäû17 (GPS Ôäû101) in the city Center for just $1.000 each day. Prime location, affordable rates. Reserve your spot now!",
+    "Homeless? Secure parking (GPS Ôäû101) for your car! Reserve now, park with ease. The citys cheapest at $1.000 a day!",
+    "Tired of circling the block in search of parking? Welcome to Parking (GPS Ôäû135), your hassle solution for suitable and secure parking, at $1.000 only!",
+    "Rockford Parking Ôäû18. (GPS Ôäû135). Just $1.000 per day near Hotel and LI. Offer for completing jobs task! Just contact me. (kosa.123).",
     
     // Family Templates
-    "Seeking Power, Unity and Legacy? Uchiha Clan provides Great Vibes, Strong Bonds and Endless Fun. Join us at House №55 or Contact (maxuchihax).",
-    "Looking for Strength, Loyalty and Family? Uchiha Clan offers Unity, Fun and True Respect. Join us at House №55 or Contact (maxuchihax).",
-    "Join Kingdom family at House №258 Provides Best bonus, supercars, helis and supportive staff. To join call 77-66-888 or mail king.kaushik",
-    "Kingdom family is open at House №258. Providing high bonus, best cars, helis and helpful team. Ph. 77-66-888 or mails king.kaushik",
-    "The Deluca Cartel is looking for skilled individuals, A family built on trust, unity and respect. Join Deluca Cartel at house №536 today!",
-    "Looking for a strong family with loyal people and skilled individuals? Join Deluca Cartel at house №536 today, become a part of something powerful!",
+    "Seeking Power, Unity and Legacy? Uchiha Clan provides Great Vibes, Strong Bonds and Endless Fun. Join us at House Ôäû55 or Contact (maxuchihax).",
+    "Looking for Strength, Loyalty and Family? Uchiha Clan offers Unity, Fun and True Respect. Join us at House Ôäû55 or Contact (maxuchihax).",
+    "Join Kingdom family at House Ôäû258 Provides Best bonus, supercars, helis and supportive staff. To join call 77-66-888 or mail king.kaushik",
+    "Kingdom family is open at House Ôäû258. Providing high bonus, best cars, helis and helpful team. Ph. 77-66-888 or mails king.kaushik",
+    "The Deluca Cartel is looking for skilled individuals, A family built on trust, unity and respect. Join Deluca Cartel at house Ôäû536 today!",
+    "Looking for a strong family with loyal people and skilled individuals? Join Deluca Cartel at house Ôäû536 today, become a part of something powerful!",
     
     // Clothing Shop Templates
     "Upgrade your style this week at Clothing Shop n1 (GPS 31) ! Special offers, lowest prices, and exclusive outfits. Don t miss out!",
@@ -3191,28 +2961,28 @@ const OFFICIAL_TEMPLATES = [
     "Clothing store 2 (No.32) is offering 50% discount and more than 50% discount for bulk order message me in email (rupoj) or contact 1181112",
     "Best style, best prices at TrendZone (Shop 3 on map). Look great for less! PH 6326759 MAILS nzoo.x.",
     "Upgrade your wardrobe at Fashion Point (Shop 3 on map). Hot styles, low prices! PH 6326759 MAILS nzoo.x.",
-    "Clothing Shop №4 at (GPS №74) provides quality clothes at wholesale rates. Get 50% off and more on bulk orders. Ph. 66-60-333. Mails (abirsikder70)",
-    "Clothing Shop №4 at (GPS №74) provides clothes at wholesale rates. Enjoy 50% off sales, best for bulk orders. Ph.66-60-333 or mail (abirsikder70)",
+    "Clothing Shop Ôäû4 at (GPS Ôäû74) provides quality clothes at wholesale rates. Get 50% off and more on bulk orders. Ph. 66-60-333. Mails (abirsikder70)",
+    "Clothing Shop Ôäû4 at (GPS Ôäû74) provides clothes at wholesale rates. Enjoy 50% off sales, best for bulk orders. Ph.66-60-333 or mail (abirsikder70)",
     "Come to our Store No5 (GPS 75) to dress stylishly and affordably. For bulk purchases, contact me via email at (halilbeyy45).",
     "For stylish and affordable clothes, visit No5 (GPS 75) and contact us via email (halilbeyy45)",
     "Come to our Store No7 (GPS 122) to dress stylishly and affordably. For bulk purchases, contact me via email at (halilbeyy45).",
     "For stylish and affordable clothes, visit No7 (GPS 122) and contact us via email (halilbeyy45).",
     "Are You Looking For Bulk Clothes For Families? Come Contact Clothing Store 6 ( GPS 126), At Cheapest Price You Cant Imagine!",
     "You Want Best Quality Clothes, With Cheapest Price You Cant Imagine? Come Clothing Shop 6 (GPS 126), And Get Maximum Discount And Cashback!",
-    "Getting bored with old outfits? Visit Troy Collection Shop №142 for unique and branded clothing at 70% discount!",
-    "If boys are not looking at you! Visit Troy Collection Shop №142 at 70% discount for all the clothing.",
-    "Everyone deserves a great look! Visit to Veneta Clothing (№143) and get yourself a great outfit at a 50% discount! We are located at near Postal.",
-    "Veneta Clothing Store (№143) has the lowest prices, the latest, high quality clothes and is always fully stocked! for family bulk orders contact us.",
-    "Need clothes for your family at the best price? Shop at Moonlight Clothing Shop (GPS №144) for unbeatable deals! Contact (lkaan5) now!",
-    "Clothing store №144 has lowest price at 50% Discount for high quality clothes and is always fully stocked! Contact (lkaan5) now!",
+    "Getting bored with old outfits? Visit Troy Collection Shop Ôäû142 for unique and branded clothing at 70% discount!",
+    "If boys are not looking at you! Visit Troy Collection Shop Ôäû142 at 70% discount for all the clothing.",
+    "Everyone deserves a great look! Visit to Veneta Clothing (Ôäû143) and get yourself a great outfit at a 50% discount! We are located at near Postal.",
+    "Veneta Clothing Store (Ôäû143) has the lowest prices, the latest, high quality clothes and is always fully stocked! for family bulk orders contact us.",
+    "Need clothes for your family at the best price? Shop at Moonlight Clothing Shop (GPS Ôäû144) for unbeatable deals! Contact (lkaan5) now!",
+    "Clothing store Ôäû144 has lowest price at 50% Discount for high quality clothes and is always fully stocked! Contact (lkaan5) now!",
     "Upgrade your style at LAAALO Clothing Shop No12 (GPS 145) ! Special offers and exclusive outfits. For bulk orders, contact me via email at (xlaaalo).",
-    "LIMITED TIME! Clothing Shop №12 (GPS 145) 50% OFF EVERYTHING - best deals in the city! Pull up now before its gone! For Bulk orders contact (xlaaalo)",
-    "Clothing Shop GPS №146 (Shop No.13 on map). Perfect for families and daily wear. Bulk orders available. PH: 98-54-268 or email (sachin2309).",
-    "Hurry up! 50% discount at Clothing Shop (№.13) best styles at great prices. Visit now before the offer ends. Contact 98-54-268 or email (sachin2309).",
-    "Los Santos Clothing Store (GPS №271) is now offering 50% Off in all products! Located inside the biggest mall in the city.",
-    "Dont forget once again the crazy deals of Los Santos Clothing Store (GPS №271). Now offering 50% Off in all products!",
-    "Level up your style for less. Clothing Shop №2 (GPS №275) offers top looks low prices and new drops daily. Visit us today or call (26-96-969).",
-    "Fresh styles low prices daily. Visit us today for best deals at Clothing Shop №2 (GPS №275) contact me via mails at (azarel.11) or call (26-96-969)."
+    "LIMITED TIME! Clothing Shop Ôäû12 (GPS 145) 50% OFF EVERYTHING - best deals in the city! Pull up now before its gone! For Bulk orders contact (xlaaalo)",
+    "Clothing Shop GPS Ôäû146 (Shop No.13 on map). Perfect for families and daily wear. Bulk orders available. PH: 98-54-268 or email (sachin2309).",
+    "Hurry up! 50% discount at Clothing Shop (Ôäû.13) best styles at great prices. Visit now before the offer ends. Contact 98-54-268 or email (sachin2309).",
+    "Los Santos Clothing Store (GPS Ôäû271) is now offering 50% Off in all products! Located inside the biggest mall in the city.",
+    "Dont forget once again the crazy deals of Los Santos Clothing Store (GPS Ôäû271). Now offering 50% Off in all products!",
+    "Level up your style for less. Clothing Shop Ôäû2 (GPS Ôäû275) offers top looks low prices and new drops daily. Visit us today or call (26-96-969).",
+    "Fresh styles low prices daily. Visit us today for best deals at Clothing Shop Ôäû2 (GPS Ôäû275) contact me via mails at (azarel.11) or call (26-96-969)."
 ];
 
 function getAmmunitionTemplate(shopNum, tempIdx) {
@@ -3529,212 +3299,22 @@ function isTemplateAd(text) {
     return getClosestMatch(cleanText, combinedTemplates, 0.65) !== null;
 }
 
-function getCanonicalKey(text) {
-    if (!text) return "";
-    return text.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function stripPricesFromText(text) {
-    if (!text) return "";
-    return text
-        .replace(/\$\s*[\d.,]+\s*(?:k|m|mil|million|billion|b|trillion)?/gi, "")
-        .replace(/\b[\d.,]+\s*(?:k|m|mil|million|billion|b|trillion)\b/gi, "")
-        .replace(/\b(?:price|budget)\s*[:.]?\s*(?:negotiable|nego)?\.?\s*/gi, "")
-        .replace(/\b\d{2,}\b/g, "")
-        .replace(/\s+/g, " ").trim();
-}
-
-function getSemanticCanonicalKey(text) {
-    if (!text) return "";
-    return stripPricesFromText(text).toLowerCase().replace(/[^a-z]/g, "");
-}
-
-function extractTranslationValue(val) {
-    if (!val) return val;
-    if (val.startsWith("{") && val.endsWith("}")) {
-        try {
-            const parsed = JSON.parse(val);
-            return parsed.text || val;
-        } catch (e) {}
-    }
-    return val;
-}
-
-function findTrainedMapping(rawText) {
-    if (!rawText || !customTranslations) return { found: false };
-    
-    const trimmedRaw = rawText.replace(/\s+/g, ' ').trim().toLowerCase();
-    
-    // Tier 1: Exact Match (spaces normalized)
-    if (customTranslations[trimmedRaw]) {
-        return {
-            found: true,
-            fixedText: extractTranslationValue(customTranslations[trimmedRaw]),
-            matchType: "exact",
-            originalKey: trimmedRaw
-        };
-    }
-    
-    const entries = Object.entries(customTranslations);
-    if (entries.length === 0) return { found: false };
-    
-    // Tier 2: Canonical Match (ignores space/punctuation shifts, keeps numbers)
-    const canonicalInput = getCanonicalKey(rawText);
-    if (canonicalInput) {
-        for (const [key, val] of entries) {
-            if (getCanonicalKey(key) === canonicalInput) {
-                return {
-                    found: true,
-                    fixedText: extractTranslationValue(val),
-                    matchType: "canonical",
-                    originalKey: key
-                };
-            }
-        }
-    }
-    
-    // Tier 3: Semantic Canonical Match (strips prices/numbers, then compares core words)
-    const semanticInput = getSemanticCanonicalKey(rawText);
-    if (semanticInput && semanticInput.length >= 4) {
-        for (const [key, val] of entries) {
-            const semanticKey = getSemanticCanonicalKey(key);
-            if (semanticKey === semanticInput) {
-                return {
-                    found: true,
-                    fixedText: extractTranslationValue(val),
-                    matchType: "semantic",
-                    originalKey: key
-                };
-            }
-        }
-    }
-    
-    // Tier 4: Fuzzy Match (Levenshtein on price-stripped + canonical forms)
-    let bestMatch = null;
-    let highestSimilarity = 0;
-    
-    const strippedInput = stripPricesFromText(rawText).toLowerCase().replace(/\s+/g, ' ').trim();
-    
-    for (const [key, val] of entries) {
-        const strippedKey = stripPricesFromText(key).toLowerCase().replace(/\s+/g, ' ').trim();
-        
-        // Compare stripped versions (price-unaware)
-        const dist = levenshteinDistance(strippedInput, strippedKey);
-        const maxLength = Math.max(strippedInput.length, strippedKey.length);
-        const similarity = maxLength > 0 ? (1 - dist / maxLength) : 0;
-        
-        if (similarity >= 0.75 && similarity > highestSimilarity) {
-            highestSimilarity = similarity;
-            bestMatch = {
-                found: true,
-                fixedText: extractTranslationValue(val),
-                matchType: "fuzzy",
-                similarity: Math.round(similarity * 100),
-                originalKey: key
-            };
-        }
-    }
-    
-    if (bestMatch) {
-        return bestMatch;
-    }
-    
-    return { found: false };
-}
-
-function validateTrainingAction(rawTextVal, fixedTextVal, onProceed) {
-    if (!rawTextVal || !fixedTextVal) return;
-
-    const trimmedRaw = rawTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
-    const trimmedFixed = fixedTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
-
-    // 1. Identity Prevention
-    if (trimmedRaw === trimmedFixed) {
-        showCustomNotification("The ad is already valid as-is. Training an identity mapping is unnecessary.", "warning");
-        return;
-    }
-
-    // 2. Input Quality Check
-    const alphaOnly = rawTextVal.replace(/[^a-zA-Z]/g, "");
-    if (rawTextVal.trim().length < 4 || alphaOnly.length < 2) {
-        showCustomNotification("This input is too short or lacks readable text, making it unsuitable for training.", "warning");
-        return;
-    }
-
-    // 3. Duplicate / Near-Duplicate checks
-    const match = findTrainedMapping(rawTextVal);
-    if (match.found) {
-        const trimmedExistingFixed = match.fixedText.replace(/\s+/g, ' ').trim().toLowerCase();
-        if (trimmedExistingFixed === trimmedFixed) {
-            showCustomNotification(`A similar mapping already exists: "${match.originalKey}" -> "${match.fixedText}". Duplicate training is blocked.`, "warning");
-            return;
-        } else {
-            // Different correction - prompt to overwrite
-            showCustomConfirmDialog(
-                `A similar mapping already exists with a different correction:\n\nOriginal: "${match.originalKey}"\nExisting Correction: "${match.fixedText}"\n\nDo you want to overwrite it with the new correction?\nNew Correction: "${fixedTextVal}"`,
-                () => {
-                    // Let's delete the old key if it is different, to keep DB clean, and then proceed.
-                    if (match.originalKey !== trimmedRaw) {
-                        delete customTranslations[match.originalKey];
-                    }
-                    onProceed();
-                }
-            );
-            return;
-        }
-    }
-
-    // 4. Default Rule Coverage check
-    const tempTranslations = customTranslations;
-    customTranslations = {};
-    let alreadyCorrect = false;
-    try {
-        const mockCtx = {
-            raw: rawTextVal,
-            logs: [],
-            finalText: "",
-            status: "pending",
-            category: "Other"
-        };
-        runValidationPipeline(mockCtx, "auto");
-        if (mockCtx.status === "passed" && mockCtx.finalText.replace(/\s+/g, ' ').trim().toLowerCase() === trimmedFixed) {
-            alreadyCorrect = true;
-        }
-    } catch(e) {
-        console.error("Default rule redundancy check failed:", e);
-    } finally {
-        customTranslations = tempTranslations;
-    }
-
-    if (alreadyCorrect) {
-        showCustomConfirmDialog(
-            `Warning: This ad is already correctly handled by standard policy rules. Custom training is redundant.\n\nDo you still want to proceed with custom training?`,
-            onProceed
-        );
-        return;
-    }
-
-    // If all checks pass, show normal confirm dialog
-    showCustomConfirmDialog(
-        `Train translation mapping for:\n\nOriginal: "${rawTextVal}"\n\nCorrected: "${fixedTextVal}"?`,
-        onProceed
-    );
-}
-
 function runValidationPipeline(ctx, override) {
     // 0. Advanced direct translation mapping matching (Advanced Learning Method)
-    const match = findTrainedMapping(ctx.raw);
-    if (match.found) {
-        let logMsg = "";
-        if (match.matchType === "exact") {
-            logMsg = `Matched trained translation: <strong>${match.fixedText}</strong>`;
-        } else if (match.matchType === "canonical") {
-            logMsg = `Matched trained translation (normalized): <strong>${match.fixedText}</strong>`;
-        } else if (match.matchType === "fuzzy") {
-            logMsg = `Matched trained translation (fuzzy, ${match.similarity}% similarity): <strong>${match.fixedText}</strong>`;
+    const trimmedRaw = ctx.raw.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (customTranslations[trimmedRaw]) {
+        const val = customTranslations[trimmedRaw];
+        let fixedText = val;
+        if (val && val.startsWith("{") && val.endsWith("}")) {
+            try {
+                const parsed = JSON.parse(val);
+                if (parsed && parsed.text) {
+                    fixedText = parsed.text;
+                }
+            } catch (e) {}
         }
-        ctx.logs.push({ text: logMsg, type: 'policy' });
-        ctx.finalText = match.fixedText;
+        ctx.logs.push({ text: `Matched trained translation: <strong>${fixedText}</strong>`, type: 'policy' });
+        ctx.finalText = fixedText;
         ctx.category = override === "auto" ? detectCategory(ctx.finalText) : override;
         ctx.status = "passed";
         
@@ -5618,7 +5198,7 @@ function formatBusinessesAd(adBody, action, ctx) {
             cleanBody = cleanBody.replace(/\bplantation\b/gi, targetName);
             body = cleanBody.replace(/\s+/g, " ").trim();
         } else {
-            // Strip intermediate "business" keyword if number is present (e.g. "Car sharing business no2" -> "Car sharing №2")
+            // Strip intermediate "business" keyword if number is present (e.g. "Car sharing business no2" -> "Car sharing Ôäû2")
             const matchedBizEscaped = escapeRegExp(matchedBiz);
             const bizWithNumRegex = new RegExp(`\\b(${matchedBizEscaped})\\s+business\\s*(?:no\\.?|number|num\\.?|#|\\u2116|mp|n\\.?|\\-)?\\s*(\\d+)\\b`, 'i');
             body = body.replace(bizWithNumRegex, (match, biz, num) => {
@@ -5635,7 +5215,7 @@ function formatBusinessesAd(adBody, action, ctx) {
                 }
             }
             if (numMatch && !isBedsSpec) {
-                // Business with number -> replace with "MatchedBiz №Num" and do NOT append "business"
+                // Business with number -> replace with "MatchedBiz ÔäûNum" and do NOT append "business"
                 const numVal = parseInt(numMatch[2]);
                 body = body.replace(numMatch[0], `${matchedBiz} \u2116${numVal}`);
                 ctx.logs.push({ text: `Formatted business designation to <strong>${matchedBiz} \u2116${numVal}</strong>`, type: 'correction' });
@@ -6610,7 +6190,7 @@ function fuzzyCorrectItemName(rawItem, ctx) {
         // Check for type numbers (e.g. "luminous stone 1 and 2") FIRST, before parseQuantity
         const stoneTypeNums = parseMultipleTypes(rawItem.replace(/^\d+\s+/, ""));
         if (stoneTypeNums) {
-            // When type is detected, no qty prefix — just return the typed name
+            // When type is detected, no qty prefix ÔÇö just return the typed name
             let isPlural = stoneTypeNums.includes("and") || stoneTypeNums.includes(",");
             let name = "luminous stones";
             return `${name} of type ${stoneTypeNums}`;
@@ -7256,105 +6836,17 @@ function updateUI(ctx) {
     });
 }
 
-// Inline Submit Bug Button
-function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
-    return new Promise((resolve) => {
-        const container = document.createElement("div");
-        container.style.position = "absolute";
-        container.style.left = "-9999px";
-        container.style.top = "0";
-        container.style.width = "520px";
-        container.style.padding = "24px";
-        container.style.backgroundColor = "#0a0b10";
-        container.style.color = "#f5f5f7";
-        container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
-        container.style.boxSizing = "border-box";
-        container.style.borderRadius = "12px";
-        container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
-        container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
-
-        container.innerHTML = `
-            <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
-                <span style="color: #ff453a;">●</span> LifeInvader False-Rejection Report
-            </h2>
-            
-            <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
-                A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
-            </p>
-            
-            <!-- Box 1: What the Editor Typed (Raw Input) -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                    What the Editor Typed
-                </div>
-                <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(rawAdText)}</div>
-            </div>
-            
-            <!-- Box 2: What the System Gave (Processed Output) -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
-                    What the System Returned / Expected Correction
-                </div>
-                <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${escapeHTML(rawAdText)}"<br>Rejection Reason: "${escapeHTML(rejectionReasonText)}"</div>
-            </div>
-            
-            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
-            <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
-                This is an automated notification from your LifeInvader Ads Assist Web App.
-            </p>
-        `;
-
-        document.body.appendChild(container);
-
-        setTimeout(() => {
-            if (window.html2canvas) {
-                window.html2canvas(container, {
-                    backgroundColor: "#0a0b10",
-                    scale: 2,
-                    logging: false,
-                    useCORS: true
-                }).then((canvas) => {
-                    const dataUrl = canvas.toDataURL("image/png");
-                    document.body.removeChild(container);
-                    resolve(dataUrl);
-                }).catch((err) => {
-                    console.error("html2canvas generation error:", err);
-                    document.body.removeChild(container);
-                    resolve("");
-                });
-            } else {
-                console.warn("html2canvas is not loaded");
-                document.body.removeChild(container);
-                resolve("");
-            }
-        }, 100);
-    });
-}
-
 /* ==========================================================================
    Helper Routines
    ========================================================================== */
 
 function escapeHTML(str) {
-    if (str === null || str === undefined) return "";
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-async function hashPasscode(passcode) {
-    if (!passcode) return "";
-    try {
-        const msgBuffer = new TextEncoder().encode(passcode);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) {
-        console.error("SHA-256 hashing failed:", e);
-        return "";
-    }
 }
 
 /* ==========================================================================
@@ -7584,8 +7076,8 @@ function initFloatingClipboard() {
                             </div>
                             <div class="processed-action-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 6px;">
                                 <button id="pip-btn-copy" class="pip-uniform-btn btn-copy" disabled style="flex: 1.2;"><i class="fa-solid fa-copy"></i> Copy</button>
-                                <button id="pip-btn-ai-assist" class="btn-spark-ai magic-mode" style="display: none;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Spark</button>
-                                <div id="pip-category-badge" class="pip-category-badge">—</div>
+                                <button id="pip-btn-ai-assist" class="pip-uniform-btn" style="flex: 1; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa; display: none;" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Spark</button>
+                                <div id="pip-category-badge" class="pip-category-badge">ÔÇö</div>
                                 <button id="pip-btn-submit-bug-inline" class="pip-uniform-btn btn-action glow-red hide" style="flex: 1; max-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-weight: 700; height: 28px; text-transform: uppercase; font-size: 10px; padding: 4px 10px; margin-top: 0;"><i class="fa-solid fa-paper-plane"></i> Bug</button>
                             </div>
                         </div>
@@ -7697,14 +7189,14 @@ function initFloatingClipboard() {
                 const noteWarning = document.getElementById("pip-overlay-note-warning");
 
                 if (badge) badge.innerHTML = `<span class="pulse-dot" style="background-color: #c084fc; box-shadow: 0 0 8px #c084fc;"></span>Pro Mode Active`;
-                if (text) text.textContent = `Designed for experienced editors who can identify issues instantly and work with minimal guidance. 🚀`;
+                if (text) text.textContent = `Designed for experienced editors who can identify issues instantly and work with minimal guidance. ­ƒÜÇ`;
                 if (noteIcon) {
                     noteIcon.className = "fa-solid fa-sliders";
                     noteIcon.style.color = "#c084fc";
                 }
                 if (noteTitle) noteTitle.textContent = "Pro Mode Guidelines";
-                if (noteLead) noteLead.textContent = "Designed for experienced editors who can identify issues instantly and work with minimal guidance. 🚀";
-                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> While advanced processing is enabled, you're still responsible for reviewing the final advertisement before publishing. 🚀`;
+                if (noteLead) noteLead.textContent = "Designed for experienced editors who can identify issues instantly and work with minimal guidance. ­ƒÜÇ";
+                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> While advanced processing is enabled, you're still responsible for reviewing the final advertisement before publishing. ­ƒÜÇ`;
 
                 // Add pro styles and stats to main window active overlay card
                 const overlayCard = document.querySelector(".pip-overlay-card");
@@ -7729,18 +7221,6 @@ function initFloatingClipboard() {
                     `;
                 }
 
-                // Switch Spark button colors to Pro Mode theme
-                const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
-                if (pipBtnAiAssist) {
-                    pipBtnAiAssist.classList.remove("magic-mode");
-                    pipBtnAiAssist.classList.add("pro-mode");
-                }
-                const mainBtn = document.getElementById("btn-gemini-assist");
-                if (mainBtn) {
-                    mainBtn.classList.remove("magic-mode");
-                    mainBtn.classList.add("pro-mode");
-                }
-
                 try {
                     pipWindow.resizeTo(420, 360);
                 } catch (err) {
@@ -7760,18 +7240,6 @@ function initFloatingClipboard() {
                     pipCompactToggle.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> PRO MODE`;
                 }
 
-                // Switch Spark button colors to Magic Mode theme
-                const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
-                if (pipBtnAiAssist) {
-                    pipBtnAiAssist.classList.remove("pro-mode");
-                    pipBtnAiAssist.classList.add("magic-mode");
-                }
-                const mainBtn = document.getElementById("btn-gemini-assist");
-                if (mainBtn) {
-                    mainBtn.classList.remove("pro-mode");
-                    mainBtn.classList.add("magic-mode");
-                }
-
                 // Restore active overlay text in main window to reflect Magic Mode
                 const badge = document.getElementById("pip-overlay-badge");
                 const text = document.getElementById("pip-overlay-text");
@@ -7788,7 +7256,7 @@ function initFloatingClipboard() {
                 }
                 if (noteTitle) noteTitle.textContent = "Editor's Career Guide";
                 if (noteLead) noteLead.innerHTML = `Everyone makes mistakes, which is why it's always a good idea to review your advertisement <span style="color: #30d158; font-weight: 700;">two</span> or <span style="color: #ff453a; font-weight: 700;">three times</span> before publishing.`;
-                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> This website is here to help, but any verbal warnings, strikes, or penalties received from a published advertisement are ultimately the responsibility of the publisher. 🚀`;
+                if (noteWarning) noteWarning.innerHTML = `<i id="pip-overlay-note-warning-icon" class="fa-solid fa-circle-exclamation"></i> This website is here to help, but any verbal warnings, strikes, or penalties received from a published advertisement are ultimately the responsibility of the publisher. ­ƒÜÇ`;
 
                 // Remove pro styles and clear stats from main window active overlay card
                 const overlayCard = document.querySelector(".pip-overlay-card");
@@ -8020,7 +7488,7 @@ function initFloatingClipboard() {
                             pipCatBadge.style.boxShadow = "inset 0 0 6px rgba(255, 255, 255, 0.02)";
                         }
                     } else {
-                        pipCatBadge.textContent = "—";
+                        pipCatBadge.textContent = "ÔÇö";
                         pipCatBadge.style.background = "rgba(255, 255, 255, 0.05)";
                         pipCatBadge.style.borderColor = "rgba(255, 255, 255, 0.12)";
                         pipCatBadge.style.color = "rgba(255, 255, 255, 0.3)";
@@ -8401,11 +7869,7 @@ function initFloatingClipboard() {
             const pipBtnAiAssist = pipWindow.document.getElementById("pip-btn-ai-assist");
             if (pipBtnAiAssist) {
                 setupHoldToTriggerButton(pipBtnAiAssist, `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`, () => {
-                    if (pipBtnAiAssist.dataset.state === "train") {
-                        submitSparkTraining("pip");
-                    } else {
-                        triggerLiveGeminiAssist();
-                    }
+                    triggerLiveGeminiAssist();
                 });
             }
             updateAIAssistButtonsVisibility();
@@ -8467,346 +7931,32 @@ function initFloatingClipboard() {
     });
 }
 
-const FALLBACK_GEMINI_KEY = ["AIzaSyC", "4sbWW3XEW", "iadIl6Nooh", "I0NlKezpur", "z54"].join("");
+/* ==========================================================================
+   Access Control Gate & Bug Reporting Logic
+   ========================================================================== */
 
 const CONFIG = {
-    BACKEND_TYPE: 'firebase',
-    GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec',
-    FIREBASE: {
-        apiKey: localStorage.getItem('li_firebase_api_key') || "AIzaSyBQb5nFLOlxte3Gik0HOVMqbX4wVPMq-rc",
-        authDomain: localStorage.getItem('li_firebase_auth_domain') || "lifeinvdereditor.firebaseapp.com",
-        projectId: localStorage.getItem('li_firebase_project_id') || "lifeinvdereditor",
-        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "lifeinvdereditor.firebasestorage.app",
-        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "327923249616",
-        appId: localStorage.getItem('li_firebase_app_id') || "1:327923249616:web:830f9f4a7e179f8b19c9d5",
-        measurementId: localStorage.getItem('li_firebase_measurement_id') || "G-XWT3LNR438"
-    }
+    GOOGLE_SCRIPT_URL: (() => {
+        const stored = localStorage.getItem('li_google_script_url');
+        const defaultUrl = 'https://script.google.com/macros/s/AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw/exec';
+        if (!stored || !stored.includes('AKfycbzltrNArt1NdXTLIvwoU0gs8BCBPY54OFBPKKKlR12I056Qzyxj9o86PIDm5IxdYZrGqw')) {
+            localStorage.setItem('li_google_script_url', defaultUrl);
+            return defaultUrl;
+        }
+        return stored;
+    })()
 };
-
-let fbApp = null;
-let fbDb = null;
-
-function getFirebaseDb() {
-    if (!window.firebase) {
-        throw new Error("Firebase SDK not loaded. Please make sure script tags are loaded.");
-    }
-    if (!CONFIG.FIREBASE.apiKey || !CONFIG.FIREBASE.projectId) {
-        throw new Error("Firebase configurations are missing.");
-    }
-    if (!fbApp) {
-        fbApp = firebase.initializeApp(CONFIG.FIREBASE);
-        fbDb = firebase.firestore();
-    }
-    return fbDb;
-}
-
-function runWithTimeout(promise, ms = 6000) {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Database operation timed out. Please check your network connection.")), ms)
-        )
-    ]);
-}
-
-async function handleFirebaseRequest(payload) {
-    const db = getFirebaseDb();
-    const action = payload.action;
-
-    if (action === "access_request") {
-        const clientUuid = payload.clientUuid;
-        if (!clientUuid) throw new Error("Missing client UUID.");
-        
-        const docRef = db.collection("access_requests").doc(clientUuid);
-        try {
-            const doc = await runWithTimeout(docRef.get(), 6000);
-            if (doc.exists && doc.data().status === "approved") {
-                return { status: "already_approved", message: "You already have access." };
-            }
-        } catch (err) {
-            console.warn("Could not check existing access request before submit:", err);
-            if (err.message.includes("timed out")) throw err;
-        }
-        
-        const timestamp = new Date().toISOString();
-        const requestData = {
-            firstname: payload.firstname || "",
-            lastname: payload.lastname || "",
-            id: payload.id || "",
-            clientUuid: clientUuid,
-            status: "pending",
-            role: payload.role || "user",
-            timestamp: timestamp
-        };
-        if (payload.screenshotBase64 && payload.screenshotBase64.length < 700000) {
-            requestData.screenshot = payload.screenshotBase64;
-        }
-        await runWithTimeout(docRef.set(requestData, { merge: true }), 6000);
-        
-        return { status: "success", message: "Access request submitted successfully." };
-    }
-
-    if (action === "check_access") {
-        const clientUuid = payload.clientUuid;
-        if (!clientUuid) throw new Error("Missing client UUID.");
-        
-        const doc = await runWithTimeout(db.collection("access_requests").doc(clientUuid).get(), 6000);
-        if (!doc.exists) {
-            return { status: "success", approved: false, requestStatus: "none", role: "user" };
-        }
-        const data = doc.data();
-        return {
-            status: "success",
-            approved: data.status === "approved",
-            requestStatus: data.status || "pending",
-            role: data.role || "user"
-        };
-    }
-
-    if (action === "get_access_requests") {
-        let authorized = false;
-        let isSuperAdmin = false;
-        const passHash = await hashPasscode(payload.passcode);
-        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
-            authorized = true;
-            isSuperAdmin = true;
-        } else if (payload.authUuid || payload.clientUuid) {
-            const adminDoc = await runWithTimeout(db.collection("access_requests").doc(payload.authUuid || payload.clientUuid).get(), 6000);
-            if (adminDoc.exists && adminDoc.data().status === "approved" && adminDoc.data().role === "assistant_admin") {
-                authorized = true;
-            }
-        }
-        if (!authorized) {
-            return { status: "error", message: "Unauthorized access." };
-        }
-
-        const snapshot = await runWithTimeout(db.collection("access_requests").get(), 10000);
-        const requests = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            requests.push({
-                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
-                firstname: data.firstname || "",
-                lastname: data.lastname || "",
-                id: data.id || "",
-                clientUuid: data.clientUuid || "",
-                status: data.status || "pending",
-                role: data.role || "user",
-                screenshotBase64: data.screenshot || ""
-            });
-        });
-        // Sort requests by timestamp desc
-        requests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        return { status: "success", requests: requests, isSuperAdmin: isSuperAdmin };
-    }
-
-    if (action === "approve_access_request") {
-        const clientUuid = payload.clientUuid;
-        if (!clientUuid) throw new Error("Missing client UUID.");
-        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
-            status: "approved"
-        }, { merge: true }), 6000);
-        return { status: "success", message: "Access request approved." };
-    }
-
-    if (action === "reject_access_request") {
-        const clientUuid = payload.clientUuid;
-        if (!clientUuid) throw new Error("Missing client UUID.");
-        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
-            status: payload.preserveUser ? "revoked" : "rejected",
-            role: "",
-            revokedAt: payload.preserveUser ? new Date().toISOString() : ""
-        }, { merge: true }), 6000);
-        return { status: "success", message: payload.preserveUser ? "User access deactivated and preserved." : "Access request rejected." };
-    }
-
-    if (action === "set_user_role") {
-        const passHash = await hashPasscode(payload.passcode);
-        if (passHash !== "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
-            return { status: "error", message: "Only super admin can change roles." };
-        }
-        const clientUuid = payload.clientUuid;
-        if (!clientUuid) throw new Error("Missing client UUID.");
-        await runWithTimeout(db.collection("access_requests").doc(clientUuid).set({
-            role: payload.role || "user"
-        }, { merge: true }), 6000);
-        return { status: "success", message: "User role updated." };
-    }
-
-    if (action === "bug_report") {
-        db.collection("bug_reports").add({
-            category: payload.category || "",
-            rawInput: payload.rawInput || "",
-            expectedOutput: payload.expectedOutput || "",
-            source: payload.source || "bug_report",
-            screenshot: payload.screenshotBase64 || "",
-            timestamp: new Date().toISOString()
-        }).catch(err => console.error("Firestore bug report write error:", err));
-        return { status: "success", message: "Bug report submitted." };
-    }
-
-    if (action === "get_bug_reports") {
-        const snapshot = await runWithTimeout(db.collection("bug_reports").get(), 10000);
-        const reports = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            reports.push({
-                id: doc.id,
-                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
-                category: data.category || "",
-                rawInput: data.rawInput || "",
-                expectedOutput: data.expectedOutput || ""
-            });
-        });
-        reports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        return { status: "success", reports: reports };
-    }
-
-    if (action === "resolve_bug_report") {
-        const id = payload.id;
-        if (!id) throw new Error("Missing report ID.");
-        await runWithTimeout(db.collection("bug_reports").doc(id).delete(), 6000);
-        return { status: "success", message: "Bug report resolved." };
-    }
-
-    if (action === "clear_bug_reports") {
-        const snapshot = await runWithTimeout(db.collection("bug_reports").get(), 10000);
-        const batch = db.batch();
-        snapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await runWithTimeout(batch.commit(), 10000);
-        return { status: "success", message: "All bug reports cleared." };
-    }
-
-    if (action === "log_ad") {
-        db.collection("ad_history").add({
-            adText: payload.adText || "",
-            category: payload.category || "",
-            status: payload.status || "",
-            reason: payload.reason || "",
-            timestamp: new Date().toISOString()
-        }).catch(err => console.error("Firestore log ad error:", err));
-        return { status: "success", message: "Ad logged." };
-    }
-
-    if (action === "get_history") {
-        const snapshot = await runWithTimeout(db.collection("ad_history").get(), 10000);
-        const history = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            history.push({
-                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
-                adText: data.adText || "",
-                category: data.category || "",
-                status: data.status || "",
-                reason: data.reason || ""
-            });
-        });
-        history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        return { status: "success", history: history };
-    }
-
-    if (action === "get_custom_data") {
-        const doc = await runWithTimeout(db.collection("config").doc("custom_data").get(), 6000);
-        if (doc.exists) {
-            return {
-                status: "success",
-                spelling: doc.data().spelling || {},
-                translations: doc.data().translations || {},
-                templates: doc.data().templates || []
-            };
-        }
-        return { status: "success", spelling: {}, translations: {}, templates: [] };
-    }
-
-    if (action === "save_custom_data") {
-        const updateData = {
-            spelling: payload.spelling || {},
-            templates: payload.templates || [],
-            translations: payload.translations || {}
-        };
-        await runWithTimeout(db.collection("config").doc("custom_data").set(updateData, { merge: true }), 8000);
-        return { status: "success", message: "Configurations saved successfully." };
-    }
-
-    if (action === "validate_key") {
-        const approvalKey = payload.approvalKey || "";
-        if (!approvalKey) {
-            return { status: "success", valid: false, message: "No key provided." };
-        }
-        const parts = approvalKey.split('-');
-        if (parts.length === 5 && parts[0] === 'LI' && parts[1] === 'APPROVED') {
-            const server = parts[2];
-            const id = parts[3];
-            const sig = parts[4];
-            const clientUuid = payload.clientUuid || "";
-            
-            const APPROVE_SALT = "DopamineLifeInvader2026!NewApprovalKey_Revoked_2026_05_24";
-            const dataStr = `${server.toLowerCase().trim()}:${id.toString().trim()}:${(clientUuid || "").toString().trim()}:${APPROVE_SALT}`;
-            let hash = 0x811c9dc5;
-            for (let i = 0; i < dataStr.length; i++) {
-                hash ^= dataStr.charCodeAt(i);
-                hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-            }
-            const expectedSig = (hash >>> 0).toString(16).toUpperCase().substring(0, 6);
-            
-            if (sig === expectedSig) {
-                return { status: "success", valid: true, message: "Key valid." };
-            }
-        }
-        return { status: "success", valid: false, message: "Invalid key." };
-    }
-
-    throw new Error("Unsupported action: " + action);
-}
-
-// Monkey patch window.fetch to support Firebase backend transparently
-(() => {
-    const originalFetch = window.fetch;
-    window.fetch = async function(url, options) {
-        const isGoogleScript = (url === CONFIG.GOOGLE_SCRIPT_URL || (typeof url === 'string' && url.includes("script.google.com/macros/s/")));
-        if (isGoogleScript && CONFIG.BACKEND_TYPE === 'firebase') {
-            try {
-                let payload = {};
-                if (options && options.body) {
-                    payload = JSON.parse(options.body);
-                }
-                const resData = await handleFirebaseRequest(payload);
-                return {
-                    ok: true,
-                    status: 200,
-                    json: async () => resData,
-                    text: async () => JSON.stringify(resData)
-                };
-            } catch (e) {
-                console.error("Firebase backend handler error:", e);
-                return {
-                    ok: false,
-                    status: 500,
-                    json: async () => ({ status: "error", message: e.message || "Firebase Database error" }),
-                    text: async () => JSON.stringify({ status: "error", message: e.message || "Firebase Database error" })
-                };
-            }
-        }
-        return originalFetch.apply(this, arguments);
-    };
-})();
 
 
 function getOrCreateClientUuid() {
     let uuid = localStorage.getItem("li_client_uuid");
     if (!uuid) {
-        if (window.crypto && typeof window.crypto.randomUUID === "function") {
-            uuid = window.crypto.randomUUID();
-        } else {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            let temp = "";
-            for (let i = 0; i < 16; i++) {
-                temp += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            uuid = temp;
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let temp = "";
+        for (let i = 0; i < 16; i++) {
+            temp += chars.charAt(Math.floor(Math.random() * chars.length));
         }
+        uuid = temp;
         localStorage.setItem("li_client_uuid", uuid);
     }
     return uuid;
@@ -8899,37 +8049,16 @@ function initAccessGate() {
     const btnAdminSubmit2 = document.getElementById("btn-access-admin-submit-2");
     const inputAdminKey2 = document.getElementById("access-admin-key-2");
 
-    async function handleAdminLogin(key) {
-        const passHash = await hashPasscode(key);
-        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
+    function handleAdminLogin(key) {
+        if (key === "DopamineAdmin2026!") {
             localStorage.setItem("li_approved_token", "APPROVED");
             localStorage.setItem("li_admin_authenticated", "true");
             localStorage.setItem("li_admin_passcode", key);
             sessionStorage.setItem("li_admin_authenticated", "true");
             sessionStorage.setItem("li_admin_passcode", key);
-            
-            // Clear polling if active
-            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
-                clearInterval(statusPollInterval);
-                statusPollInterval = null;
-            }
-
-            // Unlock DOM instantly
-            document.documentElement.classList.add("user-approved");
-            document.documentElement.classList.remove("user-unauthorized");
-            if (gate) gate.classList.add("hide");
-            
-            // Update URL query string dynamically without reload
-            try {
-                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true&admin=true");
-            } catch(e) {
-                console.error("replaceState failed:", e);
-            }
-            
-            // Initialize Admin panel
-            initAdminPanel();
-
-            showCustomAlertDialog("Welcome Admin! Access granted.", null, "success");
+            showCustomAlertDialog("Welcome Admin! Access granted.", () => {
+                window.location.reload();
+            }, "success");
         } else {
             showCustomAlertDialog("Invalid admin key. Access denied.", null, "error");
         }
@@ -9083,7 +8212,6 @@ function initAccessGate() {
         if (statusPollInterval) clearInterval(statusPollInterval);
         checkCurrentAccessStatus();
         statusPollInterval = setInterval(() => {
-            if (document.hidden) return;
             checkCurrentAccessStatus();
         }, 10000);
     }
@@ -9236,26 +8364,9 @@ function initAccessGate() {
                         } else if (data.status === "already_approved") {
                             // User already has access - unlock directly
                             localStorage.setItem("li_approved_token", "APPROVED");
-                            
-                            // Clear polling if active
-                            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
-                                clearInterval(statusPollInterval);
-                                statusPollInterval = null;
-                            }
-
-                            // Unlock DOM instantly
-                            document.documentElement.classList.add("user-approved");
-                            document.documentElement.classList.remove("user-unauthorized");
-                            if (gate) gate.classList.add("hide");
-                            
-                            // Update URL query string dynamically without reload
-                            try {
-                                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
-                            } catch(e) {
-                                console.error("replaceState failed:", e);
-                            }
-
-                            showCustomAlertDialog("You already have access! Welcome back.", null, "success");
+                            showCustomAlertDialog("You already have access! Refreshing...", () => {
+                                window.location.reload();
+                            }, "success");
                         } else {
                             showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
                             localStorage.removeItem("li_request_firstname");
@@ -9500,7 +8611,80 @@ function initBugReport() {
         }
     } // end if (form)
 
+    // Inline Submit Bug Button
+    function generateBugReportCardBlob(rawAdText, activeCategory, rejectionReasonText, timestamp) {
+        return new Promise((resolve) => {
+            const container = document.createElement("div");
+            container.style.position = "absolute";
+            container.style.left = "-9999px";
+            container.style.top = "0";
+            container.style.width = "520px";
+            container.style.padding = "24px";
+            container.style.backgroundColor = "#0a0b10";
+            container.style.color = "#f5f5f7";
+            container.style.fontFamily = "'Outfit', 'Helvetica Neue', Arial, sans-serif";
+            container.style.boxSizing = "border-box";
+            container.style.borderRadius = "12px";
+            container.style.border = "1px solid rgba(255, 255, 255, 0.08)";
+            container.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
 
+            container.innerHTML = `
+                <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin: 0 0 15px 0; font-family: 'Outfit', sans-serif;">
+                    <span style="color: #ff453a;">ÔùÅ</span> LifeInvader False-Rejection Report
+                </h2>
+                
+                <p style="font-size: 14px; color: #a1a1a6; margin-bottom: 20px; line-height: 1.5; font-family: 'Outfit', sans-serif;">
+                    A new correction report was submitted for category: <strong style="color: #ffffff; text-transform: uppercase;">${activeCategory}</strong> at ${timestamp}.
+                </p>
+                
+                <!-- Box 1: What the Editor Typed (Raw Input) -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                        What the Editor Typed
+                    </div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff453a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${rawAdText}</div>
+                </div>
+                
+                <!-- Box 2: What the System Gave (Processed Output) -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 6px; font-family: 'Outfit', sans-serif;">
+                        What the System Returned / Expected Correction
+                    </div>
+                    <div style="background-color: #121214; border: 1.5px solid #ff9f0a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 14px; color: #e1e1e6; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">[Inline False-Rejection Report]<br>Raw Ad Content: "${rawAdText}"<br>Rejection Reason: "${rejectionReasonText}"</div>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0 15px 0;">
+                <p style="font-size: 11px; color: #8e8e93; line-height: 1.5; margin: 0; text-align: center; font-family: 'Outfit', sans-serif;">
+                    This is an automated notification from your LifeInvader Ads Assist Web App.
+                </p>
+            `;
+
+            document.body.appendChild(container);
+
+            setTimeout(() => {
+                if (window.html2canvas) {
+                    window.html2canvas(container, {
+                        backgroundColor: "#0a0b10",
+                        scale: 2,
+                        logging: false,
+                        useCORS: true
+                    }).then((canvas) => {
+                        const dataUrl = canvas.toDataURL("image/png");
+                        document.body.removeChild(container);
+                        resolve(dataUrl);
+                    }).catch((err) => {
+                        console.error("html2canvas generation error:", err);
+                        document.body.removeChild(container);
+                        resolve("");
+                    });
+                } else {
+                    console.warn("html2canvas is not loaded");
+                    document.body.removeChild(container);
+                    resolve("");
+                }
+            }, 100);
+        });
+    }
 
     const btnSubmitBugInline = document.getElementById("btn-submit-bug-inline");
     if (btnSubmitBugInline) {
@@ -9573,7 +8757,7 @@ function initBugReport() {
                                 btnSubmitBugInline.classList.remove("glow-red");
                                 btnSubmitBugInline.classList.add("btn-sent");
                                 btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
-                                showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
+                                showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ÔÅ│", "success");
                             } else if (data.status === "already_submitted") {
                                 // Transition to blue "Bug Sent" state since it's already reported
                                 btnSubmitBugInline.classList.remove("glow-red");
@@ -9595,7 +8779,7 @@ function initBugReport() {
                             btnSubmitBugInline.classList.remove("glow-red");
                             btnSubmitBugInline.classList.add("btn-sent");
                             btnSubmitBugInline.innerHTML = `<i class="fa-solid fa-check"></i> Bug Sent`;
-                            showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ⏳", "success");
+                            showCustomNotification("Bug report submitted successfully. Estimated fix time: 10 minutes. ÔÅ│", "success");
                         });
                     });
                 };
@@ -9727,10 +8911,7 @@ function initCustomData() {
     syncCustomDataFromBackend();
     
     // Periodically sync custom data from backend (every 60 seconds) to update corrections globally
-    setInterval(() => {
-        if (document.hidden) return;
-        syncCustomDataFromBackend();
-    }, 60000);
+    setInterval(syncCustomDataFromBackend, 60000);
 }
 
 function syncCustomDataFromBackend() {
@@ -9847,7 +9028,7 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
-    overlay.style.zIndex = "100000";
+    overlay.style.zIndex = "20000";
     overlay.style.opacity = "0";
     overlay.style.transition = "opacity 0.3s ease";
 
@@ -9883,7 +9064,7 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
     dialog.innerHTML = `
         ${iconHtml}
         <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">Confirm Action</h4>
-        <p class="confirm-message-text" style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left; white-space: pre-wrap;"></p>
+        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="custom-confirm-cancel-btn" style="flex: 1; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: white; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
                 Cancel
@@ -9893,15 +9074,15 @@ function showCustomConfirmDialog(message, onConfirm, onCancel, okText = "Confirm
             </button>
         </div>
     `;
-    dialog.querySelector(".confirm-message-text").textContent = message;
 
     overlay.appendChild(dialog);
     targetDoc.body.appendChild(overlay);
 
     // Fade-in animations
-    void overlay.offsetHeight; // Force reflow to guarantee CSS transition works on all browsers
-    overlay.style.opacity = "1";
-    dialog.style.transform = "scale(1) translateY(0)";
+    requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+        dialog.style.transform = "scale(1) translateY(0)";
+    });
 
     const cancelBtn = dialog.querySelector("#custom-confirm-cancel-btn");
     const okBtn = dialog.querySelector("#custom-confirm-ok-btn");
@@ -9964,7 +9145,7 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
-    overlay.style.zIndex = "100000";
+    overlay.style.zIndex = "20000";
     overlay.style.opacity = "0";
     overlay.style.transition = "opacity 0.3s ease";
 
@@ -10021,22 +9202,22 @@ function showCustomAlertDialog(message, onDismiss, type = "info") {
     dialog.innerHTML = `
         ${iconHtml}
         <h4 style="margin: 0 0 10px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px; text-transform: uppercase;">${alertTitle}</h4>
-        <p class="alert-message-text" style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left; white-space: pre-wrap;"></p>
+        <p style="margin: 0 0 24px 0; font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; font-weight: 500; text-align: left;">${message}</p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="custom-alert-ok-btn" class="${okBtnClass}" style="${okBtnStyle}">
                 Dismiss
             </button>
         </div>
     `;
-    dialog.querySelector(".alert-message-text").textContent = message;
 
     overlay.appendChild(dialog);
     targetDoc.body.appendChild(overlay);
 
     // Fade-in animations
-    void overlay.offsetHeight; // Force reflow to guarantee CSS transition works on all browsers
-    overlay.style.opacity = "1";
-    dialog.style.transform = "scale(1) translateY(0)";
+    requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+        dialog.style.transform = "scale(1) translateY(0)";
+    });
 
     const okBtn = dialog.querySelector("#custom-alert-ok-btn");
 
@@ -10072,83 +9253,57 @@ function applyAdminRolePermissions() {
     }
 
     const tabBackup = document.getElementById("tab-backup");
-    if (tabBackup) {
-        // Check if banner already exists
-        let lockBanner = document.getElementById("backup-lock-banner");
+    if (!tabBackup) return;
 
-        if (isAssistant) {
-            // Create banner if not exists
-            if (!lockBanner) {
-                lockBanner = document.createElement("div");
-                lockBanner.id = "backup-lock-banner";
-                lockBanner.innerHTML = `
-                    <div style="background: rgba(255, 59, 48, 0.1); border: 1px dashed rgba(255, 59, 48, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.05);">
-                        <div style="background: rgba(255, 59, 48, 0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #ff3b30; font-size: 18px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
-                            <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
-                        </div>
-                    </div>
-                `;
-                tabBackup.insertBefore(lockBanner, tabBackup.firstChild);
-            }
-
-            // Disable all inputs & buttons in tab-backup
-            const inputs = tabBackup.querySelectorAll("input, textarea, button");
-            inputs.forEach(el => {
-                el.disabled = true;
-                el.style.opacity = "0.5";
-                el.style.cursor = "not-allowed";
-            });
-            
-            // Specifically target clear bugs button to completely restrict
-            const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
-            if (btnClearBugs) {
-                btnClearBugs.disabled = true;
-                btnClearBugs.style.opacity = "0.4";
-                btnClearBugs.style.cursor = "not-allowed";
-                btnClearBugs.classList.remove("glow-red");
-            }
-
-            const backupTextarea = document.getElementById("admin-backup-textarea");
-            if (backupTextarea) {
-                backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
-            }
-        } else {
-            // Super admin - remove banner if exists
-            if (lockBanner) {
-                lockBanner.remove();
-            }
-
-            // Enable all inputs & buttons in tab-backup
-            const inputs = tabBackup.querySelectorAll("input, textarea, button");
-            inputs.forEach(el => {
-                el.disabled = false;
-                el.style.opacity = "";
-                el.style.cursor = "";
-            });
-
-            const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
-            if (btnClearBugs) {
-                btnClearBugs.classList.add("glow-red");
-            }
-
-            const backupTextarea = document.getElementById("admin-backup-textarea");
-            if (backupTextarea) {
-                backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
-            }
-        }
-    }
-
-    // Always apply Gemini API key restriction logic regardless of tabBackup
-    const inputKey = document.getElementById("input-ai-gemini-key");
-    const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
+    // Check if banner already exists
+    let lockBanner = document.getElementById("backup-lock-banner");
 
     if (isAssistant) {
+        // Create banner if not exists
+        if (!lockBanner) {
+            lockBanner = document.createElement("div");
+            lockBanner.id = "backup-lock-banner";
+            lockBanner.innerHTML = `
+                <div style="background: rgba(255, 59, 48, 0.1); border: 1px dashed rgba(255, 59, 48, 0.4); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 20px rgba(255, 59, 48, 0.05);">
+                    <div style="background: rgba(255, 59, 48, 0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #ff3b30; font-size: 18px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div>
+                        <h5 style="margin: 0 0 3px 0; font-family: var(--font-heading); color: #ff453a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Restricted Access</h5>
+                        <p style="margin: 0; font-size: 11.5px; color: rgba(255,255,255,0.7); line-height: 1.4;">Admins are not permitted to export/import configurations or clear system databases. Please contact a Super Admin for maintenance operations.</p>
+                    </div>
+                </div>
+            `;
+            tabBackup.insertBefore(lockBanner, tabBackup.firstChild);
+        }
+
+        // Disable all inputs & buttons in tab-backup
+        const inputs = tabBackup.querySelectorAll("input, textarea, button");
+        inputs.forEach(el => {
+            el.disabled = true;
+            el.style.opacity = "0.5";
+            el.style.cursor = "not-allowed";
+        });
+        
+        // Specifically target clear bugs button to completely restrict
+        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+        if (btnClearBugs) {
+            btnClearBugs.disabled = true;
+            btnClearBugs.style.opacity = "0.4";
+            btnClearBugs.style.cursor = "not-allowed";
+            btnClearBugs.classList.remove("glow-red");
+        }
+
+        const backupTextarea = document.getElementById("admin-backup-textarea");
+        if (backupTextarea) {
+            backupTextarea.placeholder = "Access Denied. You do not have permissions to view or restore backup data.";
+        }
+
+        // Hide Gemini API key from assistant admins
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
         if (inputKey) {
-            inputKey.value = "••••••••••••••••••••••••••••••••";
+            inputKey.value = "ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó";
             inputKey.type = "password";
             inputKey.disabled = true;
             inputKey.style.opacity = "0.5";
@@ -10157,13 +9312,40 @@ function applyAdminRolePermissions() {
         if (btnToggleVisibility) {
             btnToggleVisibility.style.display = "none";
         }
+
     } else {
+        // Super admin - remove banner if exists
+        if (lockBanner) {
+            lockBanner.remove();
+        }
+
+        // Enable all inputs & buttons in tab-backup
+        const inputs = tabBackup.querySelectorAll("input, textarea, button");
+        inputs.forEach(el => {
+            el.disabled = false;
+            el.style.opacity = "";
+            el.style.cursor = "";
+        });
+
+        const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
+        if (btnClearBugs) {
+            btnClearBugs.classList.add("glow-red");
+        }
+
+        const backupTextarea = document.getElementById("admin-backup-textarea");
+        if (backupTextarea) {
+            backupTextarea.placeholder = "JSON backup content will appear here or can be pasted here for restoration...";
+        }
+
+        // Restore access to Gemini API key for super admins
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
         if (inputKey) {
             inputKey.disabled = false;
             inputKey.style.opacity = "";
             inputKey.style.cursor = "";
-            const storedKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
-            if (inputKey.value === "••••••••••••••••••••••••••••••••") {
+            const storedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+            if (inputKey.value === "ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó") {
                 inputKey.value = storedKey;
             }
         }
@@ -10193,16 +9375,6 @@ function initAdminPanel() {
     const tabBtns = document.querySelectorAll(".admin-tab-btn");
     const tabContents = document.querySelectorAll(".admin-tab-content");
     
-    const restoreAdminSubtab = () => {
-        const lastSubtab = localStorage.getItem("li_last_navigated_admin_subtab");
-        if (lastSubtab) {
-            const targetSubBtn = document.querySelector(`.admin-tab-btn[data-target="${lastSubtab}"]`);
-            if (targetSubBtn) {
-                targetSubBtn.click();
-            }
-        }
-    };
-
     if (tabBtns.length > 0 && tabContents.length > 0) {
         tabBtns.forEach(btn => {
             btn.addEventListener("click", () => {
@@ -10220,13 +9392,6 @@ function initAdminPanel() {
                         content.classList.add("hide");
                     }
                 });
-
-                if (targetId === "tab-api-vault") {
-                    refreshAIAssistantTabVisibility();
-                }
-
-                // Remember the last navigated admin subtab
-                localStorage.setItem("li_last_navigated_admin_subtab", targetId);
             });
         });
     }
@@ -10254,14 +9419,12 @@ function initAdminPanel() {
         const storedPasscode = sessionStorage.getItem("li_admin_passcode");
         const authUuid = isAssistant ? getOrCreateClientUuid() : null;
         loadAndRenderAccessRequests(storedPasscode || null, authUuid, !isAssistant);
-        restoreAdminSubtab();
     }
 
     // Handle Authentication Click
-    btnAuth.addEventListener("click", async () => {
+    btnAuth.addEventListener("click", () => {
         const password = inputPasscode.value.trim();
-        const passHash = await hashPasscode(password);
-        if (passHash === "8a8f9bd914d1de31cacb185fe3f278be859e2179891788967320befcd9397560") {
+        if (password === "DopamineAdmin2026!") {
             localStorage.setItem("li_admin_authenticated", "true");
             localStorage.setItem("li_admin_passcode", password);
             sessionStorage.setItem("li_admin_authenticated", "true");
@@ -10278,7 +9441,6 @@ function initAdminPanel() {
             loadAndRenderAccessRequests(password, null, true);
             refreshAIAssistantTabVisibility();
             refreshBugTriageTabVisibility();
-            restoreAdminSubtab();
         } else {
             if (authError) authError.classList.remove("hide");
         }
@@ -10293,7 +9455,6 @@ function initAdminPanel() {
 
     // Auto-refresh access requests and users list in real-time (every 10 seconds)
     setInterval(() => {
-        if (document.hidden) return;
         if (sessionStorage.getItem("li_admin_authenticated") === "true") {
             const adminTab = document.getElementById("tab-admin");
             if (adminTab && adminTab.classList.contains("active")) {
@@ -10437,8 +9598,6 @@ function initAdminPanel() {
             }
         });
     }
-
-
 
     const btnClearBugs = document.getElementById("btn-admin-clear-bugs");
     if (btnClearBugs) {
@@ -10615,7 +9774,7 @@ function initAdminPanel() {
                     clearPreview.innerHTML = `<span style="color: rgba(255,255,255,0.3);">No matching entries found.</span>`;
                 } else {
                     const preview = matching.slice(0, 5).map(([w, r]) =>
-                        `<span style="color:#ff453a;">${w}</span> → <span style="color:#30d158;">${r}</span>`
+                        `<span style="color:#ff453a;">${w}</span> ÔåÆ <span style="color:#30d158;">${r}</span>`
                     ).join(", ");
                     const extra = matching.length > 5 ? ` <span style="color:rgba(255,255,255,0.3);">and ${matching.length - 5} more...</span>` : "";
                     clearPreview.innerHTML = `<span style="color:#ff9f0a;">${matching.length} match${matching.length > 1 ? 'es' : ''}:</span> ${preview}${extra}`;
@@ -10641,7 +9800,7 @@ function initAdminPanel() {
             }
 
             showCustomConfirmDialog(
-                `Found ${matching.length} trained spelling entry${matching.length > 1 ? 'ies' : 'y'} matching "${query}":\n\n${matching.slice(0, 10).map(([w, r]) => `• "${w}" → "${r}"`).join('\n')}${matching.length > 10 ? `\n...and ${matching.length - 10} more` : ''}\n\nRemove ${matching.length === 1 ? 'this entry' : 'these entries'}?`,
+                `Found ${matching.length} trained spelling entry${matching.length > 1 ? 'ies' : 'y'} matching "${query}":\n\n${matching.slice(0, 10).map(([w, r]) => `ÔÇó "${w}" ÔåÆ "${r}"`).join('\n')}${matching.length > 10 ? `\n...and ${matching.length - 10} more` : ''}\n\nRemove ${matching.length === 1 ? 'this entry' : 'these entries'}?`,
                 () => {
                     // Delete matching entries
                     matching.forEach(([wrong]) => {
@@ -10790,7 +9949,7 @@ function initAdminPanel() {
             btnTranslationsRefresh.disabled = true;
 
             if (!CONFIG.GOOGLE_SCRIPT_URL) {
-                // No backend — just re-render from local data
+                // No backend ÔÇö just re-render from local data
                 renderCustomTranslations();
                 if (icon) icon.classList.remove("fa-spin");
                 btnTranslationsRefresh.disabled = false;
@@ -11042,7 +10201,7 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
         gameId.style.fontSize = "12px";
         gameId.style.color = "var(--text-muted)";
         gameId.style.marginTop = "4px";
-        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${escapeHTML(req.id)}</strong>`;
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
         details.appendChild(gameId);
         
         const time = document.createElement("div");
@@ -11238,7 +10397,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
         gameId.style.fontSize = "12px";
         gameId.style.color = "var(--text-muted)";
         gameId.style.marginTop = "4px";
-        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${escapeHTML(req.id)}</strong>`;
+        gameId.innerHTML = `<span style="color: var(--text-muted);">ID:</span> <strong style="color: var(--text-color);">${req.id}</strong>`;
         details.appendChild(gameId);
         
         const time = document.createElement("div");
@@ -11292,7 +10451,6 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             }
             
             btnRole.addEventListener("click", () => {
-                const newRole = isAssistantAdmin ? "" : "assistant_admin";
                 const confirmMsg = isAssistantAdmin 
                     ? `Remove Admin role from ${req.firstname} ${req.lastname}?`
                     : `Promote ${req.firstname} ${req.lastname} to Admin?<br><br>They will be able to:<br>- Access the Admin Panel<br>- Approve/Reject access requests<br>- View Spelling & Templates<br><br>They will NOT be able to:<br>- Revoke user access<br>- Promote/demote users<br>- Manage backups`;
@@ -11596,7 +10754,7 @@ function renderCustomTranslations() {
         reporterTimeDiv.style.display = "flex";
         reporterTimeDiv.style.alignItems = "center";
         reporterTimeDiv.style.gap = "4px";
-        reporterTimeDiv.innerHTML = `<i class="fa-regular fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Reported: ${escapeHTML(reporterTime)}`;
+        reporterTimeDiv.innerHTML = `<i class="fa-regular fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Reported: ${reporterTime}`;
         tdRaw.appendChild(reporterTimeDiv);
         
         tr.appendChild(tdRaw);
@@ -11623,7 +10781,7 @@ function renderCustomTranslations() {
         fixedTimeDiv.style.display = "flex";
         fixedTimeDiv.style.alignItems = "center";
         fixedTimeDiv.style.gap = "4px";
-        fixedTimeDiv.innerHTML = `<i class="fa-solid fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Fixed: ${escapeHTML(fixedTime)}`;
+        fixedTimeDiv.innerHTML = `<i class="fa-solid fa-clock" style="font-size: 9px; opacity: 0.7;"></i> Fixed: ${fixedTime}`;
         tdCorr.appendChild(fixedTimeDiv);
         
         tr.appendChild(tdCorr);
@@ -11679,7 +10837,7 @@ function renderCustomTranslations() {
         authorDiv.style.display = "flex";
         authorDiv.style.alignItems = "center";
         authorDiv.style.gap = "4px";
-        authorDiv.innerHTML = `<i class="fa-solid fa-user-shield" style="font-size: 8.5px; opacity: 0.6;"></i> By: <span style="font-weight: 600; color: rgba(255,255,255,0.7);">${escapeHTML(author)}</span>`;
+        authorDiv.innerHTML = `<i class="fa-solid fa-user-shield" style="font-size: 8.5px; opacity: 0.6;"></i> By: <span style="font-weight: 600; color: rgba(255,255,255,0.7);">${author}</span>`;
         tdDetails.appendChild(authorDiv);
 
         tr.appendChild(tdDetails);
@@ -11897,8 +11055,7 @@ function showCustomNotification(message, type = 'success') {
     }
     
     toast.style.border = `1px solid ${borderColor}`;
-    toast.innerHTML = `${icon} <span class="toast-message-text"></span>`;
-    toast.querySelector(".toast-message-text").textContent = message;
+    toast.innerHTML = `${icon} <span>${message}</span>`;
     container.appendChild(toast);
     
     setTimeout(() => {
@@ -12075,55 +11232,55 @@ let currentPolicyPage = 0;
 const POLICY_PAGES = [
     {
         title: "Internal Policy Overview",
-        content: "<div class=\"policy-section\" style=\"text-align: center;\"><div class=\"lifeinvader-logo-block\" style=\"display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px auto 25px auto; font-family: var(--font-heading); user-select: none;\"><span style=\"font-size: 24px; font-weight: 800; letter-spacing: -1px; line-height: 1;\"><span style=\"color: #ffffff;\">Life</span><span style=\"color: #ff3b30;\">Invader</span></span><span style=\"background: #ff3b30; color: #ffffff; font-size: 8.5px; font-weight: 800; letter-spacing: 0.3px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 0 10px rgba(255, 59, 48, 0.35); text-transform: uppercase; line-height: 1; display: inline-flex; align-items: center; justify-content: center; height: 16px; margin-top: 2px;\">EN3 OFFICIAL</span></div><p style=\"font-weight: 700; color: #ff3b30; letter-spacing: 1px; margin-bottom: 4px;\">INTERNAL POLICY</p><p style=\"font-weight: 700; color: #ff3b30; letter-spacing: 1px; margin-bottom: 8px;\">INTERNAL POLICY</p><p style=\"margin-bottom: 4px;\">(Credit List)</p><p style=\"font-size: 11px; opacity: 0.6; margin-bottom: 0;\">Last updated: 04-05-2026</p><div style=\"text-align: justify; margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 15px;\"><p style=\"font-weight: 600; color: #ff3b30; margin-bottom: 6px;\">What is LifeInvader about?</p><p>Lifeinvader is a private state organization that specializes in editing ads, hosting events like the talent show, and making news articles and videos that are informative for the public.</p></div></div>"
+        content: "<div class=\"policy-section\"><p>´╗┐INTERNAL POLICY</p><p>INTERNAL POLICY</p><p>(Credit List)</p><p>Last updated: 04-05-2026</p><p>What is LifeInvader about?</p><p>Lifeinvader is a private state organization that specializes in editing ads, hosting events like the talent show, and making news articles and videos that are informative for the public.</p></div>"
     },
     {
         title: "Buying & Selling Formats",
-        content: "<div class=\"policy-section\"><p>How to benefit from this document?</p><p>This document highlights our standards for editing ads as well as some important rules we must follow while we work for this organization.</p><p>TIP: Please use “Ctrl + F” to find anything you are searching for in documents.</p><h4 class=\"policy-subtitle\">General Ad Rules:</h4><h4 class=\"policy-subtitle\">Vehicle & Clothing List:</h4><p>LifeInvader (EN3) Renewed List for Cars, Motorcycles, Boats, Planes, Helicopters and Clothing</p><p>Templates List: LifeInvader Templates List (EN3)</p><h4 class=\"policy-subtitle\">Always begin the ad with:</h4><p>“Buying” - “Selling” - ”Trading” - “Selling or trading”.</p><p>For “Buying” put “Budget:”.</p><p>For “Selling” put “Price:”.</p><p>If the ad does not mention a Budget or Price, then you should mention it as Negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><h4 class=\"policy-subtitle\">Buying:</h4><p>Buying Progen containers. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Selling:</h4><p>Selling seeds. Price: $1.500 each.</p><h4 class=\"policy-subtitle\">Trading:</h4><p>Trading \"Ubermacht M5 (E34)\". (Auto)</p><p>Trading pink Lui Vi pants for blue Lui Vi pants. (Other)</p><h4 class=\"policy-subtitle\">Selling or trading:</h4><p>Selling or trading \"Ubermacht M5 (E34)\" with insurance for \"Benefactor-AMG C63 Coupe (W205)\". Price: Negotiable. (Auto)</p><p>Selling or trading black Abibas pants. Price: $38 Million.</p></div>"
+        content: "<div class=\"policy-section\"><p>How to benefit from this document?</p><p>This document highlights our standards for editing ads as well as some important rules we must follow while we work for this organization.</p><p>TIP: Please use ÔÇ£Ctrl + FÔÇØ to find anything you are searching for in documents.</p><h4 class=\"policy-subtitle\">General Ad Rules:</h4><h4 class=\"policy-subtitle\">Vehicle & Clothing List:</h4><p>LifeInvader (EN3) Renewed List for Cars, Motorcycles, Boats, Planes, Helicopters and Clothing</p><p>Templates List: LifeInvader Templates List (EN3)</p><h4 class=\"policy-subtitle\">Always begin the ad with:</h4><p>ÔÇ£BuyingÔÇØ - ÔÇ£SellingÔÇØ - ÔÇØTradingÔÇØ - ÔÇ£Selling or tradingÔÇØ.</p><p>For ÔÇ£BuyingÔÇØ put ÔÇ£Budget:ÔÇØ.</p><p>For ÔÇ£SellingÔÇØ put ÔÇ£Price:ÔÇØ.</p><p>If the ad does not mention a Budget or Price, then you should mention it as Negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><h4 class=\"policy-subtitle\">Buying:</h4><p>Buying Progen containers. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Selling:</h4><p>Selling seeds. Price: $1.500 each.</p><h4 class=\"policy-subtitle\">Trading:</h4><p>Trading \"Ubermacht M5 (E34)\". (Auto)</p><p>Trading pink Lui Vi pants for blue Lui Vi pants. (Other)</p><h4 class=\"policy-subtitle\">Selling or trading:</h4><p>Selling or trading \"Ubermacht M5 (E34)\" with insurance for \"Benefactor-AMG C63 Coupe (W205)\". Price: Negotiable. (Auto)</p><p>Selling or trading black Abibas pants. Price: $38 Million.</p></div>"
     },
     {
         title: "Dating & Party Examples",
-        content: "<div class=\"policy-section\"><p>The first letter is ALWAYS capital, use a full stop (.) to end the sentence.</p><p>The first letter in Price, Budget and Negotiable should be in capital.</p><h4 class=\"policy-subtitle\">A colon (:) should be used after Price: or Budget:</h4><p>A dollar sign ($) must be used before the value.</p><p>Can only trade a Business for business, Cars for Cars and Other categories.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling Abibas Pezy Boost 700 V3 Alvah shoes. Price: $200.000</p><p>Selling white Pezy Boost shoes. Price: $4 Million.</p><p>If the ad ends with a numerical value, then there is no need for a period (.)</p><ul class=\"policy-list-bullets\"><li>Use a full stop (.) instead of a comma (,) for prices.</li><li>We do NOT use “k” to represent a thousand or use “M” to represent a Million. Write it out in numbers instead:</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>$1k becomes $1.000</p><p>$1.7k each becomes $1.700 each.</p><p>$1m becomes $1 Million.</p><p>$1.450k becomes $1.45 Million.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Party-</p><p>1) Party at the beach.</p><p>2) Party at Bahama Mamas Bar.</p></div>"
+        content: "<div class=\"policy-section\"><p>The first letter is ALWAYS capital, use a full stop (.) to end the sentence.</p><p>The first letter in Price, Budget and Negotiable should be in capital.</p><h4 class=\"policy-subtitle\">A colon (:) should be used after Price: or Budget:</h4><p>A dollar sign ($) must be used before the value.</p><p>Can only trade a Business for business, Cars for Cars and Other categories.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling Abibas Pezy Boost 700 V3 Alvah shoes. Price: $200.000</p><p>Selling white Pezy Boost shoes. Price: $4 Million.</p><p>If the ad ends with a numerical value, then there is no need for a period (.)</p><ul class=\"policy-list-bullets\"><li>Use a full stop (.) instead of a comma (,) for prices.</li><li>We do NOT use ÔÇ£kÔÇØ to represent a thousand or use ÔÇ£MÔÇØ to represent a Million. Write it out in numbers instead:</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>$1k becomes $1.000</p><p>$1.7k each becomes $1.700 each.</p><p>$1m becomes $1 Million.</p><p>$1.450k becomes $1.45 Million.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Party-</p><p>1) Party at the beach.</p><p>2) Party at Bahama Mamas Bar.</p></div>"
     },
     {
         title: "Restricted Content Guidelines",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Looking/Dating Category:</h4><p>1) Looking for a boyfriend.</p><p>2) Looking for family members.</p><p>3) Looking for Max Uchiha.</p><p>________________</p><p>Advertisement Rules & Restricted Content Guidelines</p><p>Please carefully review the following rules regarding advertisements. Failure to follow these guidelines may result in ad rejection, warnings, or phone blacklisting depending on the violation.</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Issue a Phone Blacklist)</h4><h4 class=\"policy-subtitle\">If any of the following terms or items are found in an advertisement, the phone number used in the ad must be blacklisted immediately:</h4><ul class=\"policy-list-bullets\"><li>Firearms of any kind</li><li>Ammunition</li><li>Bulletproof vests</li><li>Dark Lui Vi Armored Vest</li><li>Weed / cannabis seeds or trees</li><li>Drugs and cocaine</li><li>EMS surgical masks or medical masks</li><li>Vehicle scanners and people scanners (radars)</li><li>Balaclava masks</li><li>Ropes</li><li>Flash drive with a virus (USB)</li><li>Lock picks</li><li>Troll advertisements</li><li>Anti-Radar</li><li>Engine Block</li><li>Smuggling Machine</li><li>Submodule</li><li>Hacking the Search Database</li></ul><p>It is also strictly forbidden to publish license plates containing offensive or inappropriate language. “Selling license plate (1SEX269). Price: Negotiable.”</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Do Not Issue a Phone Blacklist)</h4><p>If any of the following terms are found in an advertisement, reject the ad only. Do not issue a phone blacklist.</p><ul class=\"policy-list-bullets\"><li>Crowbar</li><li>All fabric</li><li>Head bag (except luminous head bag)</li><li>Animal skin</li><li>Armor skin</li><li>Air Horn</li><li>Earplugs</li><li>Barricade</li><li>Trap</li><li>Poison dart</li><li>Army Uniform</li><li>Tracking sensor</li><li>Dangerous razor</li><li>Resource scanners</li><li>Body armor plates</li><li>Body Armor</li><li>Ingredients for cocaine</li><li>Paper for money</li><li>Satellite dish</li><li>Tincture of forest mushrooms</li><li>First Aid Kits & all pills</li><li>Food items (Banana, Burger, Grilled Steak)</li></ul><h4 class=\"policy-subtitle\">Things We Cannot Advertise</h4><h4 class=\"policy-subtitle\">Advertisements involving any of the following must be rejected:</h4><ul class=\"policy-list-bullets\"><li>Grand Coins (Premium Battlepass / Premium Plus Battlepass)</li><li>All illegal items listed above</li><li>Lockpicks, ropes, and crowbars</li><li>Specific family names</li><li>“Looking for Playboy family members.” advertisements</li><li>(Family names cannot be mentioned)</li><li>Hype Body or branded armor</li><li>Gangs</li><li>Nationality</li><li>Anything involving the sale of people</li><li>Anything sexual or hinting at sexual content</li><li>Drugs of any kind</li><li>Food items (except fish)</li><li>Health products (medkits, pills, tincture soup, etc.)</li><li>Birthday advertisements</li><li>Leaders and deputy leaders</li></ul><p>(excluding leaders of unofficial organization families and crime organizations)</p><h4 class=\"policy-subtitle\">Places We Do Not Promote</h4><p>Punishment: Warning</p><h4 class=\"policy-subtitle\">The following locations, organizations, or events are not allowed to be promoted in advertisements:</h4><ul class=\"policy-list-bullets\"><li>Mega Mall</li><li>Gang Headquarters (Ballas, Vagos, Families, Bloods, and Marabunta)</li><li>Black Market</li><li>Parties at LSPD, FIB, SAHP, EMS, LifeInvader or Government buildings.</li><li>Parties at the ghetto</li></ul><p>Please make sure all advertisements follow these guidelines before publishing.</p><h4 class=\"policy-subtitle\">Rejection Reasons Guidelines</h4><p>Please ensure all rejection reasons are written professionally and clearly so citizens can properly understand the issue with their advertisement.</p><h4 class=\"policy-subtitle\">Common Rejection Reasons</h4><ul class=\"policy-list-bullets\"><li>Cannot advertise more than 1 vehicle at a time.</li><li>Cannot advertise more than 3 items at a time.</li><li>Cannot promote illegal items.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Improper advertisement.</li><li>Template not found. Contact LI to create a template.</li><li>Please mention the Full Name.</li><li>Person not found in database. (Person must be in the GRAND RP mail)</li><li>You cannot look for classified people.</li><li>(State organization Leaders and Deputy Leaders only)</li><li>Only if their name is mentioned in the #📁|leader-list in LI mails.</li><li>Item not found in database. (Including Grand Coins and Battlepass)</li><li>Insufficient information for the item name.</li><li>Insufficient information for the vehicle name.</li><li>Please indicate the rental period.</li><li>LI cloud server not loading or offline. (Only for PDA bug cases)</li><li>Trolling advertisements.</li><li>You must take a proper screenshot of that ad and post it in #📱|phone-blacklist.</li><li>Cannot advertise this vehicle as it is non-sellable.</li><li>A family cannot be traded.</li><li>Cannot look for a classified family.</li><li>We do not promote parties at any green grass location.</li><li>Green Grass Rule Example</li></ul><p>For example, “Party at the Beach Market.” should not be promoted and must instead be labeled as “Party at the Beach.” This rule exists because music is not allowed to be played in green grass areas.</p><p>________________</p><h4 class=\"policy-subtitle\">Categories:</h4><h4 class=\"policy-subtitle\">Real Estate:</h4><p>Houses / Apartments / Mansion / Casino penthouse</p><h4 class=\"policy-subtitle\">Auto:</h4><p>Cars / Trucks / Motorcycles / Bikes / ATVS / Boats</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Looking/Dating Category:</h4><p>1) Looking for a boyfriend.</p><p>2) Looking for family members.</p><p>3) Looking for Max Uchiha.</p><p>________________</p><p>Advertisement Rules & Restricted Content Guidelines</p><p>Please carefully review the following rules regarding advertisements. Failure to follow these guidelines may result in ad rejection, warnings, or phone blacklisting depending on the violation.</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Issue a Phone Blacklist)</h4><h4 class=\"policy-subtitle\">If any of the following terms or items are found in an advertisement, the phone number used in the ad must be blacklisted immediately:</h4><ul class=\"policy-list-bullets\"><li>Firearms of any kind</li><li>Ammunition</li><li>Bulletproof vests</li><li>Dark Lui Vi Armored Vest</li><li>Weed / cannabis seeds or trees</li><li>Drugs and cocaine</li><li>EMS surgical masks or medical masks</li><li>Vehicle scanners and people scanners (radars)</li><li>Balaclava masks</li><li>Ropes</li><li>Flash drive with a virus (USB)</li><li>Lock picks</li><li>Troll advertisements</li><li>Anti-Radar</li><li>Engine Block</li><li>Smuggling Machine</li><li>Submodule</li><li>Hacking the Search Database</li></ul><p>It is also strictly forbidden to publish license plates containing offensive or inappropriate language. ÔÇ£Selling license plate (1SEX269). Price: Negotiable.ÔÇØ</p><h4 class=\"policy-subtitle\">Illegal Items / Rejection (Do Not Issue a Phone Blacklist)</h4><p>If any of the following terms are found in an advertisement, reject the ad only. Do not issue a phone blacklist.</p><ul class=\"policy-list-bullets\"><li>Crowbar</li><li>All fabric</li><li>Head bag (except luminous head bag)</li><li>Animal skin</li><li>Armor skin</li><li>Air Horn</li><li>Earplugs</li><li>Barricade</li><li>Trap</li><li>Poison dart</li><li>Army Uniform</li><li>Tracking sensor</li><li>Dangerous razor</li><li>Resource scanners</li><li>Body armor plates</li><li>Body Armor</li><li>Ingredients for cocaine</li><li>Paper for money</li><li>Satellite dish</li><li>Tincture of forest mushrooms</li><li>First Aid Kits & all pills</li><li>Food items (Banana, Burger, Grilled Steak)</li></ul><h4 class=\"policy-subtitle\">Things We Cannot Advertise</h4><h4 class=\"policy-subtitle\">Advertisements involving any of the following must be rejected:</h4><ul class=\"policy-list-bullets\"><li>Grand Coins (Premium Battlepass / Premium Plus Battlepass)</li><li>All illegal items listed above</li><li>Lockpicks, ropes, and crowbars</li><li>Specific family names</li><li>ÔÇ£Looking for Playboy family members.ÔÇØ advertisements</li><li>(Family names cannot be mentioned)</li><li>Hype Body or branded armor</li><li>Gangs</li><li>Nationality</li><li>Anything involving the sale of people</li><li>Anything sexual or hinting at sexual content</li><li>Drugs of any kind</li><li>Food items (except fish)</li><li>Health products (medkits, pills, tincture soup, etc.)</li><li>Birthday advertisements</li><li>Leaders and deputy leaders</li></ul><p>(excluding leaders of unofficial organization families and crime organizations)</p><h4 class=\"policy-subtitle\">Places We Do Not Promote</h4><p>Punishment: Warning</p><h4 class=\"policy-subtitle\">The following locations, organizations, or events are not allowed to be promoted in advertisements:</h4><ul class=\"policy-list-bullets\"><li>Mega Mall</li><li>Gang Headquarters (Ballas, Vagos, Families, Bloods, and Marabunta)</li><li>Black Market</li><li>Parties at LSPD, FIB, SAHP, EMS, LifeInvader or Government buildings.</li><li>Parties at the ghetto</li></ul><p>Please make sure all advertisements follow these guidelines before publishing.</p><h4 class=\"policy-subtitle\">Rejection Reasons Guidelines</h4><p>Please ensure all rejection reasons are written professionally and clearly so citizens can properly understand the issue with their advertisement.</p><h4 class=\"policy-subtitle\">Common Rejection Reasons</h4><ul class=\"policy-list-bullets\"><li>Cannot advertise more than 1 vehicle at a time.</li><li>Cannot advertise more than 3 items at a time.</li><li>Cannot promote illegal items.</li><li>You must take a proper screenshot of that ad and post it in #­ƒô▒|phone-blacklist.</li><li>Improper advertisement.</li><li>Template not found. Contact LI to create a template.</li><li>Please mention the Full Name.</li><li>Person not found in database. (Person must be in the GRAND RP mail)</li><li>You cannot look for classified people.</li><li>(State organization Leaders and Deputy Leaders only)</li><li>Only if their name is mentioned in the #­ƒº¥|leader-list in LI mails.</li><li>Item not found in database. (Including Grand Coins and Battlepass)</li><li>Insufficient information for the item name.</li><li>Insufficient information for the vehicle name.</li><li>Please indicate the rental period.</li><li>LI cloud server not loading or offline. (Only for PDA bug cases)</li><li>Trolling advertisements.</li><li>You must take a proper screenshot of that ad and post it in #­ƒô▒|phone-blacklist.</li><li>Cannot advertise this vehicle as it is non-sellable.</li><li>A family cannot be traded.</li><li>Cannot look for a classified family.</li><li>We do not promote parties at any green grass location.</li><li>Green Grass Rule Example</li></ul><p>For example, ÔÇ£Party at the Beach Market.ÔÇØ should not be promoted and must instead be labeled as ÔÇ£Party at the Beach.ÔÇØ This rule exists because music is not allowed to be played in green grass areas.</p><p>________________</p><h4 class=\"policy-subtitle\">Categories:</h4><h4 class=\"policy-subtitle\">Real Estate:</h4><p>Houses / Apartments / Mansion / Casino penthouse</p><h4 class=\"policy-subtitle\">Auto:</h4><p>Cars / Trucks / Motorcycles / Bikes / ATVS / Boats</p></div>"
     },
     {
         title: "Banned Content & Locations",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Businesses:</h4><h4 class=\"policy-subtitle\">Private Businesses:</h4><ul class=\"policy-list-bullets\"><li>Ammunition Store (not gun store or weapon store)</li><li>ATM business</li><li>Bar (not strip club)</li><li>Car wash</li><li>Car sharing</li><li>Chip tuning</li><li>Clothing shop (not Binco or Suburban)</li><li>Electric station (not Charging station)</li><li>Farm</li><li>Flower shop</li><li>Fight club</li><li>Furniture shop</li><li>Gas station</li><li>Grand Elite</li><li>Hair salon (not barber)</li><li>Jewelry store</li><li>Juice shop</li><li>Luna park</li><li>Parking</li><li>Pet Shop</li><li>State object</li><li>Service station (not Auto workshop)</li><li>Tattoo studio</li><li>Taxi company</li><li>24/7 Store</li></ul><h4 class=\"policy-subtitle\">Family Businesses:</h4><ul class=\"policy-list-bullets\"><li>Burger shop (not Drug lab)</li><li>Cowshed</li><li>Freight train</li><li>Plantation (If listed as Pumpkin/Cabbage/Mandarin/Pineapple plantation etc, only capitalize the first word.)</li><li>Oil Well</li></ul><h4 class=\"policy-subtitle\">Discounts:</h4><p>This category is used when people post their business templates and they have discount in it.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Hair Salon №4 (GPS №243) is always offering 50% discount and the best hair stylists, we are awaiting your visit!</p><h4 class=\"policy-subtitle\">Work:</h4><p>This category is used when someone is looking for work or hiring for work.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Businesses:</h4><h4 class=\"policy-subtitle\">Private Businesses:</h4><ul class=\"policy-list-bullets\"><li>Ammunition Store (not gun store or weapon store)</li><li>ATM business</li><li>Bar (not strip club)</li><li>Car wash</li><li>Car sharing</li><li>Chip tuning</li><li>Clothing shop (not Binco or Suburban)</li><li>Electric station (not Charging station)</li><li>Farm</li><li>Flower shop</li><li>Fight club</li><li>Furniture shop</li><li>Gas station</li><li>Grand Elite</li><li>Hair salon (not barber)</li><li>Jewelry store</li><li>Juice shop</li><li>Luna park</li><li>Parking</li><li>Pet Shop</li><li>State object</li><li>Service station (not Auto workshop)</li><li>Tattoo studio</li><li>Taxi company</li><li>24/7 Store</li></ul><h4 class=\"policy-subtitle\">Family Businesses:</h4><ul class=\"policy-list-bullets\"><li>Burger shop (not Drug lab)</li><li>Cowshed</li><li>Freight train</li><li>Plantation (If listed as Pumpkin/Cabbage/Mandarin/Pineapple plantation etc, only capitalize the first word.)</li><li>Oil Well</li></ul><h4 class=\"policy-subtitle\">Discounts:</h4><p>This category is used when people post their business templates and they have discount in it.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Hair Salon Ôäû4 (GPS Ôäû243) is always offering 50% discount and the best hair stylists, we are awaiting your visit!</p><h4 class=\"policy-subtitle\">Work:</h4><p>This category is used when someone is looking for work or hiring for work.</p></div>"
     },
     {
         title: "Common Rejection Reasons",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Hiring workers for solar panel plantations. Salary: Negotiable.</p><h4 class=\"policy-subtitle\">Dating:</h4><p>This category is used when someone is looking for someone else.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for Max Uchiha.</p><p>Looking for a wife.</p><p>Looking for a boyfriend.</p><p>Looking for a family.</p><h4 class=\"policy-subtitle\">Services:</h4><p>This category is used when people post their business templates without a discount offer.</p><h4 class=\"policy-subtitle\">Example:</h4><p>It’s time for happy hour at your favorite Vanilla Unicorn Bar (GPS №43). Go and grab some drinks for yourself.</p><h4 class=\"policy-subtitle\">Other:</h4><p>This category includes clothing items, parties, fruits/vegetables, wires, seeds, barrels, etc.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Hiring workers for solar panel plantations. Salary: Negotiable.</p><h4 class=\"policy-subtitle\">Dating:</h4><p>This category is used when someone is looking for someone else.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for Max Uchiha.</p><p>Looking for a wife.</p><p>Looking for a boyfriend.</p><p>Looking for a family.</p><h4 class=\"policy-subtitle\">Services:</h4><p>This category is used when people post their business templates without a discount offer.</p><h4 class=\"policy-subtitle\">Example:</h4><p>ItÔÇÖs time for happy hour at your favorite Vanilla Unicorn Bar (GPS Ôäû43). Go and grab some drinks for yourself.</p><h4 class=\"policy-subtitle\">Other:</h4><p>This category includes clothing items, parties, fruits/vegetables, wires, seeds, barrels, etc.</p></div>"
     },
     {
         title: "Categories & Real Estate",
-        content: "<div class=\"policy-section\"><p>If you do not understand from the raw ad exactly which clothing item from our clothing list the person wants to sell/buy - ad should be rejected with reason \"Please, provide the correct name of the item you are selling.\" or \"Please, provide the correct name of the item you are buying.\"</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling Abibas Pezy 700 V3 Alvah shoes. Price: $200.000</p><p>Selling white Pezy Boost shoes. Price: $4 Million.</p><p>Looking for a party.</p><p>Party at the beach.</p><h4 class=\"policy-subtitle\">Terms to change:</h4><p>Looking to buy/looking to purchase changes to Buying</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking to buy house. Budget: Negotiable. > Buying a house. Budget: Negotiable.</p><p>Looking to buy car. > Buying a car. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Things to take note when editing ads:</h4><ul class=\"policy-list-bullets\"><li>If the ad ends with a number, don’t add a period. If it ends with a letter, do add a period.</li><li>Brands, official locations (certain places are lowercases), Names (first and last name) should have their first letter capitalized.</li><li>Please include a dollar sign before the amount, not after ($5 Million, $500.000)</li><li>If the sender mentions selling for an amount of items, for e.g 1000 pineapples. No need to include a period in between the amounts. Only applies to the value of the items.</li><li>Make sure to double-check your ad before posting out, make sure the first letter is capitalized and end it with a period if needed too.</li><li>We have the right to reject the ad if it’s an improper advertisement.</li></ul><p>Max config/max tuning/fully upgraded Changes to: with full configuration</p><p>Nearly max/(part)lvl3 or below Changes to: with partial configuration</p><p>Body upgrades/body kit Changes to: with visual upgrades</p><p>Turbo Changes to: turbo kit</p><p>Drift tuning/drift assistance Changes to: drift kit</p><p>Luminous rims/unique wheels Changes to: luminous wheels</p><p>Level 1/low level Changes to: low quality</p><p>Level 2/medium level Changes to: medium quality</p><p>Level 3/high level Changes to: high quality</p><p>Level 4/max level Changes to: max quality</p><p>Crates/cases Changes to: containers</p><p>Spray cans/Spray balloons Changes to: paint cans.</p><p>Extras Changes to: of type</p><p>Scarf combine it: mask</p><p>pumpkin/cabbage/pineapple/mandarin combine it: fruits, vegetables or seeds</p><p>Unique 6 rims Changes to: luminous wheels of type 6</p></div>"
+        content: "<div class=\"policy-section\"><p>If you do not understand from the raw ad exactly which clothing item from our clothing list the person wants to sell/buy - ad should be rejected with reason \"Please, provide the correct name of the item you are selling.\" or \"Please, provide the correct name of the item you are buying.\"</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling Abibas Pezy 700 V3 Alvah shoes. Price: $200.000</p><p>Selling white Pezy Boost shoes. Price: $4 Million.</p><p>Looking for a party.</p><p>Party at the beach.</p><h4 class=\"policy-subtitle\">Terms to change:</h4><p>Looking to buy/looking to purchase changes to Buying</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking to buy house. Budget: Negotiable. > Buying a house. Budget: Negotiable.</p><p>Looking to buy car. > Buying a car. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Things to take note when editing ads:</h4><ul class=\"policy-list-bullets\"><li>If the ad ends with a number, donÔÇÖt add a period. If it ends with a letter, do add a period.</li><li>Brands, official locations (certain places are lowercases), Names (first and last name) should have their first letter capitalized.</li><li>Please include a dollar sign before the amount, not after ($5 Million, $500.000)</li><li>If the sender mentions selling for an amount of items, for e.g 1000 pineapples. No need to include a period in between the amounts. Only applies to the value of the items.</li><li>Make sure to double-check your ad before posting out, make sure the first letter is capitalized and end it with a period if needed too.</li><li>We have the right to reject the ad if itÔÇÖs an improper advertisement.</li></ul><p>Max config/max tuning/fully upgraded Changes to: with full configuration</p><p>Nearly max/(part)lvl3 or below Changes to: with partial configuration</p><p>Body upgrades/body kit Changes to: with visual upgrades</p><p>Turbo Changes to: turbo kit</p><p>Drift tuning/drift assistance Changes to: drift kit</p><p>Luminous rims/unique wheels Changes to: luminous wheels</p><p>Level 1/low level Changes to: low quality</p><p>Level 2/medium level Changes to: medium quality</p><p>Level 3/high level Changes to: high quality</p><p>Level 4/max level Changes to: max quality</p><p>Crates/cases Changes to: containers</p><p>Spray cans/Spray balloons Changes to: paint cans.</p><p>Extras Changes to: of type</p><p>Scarf combine it: mask</p><p>pumpkin/cabbage/pineapple/mandarin combine it: fruits, vegetables or seeds</p><p>Unique 6 rims Changes to: luminous wheels of type 6</p></div>"
     },
     {
         title: "Business Categories",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Annis Silvia (S15)\" with partial configuration. Price: Negotiable.</p><p>Buying \"Sandking XL\" with full configuration. Budget: Negotiable.</p><p>Selling \"Shotaro\". Price: $500.000</p><p>Trading \"Toros\" for \"Karin Tundra 2021\".</p><p>Selling or trading \"Annis Skyline GT-R (R34)\". Price: $1.7 Million.</p><p>Selling \"Progen 675 LT\" with full configuration, visual upgrades, insurance and drift kit. Price: Negotiable.</p><p>Selling a helicopter. Price: $11 Million.</p><p>Buying a plane. Budget: $800.000</p><p>Buying \"Frogger\". Budget: $8 Million.</p><p>Selling \"SuperVolito Carbon\". Price: $10 Million.</p><p>Selling pineapple and mandarin fruits. Price: $1.700 and $1.500 each respectively.</p><p>Selling 2 Grand tickets and 15 seeds. Price: $800.000 and $45.000 respectively.</p><p>Trading \"Mazda RX-7\" for \"Annis Silvia\".</p><p>Trading a luminous stone plus $1 Million for Abibas pants.</p><p>Buying video cards. Budget: $60.000 each.</p><p>Selling license plate (1ABC234). Price: Negotiable.</p><p>Selling toothy masks of type 1. Price: Negotiable.</p><p>Selling tokens. Price: $13.000 each.</p><p>Selling 10 Taxi fleet shares. Price: Negotiable.</p><p>Selling high quality suspension, high quality transmission and medium quality engine tunings. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Real Estate:</h4><p>A maximum of one numbered property per is allowed.</p><p>If the seller does not provide numbers, you can advertise up to 3 properties.</p><ul class=\"policy-list-bullets\"><li>Use the number symbol (№) if the sender of the ad has mentioned house/apartment/penthouse/mansion number.</li><li>If the sender mentions “Casino apartment” change to “Casino penthouse”.</li><li>We cannot mention the number of stars of the property in the ad.</li><li>We are allowed to put in garden, insurance, view and other extra stuff like tennis court, swimming pool, helipad, long driveway etc.</li><li>For houses/apartments/penthouses/mansions with furnished or different interiors, use custom interior.</li><li>There are only 5 types of garage spaces: 2 g.s. 5 g.s. 9 g.s. 25 g.s. 30 g.s.</li><li>For garage spaces, we use “g.s.” If there are more features, we use “g.s.,”</li><li>For storage space, use “w.h.” (warehouse).</li><li>Use “.” after the last feature, “and” before the last feature, and use “,” between other features. “g.s.” or “w.h.” does not need an addition “.” at the end if that is mentioned as the last feature.</li><li>Although 3 houses can be advertised, the house numbers are not included. Ex. Selling 3 houses. Price: Negotiable.</li><li>If the house /apartment number is not specified add a/an before the word house / apartment</li><li>If the house mentions a garden be sure to add “a” before garden</li><li>Houses and apartments are not tradable.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling a house with 5 g.s. Price: Negotiable.</p><p>Selling a house with a garden, 9 g.s., insurance and nice views. Price: Negotiable.</p><p>Selling an apartment with 9 g.s. Price: Negotiable.</p><p>Selling an apartment with nice views. Price: Negotiable.</p><p>Properly capitalize the first letter of the location if it is an official location.</p><ul class=\"policy-list-bullets\"><li>Mirror Park is correct, mirror park is NOT correct.</li><li>Vinewood Hills is correct, vinewood hills is NOT correct.</li></ul><h4 class=\"policy-subtitle\">Order of the features in a real estate ad (if applicable):</h4><p>1. garden</p><p>2. garage spaces (2 g.s. 5 g.s. 9 g.s. 25 g.s. 30 g.s.)</p><p>3. warehouses (3 w.h. 4 w.h. or 5 w.h.)</p><p>4. custom interior</p><p>5. insurance - (do not mention the number of days.)</p><p>6. helipad</p><p>7. swimming pool</p><p>8. tennis court</p><p>9. (long/large) driveway</p><p>10. (spacious) backyard</p><p>11. (nice/beautiful/great) views</p><p>12. (official/unofficial) location Others</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling 2 houses with a garden. Price: Negotiable.</p><p>Selling house №1680 with 5 g.s. and 3 w.h. in the city. Price: Negotiable.</p><p>Selling house №758. Price: Negotiable.</p><p>Selling 2 houses. Price: Negotiable.</p><p>Buying an apartment near Lifeinvader. Budget: Negotiable.</p><p>Buying an apartment near the beach market. Budget: Negotiable.</p><p>Buying house №574. Budget: Negotiable.</p><p>Selling an apartment. Price: Negotiable.</p><p>Selling Casino penthouse. Price: Negotiable.</p><p>Selling mansion №58. Price: Negotiable.</p><p>Selling house №758 with insurance. Price: Negotiable.</p><p>Selling house №758 with 25 g.s. and insurance. Price: Negotiable.</p><p>Selling a house. Price: $10 Million.</p><p>Buying a house with a swimming pool in Vinewood Hills. Budget: Negotiable.</p><p>Selling a house with a garden and 4 w.h. Price: Negotiable.</p><p>Selling a house with a garden and custom interior. Price: Negotiable.</p><p>Selling house №586 with a garden, 9 g.s., 5 w.h., custom interior, insurance and swimming pool in Vinewood Hills. Price: $7 Million.</p><p>Selling a house with 9 g.s. and 5 w.h. Price: Negotiable.</p><p>Selling house №758 with 9 g.s., 5 w.h., helipad and spacious backyard. Price: Negotiable.</p><p>Selling house №759 with 9 g.s. and long driveway. Price: Negotiable.</p><p>Selling house №476 with a garden, swimming pool and nice views. Price: Negotiable.</p><p>Selling a house with a helipad. Price: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Annis Silvia (S15)\" with partial configuration. Price: Negotiable.</p><p>Buying \"Sandking XL\" with full configuration. Budget: Negotiable.</p><p>Selling \"Shotaro\". Price: $500.000</p><p>Trading \"Toros\" for \"Karin Tundra 2021\".</p><p>Selling or trading \"Annis Skyline GT-R (R34)\". Price: $1.7 Million.</p><p>Selling \"Progen 675 LT\" with full configuration, visual upgrades, insurance and drift kit. Price: Negotiable.</p><p>Selling a helicopter. Price: $11 Million.</p><p>Buying a plane. Budget: $800.000</p><p>Buying \"Frogger\". Budget: $8 Million.</p><p>Selling \"SuperVolito Carbon\". Price: $10 Million.</p><p>Selling pineapple and mandarin fruits. Price: $1.700 and $1.500 each respectively.</p><p>Selling 2 Grand tickets and 15 seeds. Price: $800.000 and $45.000 respectively.</p><p>Trading \"Mazda RX-7\" for \"Annis Silvia\".</p><p>Trading a luminous stone plus $1 Million for Abibas pants.</p><p>Buying video cards. Budget: $60.000 each.</p><p>Selling license plate (1ABC234). Price: Negotiable.</p><p>Selling toothy masks of type 1. Price: Negotiable.</p><p>Selling tokens. Price: $13.000 each.</p><p>Selling 10 Taxi fleet shares. Price: Negotiable.</p><p>Selling high quality suspension, high quality transmission and medium quality engine tunings. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Real Estate:</h4><p>A maximum of one numbered property per is allowed.</p><p>If the seller does not provide numbers, you can advertise up to 3 properties.</p><ul class=\"policy-list-bullets\"><li>Use the number symbol (Ôäû) if the sender of the ad has mentioned house/apartment/penthouse/mansion number.</li><li>If the sender mentions ÔÇ£Casino apartmentÔÇØ change to ÔÇ£Casino penthouseÔÇØ.</li><li>We cannot mention the number of stars of the property in the ad.</li><li>We are allowed to put in garden, insurance, view and other extra stuff like tennis court, swimming pool, helipad, long driveway etc.</li><li>For houses/apartments/penthouses/mansions with furnished or different interiors, use custom interior.</li><li>There are only 5 types of garage spaces: 2 g.s. 5 g.s. 9 g.s. 25 g.s. 30 g.s.</li><li>For garage spaces, we use ÔÇ£g.s.ÔÇØ If there are more features, we use ÔÇ£g.s.,ÔÇØ</li><li>For storage space, use ÔÇ£w.h.ÔÇØ (warehouse).</li><li>Use ÔÇ£.ÔÇØ after the last feature, ÔÇ£andÔÇØ before the last feature, and use ÔÇ£,ÔÇØ between other features. ÔÇ£g.s.ÔÇØ or ÔÇ£w.h.ÔÇØ does not need an addition ÔÇ£.ÔÇØ at the end if that is mentioned as the last feature.</li><li>Although 3 houses can be advertised, the house numbers are not included. Ex. Selling 3 houses. Price: Negotiable.</li><li>If the house /apartment number is not specified add a/an before the word house / apartment</li><li>If the house mentions a garden be sure to add ÔÇ£aÔÇØ before garden</li><li>Houses and apartments are not tradable.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling a house with 5 g.s. Price: Negotiable.</p><p>Selling a house with a garden, 9 g.s., insurance and nice views. Price: Negotiable.</p><p>Selling an apartment with 9 g.s. Price: Negotiable.</p><p>Selling an apartment with nice views. Price: Negotiable.</p><p>Properly capitalize the first letter of the location if it is an official location.</p><ul class=\"policy-list-bullets\"><li>Mirror Park is correct, mirror park is NOT correct.</li><li>Vinewood Hills is correct, vinewood hills is NOT correct.</li></ul><h4 class=\"policy-subtitle\">Order of the features in a real estate ad (if applicable):</h4><p>1. garden</p><p>2. garage spaces (2 g.s. 5 g.s. 9 g.s. 25 g.s. 30 g.s.)</p><p>3. warehouses (3 w.h. 4 w.h. or 5 w.h.)</p><p>4. custom interior</p><p>5. insurance - (do not mention the number of days.)</p><p>6. helipad</p><p>7. swimming pool</p><p>8. tennis court</p><p>9. (long/large) driveway</p><p>10. (spacious) backyard</p><p>11. (nice/beautiful/great) views</p><p>12. (official/unofficial) location Others</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling 2 houses with a garden. Price: Negotiable.</p><p>Selling house Ôäû1680 with 5 g.s. and 3 w.h. in the city. Price: Negotiable.</p><p>Selling house Ôäû758. Price: Negotiable.</p><p>Selling 2 houses. Price: Negotiable.</p><p>Buying an apartment near Lifeinvader. Budget: Negotiable.</p><p>Buying an apartment near the beach market. Budget: Negotiable.</p><p>Buying house Ôäû574. Budget: Negotiable.</p><p>Selling an apartment. Price: Negotiable.</p><p>Selling Casino penthouse. Price: Negotiable.</p><p>Selling mansion Ôäû58. Price: Negotiable.</p><p>Selling house Ôäû758 with insurance. Price: Negotiable.</p><p>Selling house Ôäû758 with 25 g.s. and insurance. Price: Negotiable.</p><p>Selling a house. Price: $10 Million.</p><p>Buying a house with a swimming pool in Vinewood Hills. Budget: Negotiable.</p><p>Selling a house with a garden and 4 w.h. Price: Negotiable.</p><p>Selling a house with a garden and custom interior. Price: Negotiable.</p><p>Selling house Ôäû586 with a garden, 9 g.s., 5 w.h., custom interior, insurance and swimming pool in Vinewood Hills. Price: $7 Million.</p><p>Selling a house with 9 g.s. and 5 w.h. Price: Negotiable.</p><p>Selling house Ôäû758 with 9 g.s., 5 w.h., helipad and spacious backyard. Price: Negotiable.</p><p>Selling house Ôäû759 with 9 g.s. and long driveway. Price: Negotiable.</p><p>Selling house Ôäû476 with a garden, swimming pool and nice views. Price: Negotiable.</p><p>Selling a house with a helipad. Price: Negotiable.</p></div>"
     },
     {
         title: "Dating & Services Categories",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Renting:</h4><p>Renting of the property is allowed.</p><p>Use the word \"Renting out\". Instead of using \"Price\", use the word \"Rent\".</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Renting out house №1023 with a garden and 5 g.s. Rent: $100.000 per week.</p><p>Renting a house. Budget: $100.000 per week.</p><ul class=\"policy-list-bullets\"><li>Terms we cannot use in real estate ads:</li><li>Green zone/grass.</li><li>Gang location or any Gang names.</li></ul><h4 class=\"policy-subtitle\">Apartment complexes:</h4></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Renting:</h4><p>Renting of the property is allowed.</p><p>Use the word \"Renting out\". Instead of using \"Price\", use the word \"Rent\".</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Renting out house Ôäû1023 with a garden and 5 g.s. Rent: $100.000 per week.</p><p>Renting a house. Budget: $100.000 per week.</p><ul class=\"policy-list-bullets\"><li>Terms we cannot use in real estate ads:</li><li>Green zone/grass.</li><li>Gang location or any Gang names.</li></ul><h4 class=\"policy-subtitle\">Apartment complexes:</h4></div>"
     },
     {
         title: "General Ad Editing Rules",
-        content: "<div class=\"policy-section\"><p>There are 8 apartment complexes in the city.</p><p>Apartments cannot be insured. Therefore, it should not be specified.</p><p>Selling apartment №154 in Eclipse Towers. Price: $1.5 Million.</p><p>Selling apartment №163 in Tinsel Towers. Price: Negotiable.</p><p>Selling apartment №188 in Del Perro Heights. Price: Negotiable.</p><p>Selling apartment №306 in Richards Majestic. Price: Negotiable.</p><p>Selling apartment №344 in Tinkle Building. Price: $950.000</p><p>Selling apartment №774 in 3 Alta Street. Price: Negotiable.</p><p>Selling apartment №1790 in Celltowa Building. Price: Negotiable.</p><p>Selling apartment №1480 near the beach market. Price: Negotiable.</p><h4 class=\"policy-subtitle\">Dating:</h4><p>Only the following types of ads are allowed in this category: Must search name</p><ul class=\"policy-list-bullets\"><li>Looking for (First and Last name).</li><li>Looking for a family.</li><li>Looking for family members.</li><li>Looking for a date.</li><li>Looking for a wife.</li><li>Looking for a husband.</li><li>Looking for a valentine.</li><li>Looking for a friend.</li><li>Looking for friends.</li><li>Looking for a boyfriend.</li><li>Looking for boyfriends.</li><li>Looking for a girlfriend.</li><li>Looking for girlfriends.</li><li>Looking for Name Surname.</li><li>Looking for Casino poker players.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for Max Uchiha.</p><p>Looking for Lucio Escober.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>RAW AD: I am searching elite alpha.</p><p>EDITED AD: Looking for Elite Alpha.</p><h4 class=\"policy-subtitle\">Looking for a specific person:</h4><p>● Make sure to always check GRP Mails for person names and leader’s list in LI Mails for State Leader and Deputies names.</p><p>● Make sure they mention the full name (first and second name) and also reject the ad if they don’t provide full first or last name.</p><p>● Use capitalization on the first letter of each name.</p><p>● Search their name on our database (Grand RP discord)</p><p>● If the person is not found on the database then reject the ad.</p><p>Reason: Person not found in database. (Person must be in the GRAND RP mail)</p><p>Looking for ads that should be rejected: (warning)</p><ul class=\"policy-list-bullets\"><li>Leaders of a state org (LI exempt from this).</li><li>Deputy leaders of a state org. (LI exempt from this)</li><li>Looking for a lesbian/gay. (add it to blacklist numbers in LI email)</li><li>People looking for themselves or each other. (3 or more people spamming looking for each other) (Reject with trolling ads)</li></ul><p>You cannot look for state leaders and deputies only if they are not in the leader-list in LI mails, otherwise you can look for them.</p></div>"
+        content: "<div class=\"policy-section\"><p>There are 8 apartment complexes in the city.</p><p>Apartments cannot be insured. Therefore, it should not be specified.</p><p>Selling apartment Ôäû154 in Eclipse Towers. Price: $1.5 Million.</p><p>Selling apartment Ôäû163 in Tinsel Towers. Price: Negotiable.</p><p>Selling apartment Ôäû188 in Del Perro Heights. Price: Negotiable.</p><p>Selling apartment Ôäû306 in Richards Majestic. Price: Negotiable.</p><p>Selling apartment Ôäû344 in Tinkle Building. Price: $950.000</p><p>Selling apartment Ôäû774 in 3 Alta Street. Price: Negotiable.</p><p>Selling apartment Ôäû1790 in Celltowa Building. Price: Negotiable.</p><p>Selling apartment Ôäû1480 near the beach market. Price: Negotiable.</p><h4 class=\"policy-subtitle\">Dating:</h4><p>Only the following types of ads are allowed in this category: Must search name</p><ul class=\"policy-list-bullets\"><li>Looking for (First and Last name).</li><li>Looking for a family.</li><li>Looking for family members.</li><li>Looking for a date.</li><li>Looking for a wife.</li><li>Looking for a husband.</li><li>Looking for a valentine.</li><li>Looking for a friend.</li><li>Looking for friends.</li><li>Looking for a boyfriend.</li><li>Looking for boyfriends.</li><li>Looking for a girlfriend.</li><li>Looking for girlfriends.</li><li>Looking for Name Surname.</li><li>Looking for Casino poker players.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for Max Uchiha.</p><p>Looking for Lucio Escober.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>RAW AD: I am searching elite alpha.</p><p>EDITED AD: Looking for Elite Alpha.</p><h4 class=\"policy-subtitle\">Looking for a specific person:</h4><p>ÔùÅ Make sure to always check GRP Mails for person names and leaderÔÇÖs list in LI Mails for State Leader and Deputies names.</p><p>ÔùÅ Make sure they mention the full name (first and second name) and also reject the ad if they donÔÇÖt provide full first or last name.</p><p>ÔùÅ Use capitalization on the first letter of each name.</p><p>ÔùÅ Search their name on our database (Grand RP discord)</p><p>ÔùÅ If the person is not found on the database then reject the ad.</p><p>Reason: Person not found in database. (Person must be in the GRAND RP mail)</p><p>Looking for ads that should be rejected: (warning)</p><ul class=\"policy-list-bullets\"><li>Leaders of a state org (LI exempt from this).</li><li>Deputy leaders of a state org. (LI exempt from this)</li><li>Looking for a lesbian/gay. (add it to blacklist numbers in LI email)</li><li>People looking for themselves or each other. (3 or more people spamming looking for each other) (Reject with trolling ads)</li></ul><p>You cannot look for state leaders and deputies only if they are not in the leader-list in LI mails, otherwise you can look for them.</p></div>"
     },
     {
         title: "Abbreviations & Configs",
-        content: "<div class=\"policy-section\"><p>We can look for the crime leaders and leaders of unofficial orgs. Also, we can look for administration assistants.</p><p>Looking for ads that should be blacklisted: (warning)</p><p>● Buying a wife/husband.</p><p>● Troll ads like “looking for sugar daddy”.</p><p>● Looking for a wife and listing a price or budget.</p><p>● Any troll name that is not found in the database.</p><p>Promoting families is permitted.</p><p>Mentioning of looking for a specific family is not allowed.</p><p>IMPORTANT: Reason you should mention while rejecting ad if someone is State leader \"You cannot search for classified person.\"</p><p>The leader of the organization.</p><h4 class=\"policy-subtitle\">List of leaders in the city (Server EN-03):</h4><p>Please refer to Grand RP emails.</p><p>Check #leader-list channel on LI emails</p><h4 class=\"policy-subtitle\">Work:</h4><p>● Words like \"Hiring\" and phrases like \"looking to hire\" and looking for a job\" are allowed.</p><p>● Use the number symbol (№) if the sender of the ad mentions a specific number location for a particular job.</p><p>Example: Construction site №3.</p></div>"
+        content: "<div class=\"policy-section\"><p>We can look for the crime leaders and leaders of unofficial orgs. Also, we can look for administration assistants.</p><p>Looking for ads that should be blacklisted: (warning)</p><p>ÔùÅ Buying a wife/husband.</p><p>ÔùÅ Troll ads like ÔÇ£looking for sugar daddyÔÇØ.</p><p>ÔùÅ Looking for a wife and listing a price or budget.</p><p>ÔùÅ Any troll name that is not found in the database.</p><p>Promoting families is permitted.</p><p>Mentioning of looking for a specific family is not allowed.</p><p>IMPORTANT: Reason you should mention while rejecting ad if someone is State leader \"You cannot search for classified person.\"</p><p>The leader of the organization.</p><h4 class=\"policy-subtitle\">List of leaders in the city (Server EN-03):</h4><p>Please refer to Grand RP emails.</p><p>Check #leader-list channel on LI emails</p><h4 class=\"policy-subtitle\">Work:</h4><p>ÔùÅ Words like \"Hiring\" and phrases like \"looking to hire\" and looking for a job\" are allowed.</p><p>ÔùÅ Use the number symbol (Ôäû) if the sender of the ad mentions a specific number location for a particular job.</p><p>Example: Construction site Ôäû3.</p></div>"
     },
     {
         title: "Ad Examples - Part 1",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Construction sites have 3 locations. Please include these if they also include the site number:</h4><p>● Hiring workers at construction site №1 on Vespucci Boulevard.</p><p>● Hiring workers at construction site №2 on Calais Avenue.</p><p>● Hiring workers at construction site №3 in Pillbox Hill.</p><p>● Ads of this category do not include specific dollar amounts. If they do, you use either \"Awarding (amount) bonus\" or \"Salary: $(amount)\". For example: \"Hiring at construction site №1, in Vespucci Boulevard. Awarding $3.000 bonus.\"</p><p>● They are also allowed to mention just \"Awarding bonuses\" or \"paying well\" at the end of the ad without a specific dollar amount.</p><p>● Do NOT use the word \"level\". Levels represent years of experience that someone has in a job.</p><p>Example: \"Hiring a driver with 3 years of experience at construction site №2.\"</p><h4 class=\"policy-subtitle\">● Construction sites have 5 roles they can advertise for:</h4></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Construction sites have 3 locations. Please include these if they also include the site number:</h4><p>ÔùÅ Hiring workers at construction site Ôäû1 on Vespucci Boulevard.</p><p>ÔùÅ Hiring workers at construction site Ôäû2 on Calais Avenue.</p><p>ÔùÅ Hiring workers at construction site Ôäû3 in Pillbox Hill.</p><p>ÔùÅ Ads of this category do not include specific dollar amounts. If they do, you use either \"Awarding (amount) bonus\" or \"Salary: $(amount)\". For example: \"Hiring at construction site Ôäû1, in Vespucci Boulevard. Awarding $3.000 bonus.\"</p><p>ÔùÅ They are also allowed to mention just \"Awarding bonuses\" or \"paying well\" at the end of the ad without a specific dollar amount.</p><p>ÔùÅ Do NOT use the word \"level\". Levels represent years of experience that someone has in a job.</p><p>Example: \"Hiring a driver with 3 years of experience at construction site Ôäû2.\"</p><h4 class=\"policy-subtitle\">ÔùÅ Construction sites have 5 roles they can advertise for:</h4></div>"
     },
     {
         title: "Ad Examples - Part 2",
-        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>locksmith. (Lumberjack)</li><li>electrician.</li><li>gardener. (Farmer)</li><li>surveyor. (Oilman)</li><li>driver.</li></ul><ul class=\"policy-list-bullets\"><li>These can be advertised in the ad specifically.</li></ul><p>● If the construction ad mentions more than one of the above roles, change the ad to hiring workers instead of naming them all.</p><h4 class=\"policy-subtitle\">People are also allowed to post looking for work ads. That will fall under this category. Work/jobs that can be advertised for are:</h4><ul class=\"policy-list-bullets\"><li>Any of the construction site roles above.</li><li>Trucker(s)</li><li>Lawyer(s).</li><li>DJ(s).</li><li>Photographer(s).</li><li>Bodyguard(s).</li><li>Professional Dancer(s).</li></ul><p>(not Strippers)</p><ul class=\"policy-list-bullets\"><li>Personal driver(s).</li></ul><p>Assistant</p><ul class=\"policy-list-bullets\"><li>Professional Singer(s).</li></ul><h4 class=\"policy-subtitle\">Important Note:</h4><p>If a specific profession is mentioned at the beginning, it should be written with a capital letter. Otherwise, it should be written in lowercase. Professions should not be written in full capital letters, with the only exception being DJ, which should always remain in capital letters.</p><p>Additionally, any profession can be used for hiring if it is properly mentioned in the ad. Please ensure that professional names are written correctly without any mistakes or alterations.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Lawyer looking for work.</p><p>Hiring truckers. Salary: Negotiable.</p><p>Hiring a lawyer. Salary: Negotiable.</p><p>Hiring workers at construction site №1, in Vespucci Boulevard. Salary: Negotiable.</p><p>Hiring workers at construction site. Salary: Negotiable.</p><p>DJ looking for work.</p><p>Hiring a DJ. Salary: Negotiable.</p><p>Lawyer looking for work.</p><p>Looking to work as a professional dancer.</p><p>Hiring professional dancers. Salary: Negotiable.</p><p>Hiring a professional singer. Salary: Negotiable.</p><p>Hiring workers for solar panel plantations. Salary: Negotiable.</p><p>Looking for solar panel plantation work.</p><p>Looking for a job at the construction site.</p><p>Hiring firefighters. Salary: Negotiable.</p><p>Hiring firefighters at TV station. Salary: Negotiable.</p><p>Hiring firefighters at the beach market. Salary: $15.000</p><p>Hiring firefighters at FIB. Salary: $10.000</p><p>Hiring a trucker with 3 years experience. Salary: Negotiable.</p><p>Hiring a trucker. Salary: $15.000</p><p>Looking for a job.</p><p>Hiring an assistant. Salary: Negotiable.</p><p>Bodyguard looking for work.</p><p>Renting 15% trucker van. Rent: $12.000 per week.</p><p>Renting out 15% trucker van. Budget: $10.000 per week.</p><h4 class=\"policy-subtitle\">Terms we see and what we change them to:</h4><p>Level Changes to: years experience</p><p>Exotic dancers/stripers Changes to: Professional dancer</p></div>"
+        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>locksmith. (Lumberjack)</li><li>electrician.</li><li>gardener. (Farmer)</li><li>surveyor. (Oilman)</li><li>driver.</li></ul><ul class=\"policy-list-bullets\"><li>These can be advertised in the ad specifically.</li></ul><p>ÔùÅ If the construction ad mentions more than one of the above roles, change the ad to hiring workers instead of naming them all.</p><h4 class=\"policy-subtitle\">People are also allowed to post looking for work ads. That will fall under this category. Work/jobs that can be advertised for are:</h4><ul class=\"policy-list-bullets\"><li>Any of the construction site roles above.</li><li>Trucker(s)</li><li>Lawyer(s).</li><li>DJ(s).</li><li>Photographer(s).</li><li>Bodyguard(s).</li><li>Professional Dancer(s).</li></ul><p>(not Strippers)</p><ul class=\"policy-list-bullets\"><li>Personal driver(s).</li></ul><p>Assistant</p><ul class=\"policy-list-bullets\"><li>Professional Singer(s).</li></ul><h4 class=\"policy-subtitle\">Important Note:</h4><p>If a specific profession is mentioned at the beginning, it should be written with a capital letter. Otherwise, it should be written in lowercase. Professions should not be written in full capital letters, with the only exception being DJ, which should always remain in capital letters.</p><p>Additionally, any profession can be used for hiring if it is properly mentioned in the ad. Please ensure that professional names are written correctly without any mistakes or alterations.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Lawyer looking for work.</p><p>Hiring truckers. Salary: Negotiable.</p><p>Hiring a lawyer. Salary: Negotiable.</p><p>Hiring workers at construction site Ôäû1, in Vespucci Boulevard. Salary: Negotiable.</p><p>Hiring workers at construction site. Salary: Negotiable.</p><p>DJ looking for work.</p><p>Hiring a DJ. Salary: Negotiable.</p><p>Lawyer looking for work.</p><p>Looking to work as a professional dancer.</p><p>Hiring professional dancers. Salary: Negotiable.</p><p>Hiring a professional singer. Salary: Negotiable.</p><p>Hiring workers for solar panel plantations. Salary: Negotiable.</p><p>Looking for solar panel plantation work.</p><p>Looking for a job at the construction site.</p><p>Hiring firefighters. Salary: Negotiable.</p><p>Hiring firefighters at TV station. Salary: Negotiable.</p><p>Hiring firefighters at the beach market. Salary: $15.000</p><p>Hiring firefighters at FIB. Salary: $10.000</p><p>Hiring a trucker with 3 years experience. Salary: Negotiable.</p><p>Hiring a trucker. Salary: $15.000</p><p>Looking for a job.</p><p>Hiring an assistant. Salary: Negotiable.</p><p>Bodyguard looking for work.</p><p>Renting 15% trucker van. Rent: $12.000 per week.</p><p>Renting out 15% trucker van. Budget: $10.000 per week.</p><h4 class=\"policy-subtitle\">Terms we see and what we change them to:</h4><p>Level Changes to: years experience</p><p>Exotic dancers/stripers Changes to: Professional dancer</p></div>"
     },
     {
         title: "Real Estate Rules",
@@ -12131,23 +11288,23 @@ const POLICY_PAGES = [
     },
     {
         title: "Real Estate Order of Features",
-        content: "<div class=\"policy-section\"><p>● Under this category, only buying, trading and selling of businesses are allowed. Promotion of businesses DO NOT fall under this category.(Can only trade and Business for another Business.)</p><p>● We do not promote personal businesses, instead write \"private business\"</p><p>● We only advertise Burger shop business as \"Burger shop\". Avoid saying Burger shop drug lab or drug lab business. You’ll receive a warning if you mention \"drug lab\".</p><p>● We promote family business.</p><p>● Family businesses cannot be traded. They can only be Buying or Selling. If you see anyone attempting to trade such a business please reject it and provide the</p><ul class=\"policy-list-bullets\"><li>Reason: Family businesses cannot be traded.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling family business. Price: Negotiable.</p><p>● Ads with prices that exceeded $500 Million, change the price to Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><p>ÔùÅ Under this category, only buying, trading and selling of businesses are allowed. Promotion of businesses DO NOT fall under this category.(Can only trade and Business for another Business.)</p><p>ÔùÅ We do not promote personal businesses, instead write \"private business\"</p><p>ÔùÅ We only advertise Burger shop business as \"Burger shop\". Avoid saying Burger shop drug lab or drug lab business. YouÔÇÖll receive a warning if you mention \"drug lab\".</p><p>ÔùÅ We promote family business.</p><p>ÔùÅ Family businesses cannot be traded. They can only be Buying or Selling. If you see anyone attempting to trade such a business please reject it and provide the</p><ul class=\"policy-list-bullets\"><li>Reason: Family businesses cannot be traded.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling family business. Price: Negotiable.</p><p>ÔùÅ Ads with prices that exceeded $500 Million, change the price to Negotiable.</p></div>"
     },
     {
         title: "Real Estate Examples",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying auto workshop biz for 10 Trillion. > Buying Service station business.Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Terms we see and what we change them to:</h4><p>personal business Changes to: private business.</p><p>Drug lab Changes to: Burger shop</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling 24/7 Store №123 near Paleto Bay. Price: Negotiable.</p><p>Buying a private business. Budget: Negotiable.</p><p>Selling Burger shop business. Price: $65 Million.</p><p>Selling Taxi company business. Price: Negotiable.</p><p>Selling Jewelry store №44. Price: $100 Million.</p><p>Selling Service station №113. Price: $100 Million.</p><p>Selling Ammunition Store №269 in the city. Price: Negotiable.</p><p>Selling Luna park №289. Price: Negotiable.</p><p>Buying Plantation business with 20 beds. Budget: Negotiable.</p><p>Selling Cabbage plantation business with 20 beds. Price: Negotiable.</p><p>Selling State object №260. Price: $10 Million.</p><p>Selling or trading State object business. Price: Negotiable.</p><p>Buying Car sharing business. Budget: $100 Million.</p><p>Selling Business Control. Price: Negotiable.</p><p>Buying Gas station Control. Budget: $100 Million.</p><p>Selling Chip tuning №4 Control. Price: Negotiable.</p><p>If the client doesn’t specify the number, we just put the word business.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying auto workshop biz for 10 Trillion. > Buying Service station business.Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Terms we see and what we change them to:</h4><p>personal business Changes to: private business.</p><p>Drug lab Changes to: Burger shop</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling 24/7 Store Ôäû123 near Paleto Bay. Price: Negotiable.</p><p>Buying a private business. Budget: Negotiable.</p><p>Selling Burger shop business. Price: $65 Million.</p><p>Selling Taxi company business. Price: Negotiable.</p><p>Selling Jewelry store Ôäû44. Price: $100 Million.</p><p>Selling Service station Ôäû113. Price: $100 Million.</p><p>Selling Ammunition Store Ôäû269 in the city. Price: Negotiable.</p><p>Selling Luna park Ôäû289. Price: Negotiable.</p><p>Buying Plantation business with 20 beds. Budget: Negotiable.</p><p>Selling Cabbage plantation business with 20 beds. Price: Negotiable.</p><p>Selling State object Ôäû260. Price: $10 Million.</p><p>Selling or trading State object business. Price: Negotiable.</p><p>Buying Car sharing business. Budget: $100 Million.</p><p>Selling Business Control. Price: Negotiable.</p><p>Buying Gas station Control. Budget: $100 Million.</p><p>Selling Chip tuning Ôäû4 Control. Price: Negotiable.</p><p>If the client doesnÔÇÖt specify the number, we just put the word business.</p></div>"
     },
     {
         title: "Property Rental Rules",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Selling ATM 12mil Changes to: Selling ATM business. Price: $12 Million.</p><h4 class=\"policy-subtitle\">Business Shares:</h4><ul class=\"policy-list-bullets\"><li>Taxi fleet shares</li><li>Gas station shares</li><li>Chip tuning shares</li><li>Barber shop shares</li><li>Tattoo studio shares</li><li>Armory store shares</li><li>Bar shares</li><li>Car sharing shares</li></ul><h4 class=\"policy-subtitle\">Example:</h4><p>Selling Gas station shares. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Services:</h4><p>● Most service ads are found as templates in our Lifeinvader discord under the business template category.</p><p>● Service ads are ads that are used to promote a business or a service that is being provided.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Selling ATM 12mil Changes to: Selling ATM business. Price: $12 Million.</p><h4 class=\"policy-subtitle\">Business Shares:</h4><ul class=\"policy-list-bullets\"><li>Taxi fleet shares</li><li>Gas station shares</li><li>Chip tuning shares</li><li>Barber shop shares</li><li>Tattoo studio shares</li><li>Armory store shares</li><li>Bar shares</li><li>Car sharing shares</li></ul><h4 class=\"policy-subtitle\">Example:</h4><p>Selling Gas station shares. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Services:</h4><p>ÔùÅ Most service ads are found as templates in our Lifeinvader discord under the business template category.</p><p>ÔùÅ Service ads are ads that are used to promote a business or a service that is being provided.</p></div>"
     },
     {
         title: "Apartment Complexes",
-        content: "<div class=\"policy-section\"><p>Templates List:LifeInvader Templates List (EN3)</p><h4 class=\"policy-subtitle\">Example:</h4><p>Looking for a DJ for your party or wedding? Look no further.</p><p>● Only 1 service can be provided/ advertised at a time.</p><p>● Service ads can contain the word \"discounts\" but if a specific discount percentage is given then the ad would fall under the \"Discounts\" category.</p><p>● Template ads that are different, or not found in the database are to be REJECTED.</p><p>Reason: Template not found in database. Contact LI to create a new template.</p><p>Figure 1: Example of a template and what to do with it.</p><h4 class=\"policy-subtitle\">Examples of service templates:</h4><p>Taxi company 1 Template 2 - Are you new in town? Want to make some easy money while meeting new people? Come to Taxi (GPS №1) near the Casino! Join the best Taxi company in town.</p><p>In addition, office templates can be shared only in this category.</p><p>Office 13724 template 1 - Join Imad Wanted Family Office (№13724)! Today, we are offering bonuses, easy tasks, and extra cash. Then what are you waiting for? Join us now.</p><p>Office 13724 template 2 - Whether you are new or old in the city, if you need money, Office (№13724) offers a 90% profit. We provide bonuses too! Contact us at (mostwanted994)!</p><p>________________</p></div>"
+        content: "<div class=\"policy-section\"><p>Templates List:LifeInvader Templates List (EN3)</p><h4 class=\"policy-subtitle\">Example:</h4><p>Looking for a DJ for your party or wedding? Look no further.</p><p>ÔùÅ Only 1 service can be provided/ advertised at a time.</p><p>ÔùÅ Service ads can contain the word \"discounts\" but if a specific discount percentage is given then the ad would fall under the \"Discounts\" category.</p><p>ÔùÅ Template ads that are different, or not found in the database are to be REJECTED.</p><p>Reason: Template not found in database. Contact LI to create a new template.</p><p>Figure 1: Example of a template and what to do with it.</p><h4 class=\"policy-subtitle\">Examples of service templates:</h4><p>Taxi company 1 Template 2 - Are you new in town? Want to make some easy money while meeting new people? Come to Taxi (GPS Ôäû1) near the Casino! Join the best Taxi company in town.</p><p>In addition, office templates can be shared only in this category.</p><p>Office 13724 template 1 - Join Imad Wanted Family Office (Ôäû13724)! Today, we are offering bonuses, easy tasks, and extra cash. Then what are you waiting for? Join us now.</p><p>Office 13724 template 2 - Whether you are new or old in the city, if you need money, Office (Ôäû13724) offers a 90% profit. We provide bonuses too! Contact us at (mostwanted994)!</p><p>________________</p></div>"
     },
     {
         title: "Dating Category Rules",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Discounts:</h4><p>● All of the discount templates are found on Lifeinvader discord under the business templates category.</p><p>● Discount templates are identified as having a specific % percentage of the discount.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Elites 24/7 Store No120. Max discount up to 80%. citys nonstop shop. Gear up, save big, visit now. PH: 33-30-777.</p><p>Hurry up! Up to 60% OFF on Firearms at Central Mall Weapon Shop (GPS №269)! Limited stock, act fast. Ping Me on 22-20-444 OR Mails (maxuchihax).</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Discounts:</h4><p>ÔùÅ All of the discount templates are found on Lifeinvader discord under the business templates category.</p><p>ÔùÅ Discount templates are identified as having a specific % percentage of the discount.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Elites 24/7 Store No120. Max discount up to 80%. citys nonstop shop. Gear up, save big, visit now. PH: 33-30-777.</p><p>Hurry up! Up to 60% OFF on Firearms at Central Mall Weapon Shop (GPS Ôäû269)! Limited stock, act fast. Ping Me on 22-20-444 OR Mails (maxuchihax).</p></div>"
     },
     {
         title: "Dating Ad Verification",
@@ -12155,11 +11312,11 @@ const POLICY_PAGES = [
     },
     {
         title: "Banned Dating Content",
-        content: "<div class=\"policy-section\"><p>Houses/apartment</p><p>The beach</p><p>The yacht</p><p>Bahama Mamas Bar</p><p>Tequi-la-la Bar</p><p>Stadium</p><p>Diamond Resort Bar (which is casino)</p><p>Arena</p><p>Raton Canyon</p><p>Vanilla Unicorn Bar</p><p>Hotel Spa Bar</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for a party.</p><p>Party at the beach.</p><p>Party at Tequi-la-la Bar.</p><p>Party at Cayo Perico.</p><p>Party at house №37.</p><p>Pool party at house №49.</p><p>Party at the yacht.</p><p>Party at Bahama Mamas Bar.</p><p>Party locations or specify that any location except for those listed in Places we don\'t promote are allowed for party ads.</p><h4 class=\"policy-subtitle\">We can also look for some services that can be provided in this category:</h4><p>● The following are services that can be provided under the \"other\" category - You can now include names and a time in a wedding advert.</p><ul class=\"policy-list-bullets\"><li>Looking for a lawyer.</li><li>Looking for a personal driver.</li><li>Looking for a professional dancer.</li><li>Looking for a professional singer.</li><li>Looking for a DJ.</li><li>Wedding at Church.</li><li>Wedding at Church for John Smith and Susan Jones at 18:00.</li><li>Party at the beach.</li><li>Car meet at _ .</li><li>\"brand/model\" exclusive car meet at __ .</li><li>Looking to play poker. Bet: Negotiable.</li><li>Looking to play dice. Bet: $100.000</li></ul></div>"
+        content: "<div class=\"policy-section\"><p>Houses/apartment</p><p>The beach</p><p>The yacht</p><p>Bahama Mamas Bar</p><p>Tequi-la-la Bar</p><p>Stadium</p><p>Diamond Resort Bar (which is casino)</p><p>Arena</p><p>Raton Canyon</p><p>Vanilla Unicorn Bar</p><p>Hotel Spa Bar</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for a party.</p><p>Party at the beach.</p><p>Party at Tequi-la-la Bar.</p><p>Party at Cayo Perico.</p><p>Party at house Ôäû37.</p><p>Pool party at house Ôäû49.</p><p>Party at the yacht.</p><p>Party at Bahama Mamas Bar.</p><p>Party locations or specify that any location except for those listed in Places we don\'t promote are allowed for party ads.</p><h4 class=\"policy-subtitle\">We can also look for some services that can be provided in this category:</h4><p>ÔùÅ The following are services that can be provided under the \"other\" category - You can now include names and a time in a wedding advert.</p><ul class=\"policy-list-bullets\"><li>Looking for a lawyer.</li><li>Looking for a personal driver.</li><li>Looking for a professional dancer.</li><li>Looking for a professional singer.</li><li>Looking for a DJ.</li><li>Wedding at Church.</li><li>Wedding at Church for John Smith and Susan Jones at 18:00.</li><li>Party at the beach.</li><li>Car meet at _ .</li><li>\"brand/model\" exclusive car meet at __ .</li><li>Looking to play poker. Bet: Negotiable.</li><li>Looking to play dice. Bet: $100.000</li></ul></div>"
     },
     {
         title: "Work Category Rules",
-        content: "<div class=\"policy-section\"><p>For Play Dice and Play Poker, if no Bet is specified, use “Bet: Negotiable.”</p><p>The maximum allowed bet is $10 Million. and Any bet above that should be marked as “Bet: Negotiable.”</p><h4 class=\"policy-subtitle\">We can also let families to look for an alliance with another family:</h4><ul class=\"policy-list-bullets\"><li>Looking for an alliance.</li></ul><p>Citizens can also look for a Business owner. This is not limited to the below examples, they may search for any Business owner for the Businesses listed in the Business tab.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for a 24/7 Store owner.</p><p>Looking for a Clothing Shop owner.</p><p>Looking for an Ammunition Store owner.</p><p>Looking for a Gas Station owner.</p><p>Looking for a Car sharing owner.</p><p>Looking for a Business owner.</p><h4 class=\"policy-subtitle\">Terms for using the word type instead of extras:</h4><p>If you encounter any ad containing the word \"extras\" in it, we have to change that word to type.</p></div>"
+        content: "<div class=\"policy-section\"><p>For Play Dice and Play Poker, if no Bet is specified, use ÔÇ£Bet: Negotiable.ÔÇØ</p><p>The maximum allowed bet is $10 Million. and Any bet above that should be marked as ÔÇ£Bet: Negotiable.ÔÇØ</p><h4 class=\"policy-subtitle\">We can also let families to look for an alliance with another family:</h4><ul class=\"policy-list-bullets\"><li>Looking for an alliance.</li></ul><p>Citizens can also look for a Business owner. This is not limited to the below examples, they may search for any Business owner for the Businesses listed in the Business tab.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Looking for a 24/7 Store owner.</p><p>Looking for a Clothing Shop owner.</p><p>Looking for an Ammunition Store owner.</p><p>Looking for a Gas Station owner.</p><p>Looking for a Car sharing owner.</p><p>Looking for a Business owner.</p><h4 class=\"policy-subtitle\">Terms for using the word type instead of extras:</h4><p>If you encounter any ad containing the word \"extras\" in it, we have to change that word to type.</p></div>"
     },
     {
         title: "Construction Sites",
@@ -12175,11 +11332,11 @@ const POLICY_PAGES = [
     },
     {
         title: "Work Category Professions",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Robobeast Pet:</h4><p>Selling cage with a Robobeast. Price: Negotiable.</p><p>Buying cage with a Robobeast. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Mr Candy Cane Pet:</h4><p>Selling cage with a Mr Candy Cane. Price: Negotiable.</p><p>Buying cage with a Mr Candy Cane. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Futuristic Friend:</h4><p>Selling cage with a Futuristic Friend. Price: Negotiable.</p><p>Buying cage with a Futuristic Friend. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>cage with a pet:</li></ul><p>(Border Collie, Cougar, Pig, Poodle, Pug, Puma, Rabbit, Rat, Retriever, Rooster, Rottweiler…)</p><p>Selling cage with a pet. Price: Negotiable.</p><p>Buying cage with a Dog. Budget: Negotiable.</p><p>Selling cage with a Cougar. Price: Negotiable.</p><p>Selling cage with a Border Collie. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-canister(s):</h4><p>premium fuel canister</p><p>fuel canister</p><p>Selling a premium fuel canister. Price: Negotiable.</p><p>Selling 100 premium fuel canisters. Price: Negotiable.</p><p>Selling a fuel canister. Price: Negotiable.</p><p>Selling 1000 fuel canisters. Price: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Robobeast Pet:</h4><p>Selling cage with a Robobeast. Price: Negotiable.</p><p>Buying cage with a Robobeast. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Mr Candy Cane Pet:</h4><p>Selling cage with a Mr Candy Cane. Price: Negotiable.</p><p>Buying cage with a Mr Candy Cane. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Futuristic Friend:</h4><p>Selling cage with a Futuristic Friend. Price: Negotiable.</p><p>Buying cage with a Futuristic Friend. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>cage with a pet:</li></ul><p>(Border Collie, Cougar, Pig, Poodle, Pug, Puma, Rabbit, Rat, Retriever, Rooster, RottweilerÔÇª)</p><p>Selling cage with a pet. Price: Negotiable.</p><p>Buying cage with a Dog. Budget: Negotiable.</p><p>Selling cage with a Cougar. Price: Negotiable.</p><p>Selling cage with a Border Collie. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-canister(s):</h4><p>premium fuel canister</p><p>fuel canister</p><p>Selling a premium fuel canister. Price: Negotiable.</p><p>Selling 100 premium fuel canisters. Price: Negotiable.</p><p>Selling a fuel canister. Price: Negotiable.</p><p>Selling 1000 fuel canisters. Price: Negotiable.</p></div>"
     },
     {
         title: "Work Category Examples",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">-charger(s):</h4><p>Selling a charger. Price: Negotiable.</p><p>Selling 10 chargers. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>Christmas resources:</li></ul><p>Christmas key(s)(‘C’ is always capital and ‘k’ in lower case, also included ‘each’ when more than one key is mentioned.)</p><p>Christmas copper</p><p>Christmas timber</p><p>Christmas perch</p><p>Christmas seed(s)</p><p>Christmas lollipop(s)</p><p>New years gift(s)</p><ul class=\"policy-list-bullets\"><li>Christmas lollipop(s):</li></ul><p>Selling Christmas lollipops. Price: Negotiable.</p><p>Buying a Christmas lollipop. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>New years gift(s):</li></ul><p>Selling New years gifts. Price: Negotiable.</p><p>Buying a New years gift. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>A Little gift(s):</li></ul><p>Selling a Little gift. Price: Negotiable.</p><p>Buying 5 Little gifts. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>A Big gift(s):</li></ul><p>Selling a Big gift. Price: Negotiable.</p><p>Buying 10 Big gifts. Budget: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">-charger(s):</h4><p>Selling a charger. Price: Negotiable.</p><p>Selling 10 chargers. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>Christmas resources:</li></ul><p>Christmas key(s)(ÔÇÿCÔÇÖ is always capital and ÔÇÿkÔÇÖ in lower case, also included ÔÇÿeachÔÇÖ when more than one key is mentioned.)</p><p>Christmas copper</p><p>Christmas timber</p><p>Christmas perch</p><p>Christmas seed(s)</p><p>Christmas lollipop(s)</p><p>New years gift(s)</p><ul class=\"policy-list-bullets\"><li>Christmas lollipop(s):</li></ul><p>Selling Christmas lollipops. Price: Negotiable.</p><p>Buying a Christmas lollipop. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>New years gift(s):</li></ul><p>Selling New years gifts. Price: Negotiable.</p><p>Buying a New years gift. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>A Little gift(s):</li></ul><p>Selling a Little gift. Price: Negotiable.</p><p>Buying 5 Little gifts. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>A Big gift(s):</li></ul><p>Selling a Big gift. Price: Negotiable.</p><p>Buying 10 Big gifts. Budget: Negotiable.</p></div>"
     },
     {
         title: "Business Names & Categories",
@@ -12195,7 +11352,7 @@ const POLICY_PAGES = [
     },
     {
         title: "Business Shares",
-        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>Grand ticket(s): (NOT rp ticket)</li></ul><p>Selling a Grand ticket. Price: Negotiable.</p><p>Buying 10 Grand tickets. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">-hookah(s):</h4><p>Selling a hookah. Price: Negotiable.</p><p>Selling 3 hookahs. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-juice(s):</h4><p>attack juice</p><p>protection juice</p><p>endurance juice</p><p>riding juice</p><p>power juice</p><p>immunity juice</p><p>juice on becoming an animal</p><p>juice for double the payment</p><p>fast running juice</p><p>-Leash</p><p>Buying a Leash. Budget: Negotiable.</p><p>Selling a Leash. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>Letters: (G,R,A,N,D)</li></ul><p>Selling letter \"G\". Price: Negotiable.</p><p>Buying letter “R”. Budget: Negotiable.</p><p>Selling letters. Price: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>Grand ticket(s): (NOT rp ticket)</li></ul><p>Selling a Grand ticket. Price: Negotiable.</p><p>Buying 10 Grand tickets. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">-hookah(s):</h4><p>Selling a hookah. Price: Negotiable.</p><p>Selling 3 hookahs. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-juice(s):</h4><p>attack juice</p><p>protection juice</p><p>endurance juice</p><p>riding juice</p><p>power juice</p><p>immunity juice</p><p>juice on becoming an animal</p><p>juice for double the payment</p><p>fast running juice</p><p>-Leash</p><p>Buying a Leash. Budget: Negotiable.</p><p>Selling a Leash. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>Letters: (G,R,A,N,D)</li></ul><p>Selling letter \"G\". Price: Negotiable.</p><p>Buying letter ÔÇ£RÔÇØ. Budget: Negotiable.</p><p>Selling letters. Price: Negotiable.</p></div>"
     },
     {
         title: "Services Category",
@@ -12219,7 +11376,7 @@ const POLICY_PAGES = [
     },
     {
         title: "Other Services & Dice Bet",
-        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>SIM card №:</li></ul><p>Selling SIM cards. Price: Negotiable.</p><p>Selling SIM card № 77-77-777. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>scrap metal:</li></ul><p>Selling a scrap metal. Price: Negotiable.</p><p>Buying 60 scrap metal. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>top quality metal:</li></ul><p>Selling a top quality metal. Price: Negotiable.</p><p>Buying 10 top quality metal. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">-thread(s):</h4><p>Selling a thread. Price: Negotiable.</p><p>Selling 200 threads. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-timber:</h4><p>Selling timber. Price: Negotiable.</p><p>Selling 30 timber. Price: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>SIM card Ôäû:</li></ul><p>Selling SIM cards. Price: Negotiable.</p><p>Selling SIM card Ôäû 77-77-777. Price: Negotiable.</p><ul class=\"policy-list-bullets\"><li>scrap metal:</li></ul><p>Selling a scrap metal. Price: Negotiable.</p><p>Buying 60 scrap metal. Budget: Negotiable.</p><ul class=\"policy-list-bullets\"><li>top quality metal:</li></ul><p>Selling a top quality metal. Price: Negotiable.</p><p>Buying 10 top quality metal. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">-thread(s):</h4><p>Selling a thread. Price: Negotiable.</p><p>Selling 200 threads. Price: Negotiable.</p><h4 class=\"policy-subtitle\">-timber:</h4><p>Selling timber. Price: Negotiable.</p><p>Selling 30 timber. Price: Negotiable.</p></div>"
     },
     {
         title: "Alliance & Business Owners",
@@ -12239,49 +11396,45 @@ const POLICY_PAGES = [
     },
     {
         title: "Christmas & New Year Gifts",
-        content: "<div class=\"policy-section\"><p>cage with a Rottweiler</p><p>cage with a Westie</p><p>cage with a Kitty Bunny</p><p>cage with a Duckling</p><p>cage with a Panda</p><p>cage with a Lion Cub</p><p>cage with a Mini Robot</p><p>cage with a Cosmodog</p><p>cage with a Easter Bunny</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying cage with a New years Husky. Budget: Negotiable.</p><p>Selling cage with a Rabbit. Price: Negotiable.</p><p>Buying cage with a Border Collie. Budget: Negotiable.</p><p>Buying cage with a pet. Budget: Negotiable.</p><p>Buying cage with a Christmas Elf. Budget: Negotiable.</p><p>Selling cage with a Santa Claus. Price: Negotiable.</p><p>Selling cage with a Cosmodog. Price: Negotiable.</p><p>Selling cage with a Easter Bunny. Price: Negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying Ingrand containers. Budget: Negotiable.</p><p>Buying Prime. Budget: Negotiable.</p><p>Selling Prime Platinum with 15 days. Price: Negotiable.</p><p>Selling Prime Platinum in bulk. Price: Negotiable.</p><p>Selling chargers and repair kits in bulk. Price: Negotiable.</p><p>Selling Benefactor-Benz 600SEL (W140) containers. Price: Negotiable.</p><p>Selling Grand RP trousers. Price: $2.3 Million.</p><p>Selling Grand RP collection T-shirt. Price: $50.000</p><p>Selling Grand RP collection pants. Price: $450.000</p><p>Selling a Grand ticket. Price: $325.000</p><p>Selling timber. Price: $900 each.</p><p>Buying seeds. Budget: $2.100 each.</p><p>Selling power booster shots. Price: Negotiable.</p><p>Buying a power booster shot. Budget: Negotiable.</p><p>Selling 200 scrap metal. Price: Negotiable.</p><p>Buying regular love containers. Budget: Negotiable.</p><p>Selling rare love containers. Price: Negotiable.</p><p>Selling mandarin and pineapple fruits and Lui Vi desert scarf mask. Price: Negotiable.</p><p>Selling 174 pineapple fruits and 3 batteries. Price: $650 and $20.000 each respectively.</p><p>Selling high quality pickaxe. Price: $650.000</p><p>Selling SIM card № 11-11-711. Price: Negotiable.</p><p>Selling desert scarf mask containers. Price: $100.000 each.</p><p>Selling desert scarf mask of type 6. Price: Negotiable.</p><p>Buying threads. Budget: $2.500 each.</p><p>Selling wheels 1, racer and drifter 2 containers. Price: Negotiable.</p><p>Selling masks of type 2. Price: $35.000 each.</p><p>Selling or trading desert scarf mask of type 25. Price: Negotiable.</p><p>Selling black Abibas pants. Price: $3 Million.</p><p>Selling black Lui Vi pants. Price: Negotiable.</p><p>Selling six tailed fox on shoulder pet. Price: Negotiable.</p><p>Selling cage with a Retriever. Price: $5 Million.</p><p>Selling Mikachu hoodie for women. Price: Negotiable.</p><p>Buying pineapple, mandarin and strawberry fruits. Budget: $650, $350 and $450 each respectively.</p><p>Selling solar barrels. Price: $70 each.</p><p>Buying premium fuel canisters. Budget: $9.000 each.</p><p>Selling black The West Pace jacket for men. Price: $5 Million.</p><p>Buying luminous head bag mask. Budget: Negotiable.</p><p>Selling luminous wheels of type 4. Price: Negotiable.</p><p>Selling a luminous stone. Price: $600.000</p><p>Selling luminous stones. Price: Negotiable.</p><p>Selling pet food. Price: $1 Million.</p><p>Buying 350 Grand tickets. Budget $10 Million.</p><p>Trading Grand tickets for luminous trousers.</p><p>Selling solar panels and regular lottery tickets. Price: Negotiable.</p><p>Selling cage with a Pig and cage with a Poodle. Price: Negotiable.</p><p>Buying high quality transmission tuning. Budget: $2 Million.</p><p>Trading valuable container plus cash for wheels containers.</p><p>Selling fuel for resource extraction. Price: Negotiable.</p><p>Selling an organization container. Price: Negotiable.</p><p>Selling mushroom seeds. Price: Negotiable.</p><p>Selling 2 Drawings. Price: Negotiable.</p><p>Selling an old summer gold container. Price: Negotiable.</p><p>Selling a Valentine 2025 container. Price: Negotiable.</p><p>Buying Valentine 2025 containers. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Clothing Item Examples:</h4><p>Buying Pans sneakers. Budget: Negotiable.</p><p>Buying multi-colored Pans sneakers. Budget: Negotiable.</p><p>Selling Niki Groundporce One new collection shoes for men. Price: Negotiable.</p><p>Selling purple and yellow RGB neon shoes. Price: $3 Million each.</p><p>Selling Abibas Pezy Boost 700 V3 Alvah shoes. Price: Negotiable.</p><p>Selling Ground Mordan 4 Retro Laser 30th shoes. Price: Negotiable.</p><p>Selling white tied scarf mask of type 1. Price: Negotiable.</p><p>Selling black Lui Vi desert scarf mask of type 1. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Juices:</h4></div>"
+        content: "<div class=\"policy-section\"><p>cage with a Rottweiler</p><p>cage with a Westie</p><p>cage with a Kitty Bunny</p><p>cage with a Duckling</p><p>cage with a Panda</p><p>cage with a Lion Cub</p><p>cage with a Mini Robot</p><p>cage with a Cosmodog</p><p>cage with a Easter Bunny</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying cage with a New years Husky. Budget: Negotiable.</p><p>Selling cage with a Rabbit. Price: Negotiable.</p><p>Buying cage with a Border Collie. Budget: Negotiable.</p><p>Buying cage with a pet. Budget: Negotiable.</p><p>Buying cage with a Christmas Elf. Budget: Negotiable.</p><p>Selling cage with a Santa Claus. Price: Negotiable.</p><p>Selling cage with a Cosmodog. Price: Negotiable.</p><p>Selling cage with a Easter Bunny. Price: Negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Buying Ingrand containers. Budget: Negotiable.</p><p>Buying Prime. Budget: Negotiable.</p><p>Selling Prime Platinum with 15 days. Price: Negotiable.</p><p>Selling Prime Platinum in bulk. Price: Negotiable.</p><p>Selling chargers and repair kits in bulk. Price: Negotiable.</p><p>Selling Benefactor-Benz 600SEL (W140) containers. Price: Negotiable.</p><p>Selling Grand RP trousers. Price: $2.3 Million.</p><p>Selling Grand RP collection T-shirt. Price: $50.000</p><p>Selling Grand RP collection pants. Price: $450.000</p><p>Selling a Grand ticket. Price: $325.000</p><p>Selling timber. Price: $900 each.</p><p>Buying seeds. Budget: $2.100 each.</p><p>Selling power booster shots. Price: Negotiable.</p><p>Buying a power booster shot. Budget: Negotiable.</p><p>Selling 200 scrap metal. Price: Negotiable.</p><p>Buying regular love containers. Budget: Negotiable.</p><p>Selling rare love containers. Price: Negotiable.</p><p>Selling mandarin and pineapple fruits and Lui Vi desert scarf mask. Price: Negotiable.</p><p>Selling 174 pineapple fruits and 3 batteries. Price: $650 and $20.000 each respectively.</p><p>Selling high quality pickaxe. Price: $650.000</p><p>Selling SIM card Ôäû 11-11-711. Price: Negotiable.</p><p>Selling desert scarf mask containers. Price: $100.000 each.</p><p>Selling desert scarf mask of type 6. Price: Negotiable.</p><p>Buying threads. Budget: $2.500 each.</p><p>Selling wheels 1, racer and drifter 2 containers. Price: Negotiable.</p><p>Selling masks of type 2. Price: $35.000 each.</p><p>Selling or trading desert scarf mask of type 25. Price: Negotiable.</p><p>Selling black Abibas pants. Price: $3 Million.</p><p>Selling black Lui Vi pants. Price: Negotiable.</p><p>Selling six tailed fox on shoulder pet. Price: Negotiable.</p><p>Selling cage with a Retriever. Price: $5 Million.</p><p>Selling Mikachu hoodie for women. Price: Negotiable.</p><p>Buying pineapple, mandarin and strawberry fruits. Budget: $650, $350 and $450 each respectively.</p><p>Selling solar barrels. Price: $70 each.</p><p>Buying premium fuel canisters. Budget: $9.000 each.</p><p>Selling black The West Pace jacket for men. Price: $5 Million.</p><p>Buying luminous head bag mask. Budget: Negotiable.</p><p>Selling luminous wheels of type 4. Price: Negotiable.</p><p>Selling a luminous stone. Price: $600.000</p><p>Selling luminous stones. Price: Negotiable.</p><p>Selling pet food. Price: $1 Million.</p><p>Buying 350 Grand tickets. Budget $10 Million.</p><p>Trading Grand tickets for luminous trousers.</p><p>Selling solar panels and regular lottery tickets. Price: Negotiable.</p><p>Selling cage with a Pig and cage with a Poodle. Price: Negotiable.</p><p>Buying high quality transmission tuning. Budget: $2 Million.</p><p>Trading valuable container plus cash for wheels containers.</p><p>Selling fuel for resource extraction. Price: Negotiable.</p><p>Selling an organization container. Price: Negotiable.</p><p>Selling mushroom seeds. Price: Negotiable.</p><p>Selling 2 Drawings. Price: Negotiable.</p><p>Selling an old summer gold container. Price: Negotiable.</p><p>Selling a Valentine 2025 container. Price: Negotiable.</p><p>Buying Valentine 2025 containers. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Clothing Item Examples:</h4><p>Buying Pans sneakers. Budget: Negotiable.</p><p>Buying multi-colored Pans sneakers. Budget: Negotiable.</p><p>Selling Niki Groundporce One new collection shoes for men. Price: Negotiable.</p><p>Selling purple and yellow RGB neon shoes. Price: $3 Million each.</p><p>Selling Abibas Pezy Boost 700 V3 Alvah shoes. Price: Negotiable.</p><p>Selling Ground Mordan 4 Retro Laser 30th shoes. Price: Negotiable.</p><p>Selling white tied scarf mask of type 1. Price: Negotiable.</p><p>Selling black Lui Vi desert scarf mask of type 1. Price: Negotiable.</p><p>________________</p><h4 class=\"policy-subtitle\">Juices:</h4></div>"
     },
     {
         title: "Drawings & Statues",
-        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>attack juice</li><li>protection juice</li><li>endurance juice</li><li>25% protection juice</li><li>riding juice</li><li>power juice</li><li>immunity juice</li><li>fast running juice</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling protection and immunity juices. Price: Negotiable.</p><p>Selling juices. Price: Negotiable.</p><p>Buying 20% juices in bulk. Budget: Negotiable.</p><p>Buying 20% attack juices in bulk. Budget: Negotiable.</p><p>Selling juices at the beach market shop №9.</p><p>Selling 50 20% attack and 20 10% protection juices. Price: Negotiable.</p><p>Selling juice on becoming an animal. Price: Negotiable.</p><p>Buying 10 juices on becoming an animal. Budget: Negotiable.</p><p>Selling juice for double the payment. Price: Negotiable.</p><p>Buying 10 juices for double the payment. Budget: Negotiable.</p><p>Selling fast running juice. Price: Negotiable.</p><p>Buying fast running juice. Budget: Negotiable.</p><p>Selling 25% protection juice. Price: Negotiable.</p><p>Buying 25% attack juice. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Animated Items:</h4><ul class=\"policy-list-bullets\"><li>Animated items must be written using the Animated items list.</li></ul><p>Examples</p><ul class=\"policy-list-bullets\"><li>Selling animated items. Price: Negotiable.</li><li>Selling Fire Ring. Price: Negotiable.</li><li>Buying Lightning Charge. Budget: Negotiable.</li></ul></div>"
+        content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>attack juice</li><li>protection juice</li><li>endurance juice</li><li>25% protection juice</li><li>riding juice</li><li>power juice</li><li>immunity juice</li><li>fast running juice</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling protection and immunity juices. Price: Negotiable.</p><p>Selling juices. Price: Negotiable.</p><p>Buying 20% juices in bulk. Budget: Negotiable.</p><p>Buying 20% attack juices in bulk. Budget: Negotiable.</p><p>Selling juices at the beach market shop Ôäû9.</p><p>Selling 50 20% attack and 20 10% protection juices. Price: Negotiable.</p><p>Selling juice on becoming an animal. Price: Negotiable.</p><p>Buying 10 juices on becoming an animal. Budget: Negotiable.</p><p>Selling juice for double the payment. Price: Negotiable.</p><p>Buying 10 juices for double the payment. Budget: Negotiable.</p><p>Selling fast running juice. Price: Negotiable.</p><p>Buying fast running juice. Budget: Negotiable.</p><p>Selling 25% protection juice. Price: Negotiable.</p><p>Buying 25% attack juice. Budget: Negotiable.</p><h4 class=\"policy-subtitle\">Animated Items:</h4><ul class=\"policy-list-bullets\"><li>Animated items must be written using the Animated items list.</li></ul><p>Examples</p><ul class=\"policy-list-bullets\"><li>Selling animated items. Price: Negotiable.</li><li>Selling Fire Ring. Price: Negotiable.</li><li>Buying Lightning Charge. Budget: Negotiable.</li></ul></div>"
     },
     {
         title: "Clothing Features & Order",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Spatial Sound Effects:</h4><ul class=\"policy-list-bullets\"><li>Spatial sound effects must be written using the Full Name.</li></ul><p>Examples</p><ul class=\"policy-list-bullets\"><li>Selling spatial sound effect (Suspicious Sound). Price: Negotiable. (only 1)</li><li>Buying 2 spatial sound effects. Budget: Negotiable. (for more than 1, do not mention the names)</li><li>Selling a spatial sound effect. Price: Negotiable.</li></ul><h4 class=\"policy-subtitle\">Beach Market:</h4><p>● Don’t need to mention negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling mining resources at the beach market shop №23.</p><p>Selling luminous clothes for men at the beach market shop №23.</p><p>Selling a variety of items at the beach market shop №23.</p><p>Selling luminous trousers at the beach market shop №21. Price: $1.6 Million.</p><p>Selling batteries at the beach market shop №2. Price: $23.500 each.</p><p>Selling various items at the beach market shop №5.</p><p>● If the sender mentions cheap prices change to \"for good prices\" instead.</p><p>Note: For the Beach Market, you cannot mention more than one item name in the ad. If there are multiple items, you must use “various items.”</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling various items for good prices at the beach market shop №23.</p><p>________________</p><p>Official Places: Uppercases</p><p>Vinewood Hills</p><p>Rockford Hills</p><p>Richman</p><p>Sandy Shores</p><p>Paleto Bay</p><p>Postal</p><p>Hospital</p><p>Capitol</p><p>Fire Station</p><p>Auto Fair</p><p>Bahama Mamas Bar</p><p>Tequi-la-la Bar</p><p>FIB</p><p>Hotel Spa Bar</p><p>Pacific Bluffs Country Club</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Spatial Sound Effects:</h4><ul class=\"policy-list-bullets\"><li>Spatial sound effects must be written using the Full Name.</li></ul><p>Examples</p><ul class=\"policy-list-bullets\"><li>Selling spatial sound effect (Suspicious Sound). Price: Negotiable. (only 1)</li><li>Buying 2 spatial sound effects. Budget: Negotiable. (for more than 1, do not mention the names)</li><li>Selling a spatial sound effect. Price: Negotiable.</li></ul><h4 class=\"policy-subtitle\">Beach Market:</h4><p>ÔùÅ DonÔÇÖt need to mention negotiable.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling mining resources at the beach market shop Ôäû23.</p><p>Selling luminous clothes for men at the beach market shop Ôäû23.</p><p>Selling a variety of items at the beach market shop Ôäû23.</p><p>Selling luminous trousers at the beach market shop Ôäû21. Price: $1.6 Million.</p><p>Selling batteries at the beach market shop Ôäû2. Price: $23.500 each.</p><p>Selling various items at the beach market shop Ôäû5.</p><p>ÔùÅ If the sender mentions cheap prices change to \"for good prices\" instead.</p><p>Note: For the Beach Market, you cannot mention more than one item name in the ad. If there are multiple items, you must use ÔÇ£various items.ÔÇØ</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling various items for good prices at the beach market shop Ôäû23.</p><p>________________</p><p>Official Places: Uppercases</p><p>Vinewood Hills</p><p>Rockford Hills</p><p>Richman</p><p>Sandy Shores</p><p>Paleto Bay</p><p>Postal</p><p>Hospital</p><p>Capitol</p><p>Fire Station</p><p>Auto Fair</p><p>Bahama Mamas Bar</p><p>Tequi-la-la Bar</p><p>FIB</p><p>Hotel Spa Bar</p><p>Pacific Bluffs Country Club</p></div>"
     },
     {
         title: "Containers & Dice",
-        content: "<div class=\"policy-section\"><p>Diamond Resort Bar (Casino Restaurant)</p><p>Vanilla Unicorn Bar</p><p>Church</p><p>Stock Exchange</p><p>Stadium</p><p>Chumash</p><p>Lifeinvader</p><p>Del Perro Pier</p><p>Del Perro Beach</p><p>Cayo Perico Island</p><p>Hotel</p><p>Raton Canyon</p><p>School</p><p>SAHP</p><p>Mirror Park</p><p>Unofficial places: Lowercases</p><p>airport</p><p>autosalon</p><p>beach</p><p>beach market</p><p>ghetto</p><p>post office</p><p>train station</p><p>yacht</p><p>Note: When mentioning any Official Location, write it as in/near Vinewood Hills or near SAHP (keep letters uppercase). When mentioning an Unofficial Location, always include “the” before the place name, such as in the city, in the ghetto, or near the beach market (keep all letters lowercase).</p><p>________________</p><h4 class=\"policy-subtitle\">Auto:</h4><p>A maximum of ONE vehicle per ad is allowed, unless they are trading.</p><p>The brand and the model of the vehicle must be in quotes (\" \").</p><p>Please copy the vehicle name DIRECTLY from the VEHICLE LIST to ensure correct formatting.</p><p>Vehicles, which don\'t have \"NOT SELLABLE CARS\" text above them are allowed to sell, buy, rent or rent out.</p><p>Vehicles, which have \"NOT SELLABLE CARS\" text above them are only allowed to rent or rent out (NOT SELL OR BUY).</p><p>Can only trade a Vehicle for another Vehicle.</p><h4 class=\"policy-subtitle\">Order of the features of a vehicle:</h4></div>"
+        content: "<div class=\"policy-section\"><p>Diamond Resort Bar (Casino Restaurant)</p><p>Vanilla Unicorn Bar</p><p>Church</p><p>Stock Exchange</p><p>Stadium</p><p>Chumash</p><p>Lifeinvader</p><p>Del Perro Pier</p><p>Del Perro Beach</p><p>Cayo Perico Island</p><p>Hotel</p><p>Raton Canyon</p><p>School</p><p>SAHP</p><p>Mirror Park</p><p>Unofficial places: Lowercases</p><p>airport</p><p>autosalon</p><p>beach</p><p>beach market</p><p>ghetto</p><p>post office</p><p>train station</p><p>yacht</p><p>Note: When mentioning any Official Location, write it as in/near Vinewood Hills or near SAHP (keep letters uppercase). When mentioning an Unofficial Location, always include ÔÇ£theÔÇØ before the place name, such as in the city, in the ghetto, or near the beach market (keep all letters lowercase).</p><p>________________</p><h4 class=\"policy-subtitle\">Auto:</h4><p>A maximum of ONE vehicle per ad is allowed, unless they are trading.</p><p>The brand and the model of the vehicle must be in quotes (\" \").</p><p>Please copy the vehicle name DIRECTLY from the VEHICLE LIST to ensure correct formatting.</p><p>Vehicles, which don\'t have \"NOT SELLABLE CARS\" text above them are allowed to sell, buy, rent or rent out.</p><p>Vehicles, which have \"NOT SELLABLE CARS\" text above them are only allowed to rent or rent out (NOT SELL OR BUY).</p><p>Can only trade a Vehicle for another Vehicle.</p><h4 class=\"policy-subtitle\">Order of the features of a vehicle:</h4></div>"
     },
     {
         title: "Fish & Fishing Rods",
-        content: "<div class=\"policy-section\"><p>1) with partial/full configuration</p><p>2) visual upgrades</p><p>3) luminous wheels (of type)</p><p>4) insurance - (do not mention the number of days.)</p><p>5) turbo kit</p><p>6) drift kit</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Obey R8\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Price: $8 Million.</p><p>Selling \"Enus Phantom\" with partial configuration, visual upgrades, luminous wheels of type 9, insurance and drift kit. Price: $10 Million.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Ubermacht M8 (F91)\". Price: Negotiable.</p><p>Selling or trading \"Ubermacht M3 (G80)\" for \"Grotti Italia (F458)\". Price: Negotiable.</p><p>Selling \"Monowheel\" of type 2. Price: Negotiable.</p><p>Buying \"Monowheel\" of type 22. Budget: Negotiable.</p><p>● Any engine, transmission, brakes or suspension upgrades to the vehicle (chip tuning upgrades) are all clubbed under an umbrella term - (configuration).</p><p>● All upgrades which change the appearance of the car like paint, wheels (except luminous wheels), headlights etc. (service station upgrades) are clubbed under an umbrella term - (visual upgrades).</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Ubermacht 760 (LI)\" with visual upgrades. Price: Negotiable.</p><p>● If the client mentions luminous rims feature, we need to mention this detail as luminous wheels in the ads. (Without mentioning which rims belong to which container.)</p></div>"
+        content: "<div class=\"policy-section\"><p>1) with partial/full configuration</p><p>2) visual upgrades</p><p>3) luminous wheels (of type)</p><p>4) insurance - (do not mention the number of days.)</p><p>5) turbo kit</p><p>6) drift kit</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Obey R8\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Price: $8 Million.</p><p>Selling \"Enus Phantom\" with partial configuration, visual upgrades, luminous wheels of type 9, insurance and drift kit. Price: $10 Million.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Ubermacht M8 (F91)\". Price: Negotiable.</p><p>Selling or trading \"Ubermacht M3 (G80)\" for \"Grotti Italia (F458)\". Price: Negotiable.</p><p>Selling \"Monowheel\" of type 2. Price: Negotiable.</p><p>Buying \"Monowheel\" of type 22. Budget: Negotiable.</p><p>ÔùÅ Any engine, transmission, brakes or suspension upgrades to the vehicle (chip tuning upgrades) are all clubbed under an umbrella term - (configuration).</p><p>ÔùÅ All upgrades which change the appearance of the car like paint, wheels (except luminous wheels), headlights etc. (service station upgrades) are clubbed under an umbrella term - (visual upgrades).</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Ubermacht 760 (LI)\" with visual upgrades. Price: Negotiable.</p><p>ÔùÅ If the client mentions luminous rims feature, we need to mention this detail as luminous wheels in the ads. (Without mentioning which rims belong to which container.)</p></div>"
     },
     {
         title: "Fruits, Vegetables & Fireworks",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Selling Obey r8 with luminous unique 25 rims from wheels 1 container. > Selling \"Obey R8\" with luminous wheels of type 25. Price: Negotiable.</p><p>Note: Mentioning the type of luminous wheels is allowed in Auto category ads.</p><p>● If there are no chip tuning upgrades to the vehicle, then no need to specify anything. If there are some chip tuning upgrades, then we use \"with partial configuration\" right after the vehicle name.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Annis RX-7 (FD)\" with partial configuration and visual upgrades. Price: Negotiable.</p><p>● If there are chip tuning upgrades and the car is fully maxed, then we use \"with full configuration\" right after the vehicle name.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Benefactor-Benz 600SEL (W140)\" with full configuration, insurance and drift kit. Price: Negotiable.</p><p>If you’re unsure whether a car actually exists in the city.</p><p>Search on Google, type the car name, and type \"GTA 5\" at the end, if a car shows up, it\'s there in the game.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>Selling Obey r8 with luminous unique 25 rims from wheels 1 container. > Selling \"Obey R8\" with luminous wheels of type 25. Price: Negotiable.</p><p>Note: Mentioning the type of luminous wheels is allowed in Auto category ads.</p><p>ÔùÅ If there are no chip tuning upgrades to the vehicle, then no need to specify anything. If there are some chip tuning upgrades, then we use \"with partial configuration\" right after the vehicle name.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Annis RX-7 (FD)\" with partial configuration and visual upgrades. Price: Negotiable.</p><p>ÔùÅ If there are chip tuning upgrades and the car is fully maxed, then we use \"with full configuration\" right after the vehicle name.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Benefactor-Benz 600SEL (W140)\" with full configuration, insurance and drift kit. Price: Negotiable.</p><p>If youÔÇÖre unsure whether a car actually exists in the city.</p><p>Search on Google, type the car name, and type \"GTA 5\" at the end, if a car shows up, it\'s there in the game.</p></div>"
     },
     {
         title: "Juices, SIM Cards & Solar Panels",
-        content: "<div class=\"policy-section\"><p>● Upgrades like turbo kit and drift kit should be written separately.</p><p>● We are allowed to mention whether the car has insurance. No need to mention the number of days of insurance. Just \"with insurance\" is fine.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Benefactor-Maybach Pullman\" with insurance. Price: $200.000</p><p>● Always remember to capitalize the first letter of the brand name and the model of the car.</p></div>"
+        content: "<div class=\"policy-section\"><p>ÔùÅ Upgrades like turbo kit and drift kit should be written separately.</p><p>ÔùÅ We are allowed to mention whether the car has insurance. No need to mention the number of days of insurance. Just \"with insurance\" is fine.</p><h4 class=\"policy-subtitle\">Example:</h4><p>Selling \"Benefactor-Maybach Pullman\" with insurance. Price: $200.000</p><p>ÔùÅ Always remember to capitalize the first letter of the brand name and the model of the car.</p></div>"
     },
     {
         title: "Tuning Parts & Shoulder Pets",
-        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>\"Ubermacht m5 e60\" is NOT correct, instead \"Ubermacht M5 (E60)\" is correct.</p><p>● If the sender did not mention any car brands, mention \"Selling a car\" instead.</p><p>● Don\'t need to indicate types of cars such as SUV, Sports, Electric, etc.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling a car. Price: Negotiable.</p><p>Buying a car with full configuration. Budget: $10 Million.</p><p>Buying an electric car. > Buying a car. Budget: Negotiable.</p></div>"
+        content: "<div class=\"policy-section\"><h4 class=\"policy-subtitle\">Example:</h4><p>\"Ubermacht m5 e60\" is NOT correct, instead \"Ubermacht M5 (E60)\" is correct.</p><p>ÔùÅ If the sender did not mention any car brands, mention \"Selling a car\" instead.</p><p>ÔùÅ Don\'t need to indicate types of cars such as SUV, Sports, Electric, etc.</p><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling a car. Price: Negotiable.</p><p>Buying a car with full configuration. Budget: $10 Million.</p><p>Buying an electric car. > Buying a car. Budget: Negotiable.</p></div>"
     },
     {
         title: "Caged Pets Rules",
-        content: "<div class=\"policy-section\"><p>● Buying/Selling/Trading of bikes/helicopters/boats also fall under this category.</p><h4 class=\"policy-subtitle\">Auto Fair:</h4><ul class=\"policy-list-bullets\"><li>Don’t need to mention price as “Negotiable.”.</li><li>Mention “at Auto Fair.”.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Benefactor-Maybach Pullman\" at Auto Fair.</p><p>Selling \"Grotti Italia (F458) with insurance and turbo kit at Auto Fair.</p><h4 class=\"policy-subtitle\">Car Rentals:</h4><p>You can now rent container vehicles to players who own a car sharing business. Renting of vehicles can be done up to 21 days.</p><p>It is unlikely that we will get many vehicle renting ads, as car sharing business owners usually have their own stockpile of container vehicles.</p></div>"
+        content: "<div class=\"policy-section\"><p>ÔùÅ Buying/Selling/Trading of bikes/helicopters/boats also fall under this category.</p><h4 class=\"policy-subtitle\">Auto Fair:</h4><ul class=\"policy-list-bullets\"><li>DonÔÇÖt need to mention price as ÔÇ£Negotiable.ÔÇØ.</li><li>Mention ÔÇ£at Auto Fair.ÔÇØ.</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Selling \"Benefactor-Maybach Pullman\" at Auto Fair.</p><p>Selling \"Grotti Italia (F458) with insurance and turbo kit at Auto Fair.</p><h4 class=\"policy-subtitle\">Car Rentals:</h4><p>You can now rent container vehicles to players who own a car sharing business. Renting of vehicles can be done up to 21 days.</p><p>It is unlikely that we will get many vehicle renting ads, as car sharing business owners usually have their own stockpile of container vehicles.</p></div>"
     },
     {
         title: "Editors & Credits",
         content: "<div class=\"policy-section\"><ul class=\"policy-list-bullets\"><li>Use the word \"Renting out\". Instead of using \"Price\", use the word \"Rent\".</li></ul><h4 class=\"policy-subtitle\">Examples:</h4><p>Renting out a vehicle. Rent: Negotiable. (for single vehicle)</p><p>Renting out vehicles. Rent: Negotiable. (for more than one vehicle)</p><p>Renting out \"Truffade Chiron\". Rent: Negotiable.</p><p>Renting out \"Truffade Chiron\". Rent: $100.000 per week.</p><p>Renting out \"Truffade Chiron\". Rent: $100.000 for 3 days.</p><p>Renting out \"Truffade Chiron\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Rent: Negotiable.</p><p>Renting out \"Truffade Chiron\" with full configuration, visual upgrades, insurance, turbo kit and drift kit. Rent: $100.000 for 3 days.</p><h4 class=\"policy-subtitle\">An owner of a car sharing business would post:</h4><p>Renting a vehicle. Budget: Negotiable.</p><p>Renting a vehicle. Budget: $100.000 per week.</p><p>Renting vehicles. Budget: $100.000 per week per car. (for more than one vehicle)</p><p>Renting \"Truffade Chiron\". Budget: $100.000 per week.</p><p>Renting \"Truffade Chiron\" with partial configuration and visual upgrades. Budget: $100.000 for 3 days.</p><ul class=\"policy-list-bullets\"><li>*Players are also now able to rent exclusive truck skins to boost their earnings from the trucking job. This would be advertised as the following:</li></ul><p>Renting a \"20 percent\" exclusive truck. Budget: Negotiable.</p><p>If rent and budget are specified but no rental period is specified, (1-21 days/per week/for 1-21 days) reject with the message \"Please indicate rental period.\"</p><h4 class=\"policy-subtitle\">Credit List:</h4><h4 class=\"policy-subtitle\">Editors:</h4><p>White Rabbit</p><p>Mya Rae</p><p>Minxy Malono</p><p>Cherry Choo</p><p>Kim Abergil</p><p>Habib Rahman</p><p>Calvin Classic</p><p>Nate Blakely</p><p>Nyx Kleps</p><p>Frankie Hill</p><p>Azure Duke</p><p>Carl Jordan</p><p>Eve Mystbloom</p><p>Emazeo Ferry</p><p>Shikamaru Frankie</p><p>Lucio Escobar</p><p>Elite Alpha</p><p>Max Uchiha</p><p>C E O</p><p>Max Uchiha</p><p>Ex: CEO</p><p>2x Elite Alpha | 2988</p><p>2x Nate Blakely | 60897</p><p>2x Zandre Mortez | 124460</p><p>Lucio Escobar | 44513</p><p>2x Nyx Kleps | 71788</p><p>Azure Duke | 62753</p><p>John Funchallez | 1378</p><p>Emazeo Ferry | 113643</p><p>Viking Nawab | 39322</p><p>Abdul Hadii | 98878</p><p>John Ice | 127082</p><p>2x Evee Smoke | 60696</p><p>Axon Drake | 84678</p><p>Carl Jordan | 38646</p><p>Nateq Blakely | 60897</p><p>2x Captain Voax | 31031</p><p>Kiana Kaslana | 39734</p><p>Levi Pluxury | 4660</p><p>2x Habib Rahman | 37496</p><p>2x Lucio Escobar | 44513</p><p>Hazem Prod | 41953</p><p>2x Minxy Malono | 5944</p><p>John Funchalez | 1378</p><p>Rui Ace | 240</p><p>Opti Pride | 12854</p><p>Minxy Malono | 5944</p><p>Josh Anton | 38601</p><p>2x Lavi Pluxury | 13752</p><p>2x Hamada Ninja | 10494</p><p>Singham Vella | 14790</p><p>Broolz Hurmaci | 347</p><p>Elizabeth Targaryen | 7238</p><p>3rd Carlo Russo | 186</p><p>2nd Don Kiddick | 359</p><p>1st Nyx Liu l | 94</p></div>"
     }
 ];
-
-
-
-
 
 
 let currentPolicySpread = 0;
@@ -12454,7 +11607,7 @@ function showBookSearchResults(query) {
     bookSearchResults.forEach((res, i) => {
         listHTML += `
             <li class="search-result-item" data-index="${i}">
-                <div class="search-result-page-num">Page ${res.pageIndex + 1} • ${res.pageTitle}</div>
+                <div class="search-result-page-num">Page ${res.pageIndex + 1} ÔÇó ${res.pageTitle}</div>
                 <div class="search-result-snippet">${res.snippet}</div>
             </li>
         `;
@@ -12585,7 +11738,7 @@ function initPolicyBook() {
             // Reset inputs and show success
             trainWrong.value = "";
             trainRight.value = "";
-            showCustomNotification(`Spelling trained from policy: "${wrongVal}" → "${rightVal}"`, "success");
+            showCustomNotification(`Spelling trained from policy: "${wrongVal}" ÔåÆ "${rightVal}"`, "success");
             
             const oldHtml = trainSubmit.innerHTML;
             trainSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Trained!`;
@@ -12621,27 +11774,14 @@ function initPolicyBook() {
     }
 
     if (searchInput) {
-        const searchClearBtn = document.getElementById("book-search-clear");
-        
         searchInput.addEventListener("input", (e) => {
             const query = e.target.value.trim();
             if (query.length > 0) {
-                if (searchClearBtn) searchClearBtn.style.display = "flex";
                 showBookSearchResults(query);
             } else {
-                if (searchClearBtn) searchClearBtn.style.display = "none";
                 renderPolicySpread(currentPolicySpread);
             }
         });
-
-        if (searchClearBtn) {
-            searchClearBtn.addEventListener("click", () => {
-                searchInput.value = "";
-                searchClearBtn.style.display = "none";
-                renderPolicySpread(currentPolicySpread);
-                searchInput.focus();
-            });
-        }
     }
 
     renderPolicySpread(currentPolicySpread);
@@ -12716,7 +11856,7 @@ function extractSpellingCorrection(raw, expected) {
     if (corrections.length === 0) return null;
     
     // If multiple misspelled words map to the same correct multi-word brand, group them
-    // e.g., "lui vi" → "louis vuitton"
+    // e.g., "lui vi" ÔåÆ "louis vuitton"
     corrections.sort((a, b) => a.distance - b.distance);
     
     // Check if consecutive wrong words form a multi-word correction
@@ -13186,7 +12326,7 @@ function loadAndRenderBugTriage() {
     container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px;">
             <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-            <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading bug reports…</p>
+            <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading bug reportsÔÇª</p>
         </div>`;
     
     const filterAndRender = (reports) => {
@@ -13198,7 +12338,7 @@ function loadAndRenderBugTriage() {
     };
     
     if (!CONFIG.GOOGLE_SCRIPT_URL) {
-        // No backend configured — show mock bug reports for testing
+        // No backend configured ÔÇö show mock bug reports for testing
         filterAndRender(getMockBugReports());
         return;
     }
@@ -13218,12 +12358,12 @@ function loadAndRenderBugTriage() {
         if (data.status === "success" && data.reports) {
             filterAndRender(data.reports);
         } else {
-            // Backend returned error — show mock bug reports as fallback
+            // Backend returned error ÔÇö show mock bug reports as fallback
             filterAndRender(getMockBugReports());
         }
     })
     .catch(() => {
-        // Network error — show mock bug reports as fallback
+        // Network error ÔÇö show mock bug reports as fallback
         filterAndRender(getMockBugReports());
     });
 }
@@ -13495,7 +12635,6 @@ function resolveBugReport(report, card, isIgnore = false) {
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
             action: "resolve_bug_report",
-            id: report.id,
             rawInput: report.rawInput,
             timestamp: report.timestamp,
             passcode: passcode,
@@ -13510,393 +12649,36 @@ function resolveBugReport(report, card, isIgnore = false) {
 
 // --- Gemini Spark AI Engine & Fuzzy Suggestion Fallback Helpers ---
 
-// --- Gemini Backup Key Vault & Auto-Failover Logic ---
-
-// Helper to update the visual state of a vault slot status dot
-function updateVaultStatusDot(slot, status) {
-    const dot = document.querySelector(`.vault-status-dot[data-slot="${slot}"]`);
-    if (!dot) return;
-    if (status === "active") {
-        dot.style.background = "#30d158";
-        dot.title = "Active (Connected)";
-    } else if (status === "rate-limit") {
-        dot.style.background = "#ff9f0a";
-        dot.title = "Rate Limited / Quota Exceeded (429)";
-    } else if (status === "invalid" || status === "error") {
-        dot.style.background = "#ff453a";
-        dot.title = "Invalid Key / Connection Error";
-    } else {
-        dot.style.background = "rgba(255,255,255,0.15)";
-        dot.title = "Untested";
-    }
-}
-
-// Test health of a single key slot
-async function testSingleKeyHealth(keyVal) {
-    if (!keyVal) return { ok: false, status: "empty", msg: "Empty Slot" };
-    try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: "Hello!" }] }]
-            })
-        });
-        if (!res.ok) {
-            const errBody = await res.json().catch(() => ({}));
-            const code = errBody?.error?.code || res.status;
-            const message = errBody?.error?.message || "API error";
-            return { ok: false, status: code === 429 ? "rate-limit" : "invalid", msg: message };
-        }
-        trackGeminiAPICall();
-        return { ok: true, status: "active", msg: "Connected" };
-    } catch (e) {
-        return { ok: false, status: "error", msg: e.message || "Network Error" };
-    }
-}
-
-// Auto-failover: sequentially rotate active slot to next populated slot and return key
-function failoverToNextKey() {
-    const isFailoverEnabled = localStorage.getItem("li_gemini_auto_failover") === "true";
-    if (!isFailoverEnabled) return null;
-
-    const startSlot = parseInt(localStorage.getItem("li_gemini_active_slot") || "1");
-    let nextSlot = startSlot;
-
-    for (let attempts = 1; attempts <= 5; attempts++) {
-        nextSlot = (nextSlot % 5) + 1; // sequentially advance: 1->2->3->4->5->1
-        
-        const backupKey = localStorage.getItem(`li_gemini_vault_key_${nextSlot}`);
-        if (backupKey && backupKey.trim()) {
-            // Found a valid key slot!
-            localStorage.setItem("li_gemini_active_slot", nextSlot.toString());
-            localStorage.setItem("li_gemini_api_key", backupKey.trim());
-            
-            // Sync with hidden main key input
-            const mainInput = document.getElementById("input-ai-gemini-key");
-            if (mainInput) mainInput.value = backupKey.trim();
-
-            // Refresh UI in settings
-            updateAIGeminiStatusDisplay();
-            
-            // Highlight row visually in Settings tab
-            for (let s = 1; s <= 5; s++) {
-                const r = document.querySelector(`.vault-row[data-slot="${s}"]`);
-                const ba = r?.querySelector(`.btn-vault-activate`);
-                if (r) {
-                    if (s === nextSlot) {
-                        r.classList.add("active");
-                        if (ba) {
-                            ba.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
-                            ba.style.color = "var(--color-primary)";
-                        }
-                    } else {
-                        r.classList.remove("active");
-                        if (ba) {
-                            ba.innerHTML = `<i class="fa-regular fa-circle"></i>`;
-                            ba.style.color = "var(--text-muted)";
-                        }
-                    }
-                }
-            }
-
-            if (typeof showCustomNotification === "function") {
-                showCustomNotification(`Failover Triggered: Switched to Slot ${nextSlot} backup key!`, "warning");
-            }
-            return backupKey.trim();
-        }
-    }
-    
-    return null; // no other valid backup key found
-}
-
-// Unified API calling promise wrapper with Auto-Failover rotation
-function geminiPostWithFailover(payload) {
-    let activeKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
-    const autoFailoverEnabled = localStorage.getItem("li_gemini_auto_failover") === "true";
-
-    const attemptPost = (key, slotsTested = new Set()) => {
-        return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${key}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
-        .then(async res => {
-            if (!res.ok) {
-                const errBody = await res.json().catch(() => ({}));
-                const code = errBody?.error?.code || res.status;
-                const message = errBody?.error?.message || `HTTP ${res.status}`;
-                throw { code, message };
-            }
-            return res.json();
-        })
-        .catch(async err => {
-            console.warn(`Gemini Request failed with key: ...${key.slice(-6)}. Error:`, err);
-            const errCode = err.code || 0;
-            const isApiError = errCode === 429 || errCode === 403 || errCode === 400 || errCode === 0;
-
-            if (isApiError && autoFailoverEnabled) {
-                const currentSlot = localStorage.getItem("li_gemini_active_slot") || "1";
-                slotsTested.add(currentSlot);
-                updateVaultStatusDot(currentSlot, errCode === 429 ? "rate-limit" : "invalid");
-
-                const nextKey = failoverToNextKey();
-                if (nextKey && !slotsTested.has(localStorage.getItem("li_gemini_active_slot"))) {
-                    console.log(`Retrying Gemini request with Backup Key from Slot ${localStorage.getItem("li_gemini_active_slot")}`);
-                    return attemptPost(nextKey, slotsTested);
-                }
-            }
-            throw err;
-        });
-    };
-
-    return attemptPost(activeKey);
-}
-
-// Initializes settings vault panel controls and event handlers
-function initBackupKeyVault() {
-    const vaultList = document.getElementById("api-vault-list");
-    if (!vaultList) return;
-
-    // Load active slot from localStorage (default "1")
-    let activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
-    
-    // Load failover switch state
-    const failoverToggle = document.getElementById("toggle-ai-failover");
-    let autoFailover = localStorage.getItem("li_gemini_auto_failover");
-    if (autoFailover === null) {
-        autoFailover = "true";
-        localStorage.setItem("li_gemini_auto_failover", "true");
-    }
-    if (failoverToggle) {
-        failoverToggle.checked = autoFailover === "true";
-        // Wire up change listener
-        if (!failoverToggle.dataset.wired) {
-            failoverToggle.dataset.wired = "true";
-            failoverToggle.addEventListener("change", (e) => {
-                localStorage.setItem("li_gemini_auto_failover", e.target.checked ? "true" : "false");
-                showCustomNotification("Auto-Failover " + (e.target.checked ? "enabled" : "disabled") + ".", "success");
-            });
-        }
-    }
-
-    // Migration logic
-    const globalKey = localStorage.getItem("li_gemini_api_key");
-    const slot1Key = localStorage.getItem("li_gemini_vault_key_1");
-    if (globalKey && !slot1Key && globalKey !== FALLBACK_GEMINI_KEY) {
-        localStorage.setItem("li_gemini_vault_key_1", globalKey);
-    }
-
-    // Set up each row (1 to 5)
-    for (let slot = 1; slot <= 5; slot++) {
-        const row = document.querySelector(`.vault-row[data-slot="${slot}"]`);
-        if (!row) continue;
-
-        const input = row.querySelector(`.vault-key-input`);
-        const btnActivate = row.querySelector(`.btn-vault-activate`);
-        const btnVisibility = row.querySelector(`.btn-vault-visibility`);
-        const btnCopy = row.querySelector(`.btn-vault-copy`);
-        const btnPaste = row.querySelector(`.btn-vault-paste`);
-        const btnTestHealth = row.querySelector(`.btn-vault-test`);
-
-        // Load value
-        const key = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
-        if (input) {
-            input.value = key;
-            input.placeholder = key ? "••••••••••••••••••••••••••••••••" : `Empty Slot ${slot}`;
-            input.removeAttribute("readonly"); // Keep unlocked by default
-        }
-
-        // Apply active/inactive visual states
-        if (slot.toString() === activeSlot) {
-            row.classList.add("active");
-            if (btnActivate) {
-                btnActivate.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
-                btnActivate.style.color = "var(--color-primary)";
-            }
-        } else {
-            row.classList.remove("active");
-            if (btnActivate) {
-                btnActivate.innerHTML = `<i class="fa-regular fa-circle"></i>`;
-                btnActivate.style.color = "var(--text-muted)";
-            }
-        }
-
-        // Skip event wiring if already done to prevent duplicates
-        if (row.dataset.wired) continue;
-        row.dataset.wired = "true";
-
-        // Activate slot event
-        if (btnActivate) {
-            btnActivate.addEventListener("click", () => {
-                const currentKey = localStorage.getItem(`li_gemini_vault_key_${slot}`) || "";
-                if (!currentKey) {
-                    showCustomNotification(`Cannot activate empty slot ${slot}. Please paste a key first.`, "warning");
-                    return;
-                }
-                
-                // Set active slot
-                activeSlot = slot.toString();
-                localStorage.setItem("li_gemini_active_slot", activeSlot);
-                
-                // Update global API key for backward compatibility
-                localStorage.setItem("li_gemini_api_key", currentKey);
-                const mainInput = document.getElementById("input-ai-gemini-key");
-                if (mainInput) {
-                    mainInput.value = currentKey;
-                }
-                updateAIGeminiStatusDisplay();
-
-                // Update UI rows active state
-                for (let s = 1; s <= 5; s++) {
-                    const r = document.querySelector(`.vault-row[data-slot="${s}"]`);
-                    const ba = r?.querySelector(`.btn-vault-activate`);
-                    if (r) {
-                        if (s === slot) {
-                            r.classList.add("active");
-                            if (ba) {
-                                ba.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
-                                ba.style.color = "var(--color-primary)";
-                            }
-                        } else {
-                            r.classList.remove("active");
-                            if (ba) {
-                                ba.innerHTML = `<i class="fa-regular fa-circle"></i>`;
-                                ba.style.color = "var(--text-muted)";
-                            }
-                        }
-                    }
-                }
-                showCustomNotification(`Slot ${slot} activated as primary API key!`, "success");
-            });
-        }
-
-        // Show/Hide Visibility
-        if (btnVisibility) {
-            btnVisibility.addEventListener("click", () => {
-                if (!input) return;
-                const isPassword = input.type === "password";
-                input.type = isPassword ? "text" : "password";
-                btnVisibility.innerHTML = isPassword ? `<i class="fa-solid fa-eye-slash"></i>` : `<i class="fa-solid fa-eye"></i>`;
-            });
-        }
-
-        // Copy Key
-        if (btnCopy) {
-            btnCopy.addEventListener("click", () => {
-                const currentKey = input ? input.value.trim() : "";
-                if (!currentKey) {
-                    showCustomNotification(`Slot ${slot} is empty. Nothing to copy!`, "warning");
-                    return;
-                }
-                navigator.clipboard.writeText(currentKey)
-                    .then(() => showCustomNotification(`Slot ${slot} API Key copied to clipboard!`, "success"))
-                    .catch(() => {
-                        const tempTextarea = document.createElement("textarea");
-                        tempTextarea.value = currentKey;
-                        document.body.appendChild(tempTextarea);
-                        tempTextarea.select();
-                        document.execCommand("copy");
-                        document.body.removeChild(tempTextarea);
-                        showCustomNotification(`Slot ${slot} API Key copied to clipboard!`, "success");
-                    });
-            });
-        }
-
-        // Paste Key
-        if (btnPaste) {
-            btnPaste.addEventListener("click", async () => {
-                try {
-                    let text = "";
-                    if (navigator.clipboard && navigator.clipboard.readText) {
-                        text = await navigator.clipboard.readText().catch(() => "");
-                    }
-                    if (!text) {
-                        text = prompt(`Paste Gemini API Key for Slot ${slot}:`);
-                    }
-                    if (text) {
-                        text = text.trim();
-                        if (text.startsWith("AIzaSy")) {
-                            if (input) {
-                                input.value = text;
-                                input.placeholder = "••••••••••••••••••••••••••••••••";
-                            }
-                            localStorage.setItem(`li_gemini_vault_key_${slot}`, text);
-                            
-                            // If this slot is the active one, sync with the global key as well
-                            if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
-                                localStorage.setItem("li_gemini_api_key", text);
-                                const mainInput = document.getElementById("input-ai-gemini-key");
-                                if (mainInput) mainInput.value = text;
-                                updateAIGeminiStatusDisplay();
-                            }
-                            
-                            showCustomNotification(`API Key pasted into Slot ${slot}! Please click "Save Details" to apply.`, "success");
-                        } else {
-                            showCustomNotification(`Invalid Gemini API Key format. Must start with "AIzaSy".`, "error");
-                        }
-                    }
-                } catch (e) {
-                    console.error("Paste failed:", e);
-                }
-            });
-        }
-
-        // Row-level Test Health Connection
-        if (btnTestHealth) {
-            btnTestHealth.addEventListener("click", async () => {
-                const keyVal = input ? input.value.trim() : "";
-                if (!keyVal) {
-                    showCustomNotification(`Slot ${slot} is empty. Paste a key to test.`, "warning");
-                    return;
-                }
-                btnTestHealth.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                btnTestHealth.style.color = "#ff9f0a";
-                const dot = row.querySelector(`.vault-status-dot`);
-                if (dot) {
-                    dot.style.background = "#ff9f0a";
-                    dot.title = "Testing...";
-                }
-                showCustomNotification(`Testing slot ${slot} API key connection...`, "info");
-                
-                const result = await testSingleKeyHealth(keyVal);
-                updateVaultStatusDot(slot, result.status);
-                
-                btnTestHealth.innerHTML = `<i class="fa-solid fa-vial"></i>`;
-                btnTestHealth.style.color = "var(--text-muted)";
-
-                if (result.ok) {
-                    showCustomConfirmDialog(`Slot ${slot} API key is healthy and active! Connection test successful.`, null, null, "OK", false);
-                } else {
-                    showCustomConfirmDialog(`Slot ${slot} test failed: ${result.msg || "Invalid key or rate limit exceeded."}`, null, null, "Close", true);
-                }
-                
-                if (slot.toString() === localStorage.getItem("li_gemini_active_slot")) {
-                    updateAIGeminiStatusDisplay();
-                }
-            });
-        }
-    }
-}
-
 // --- AI Assistant Tab Visibility Helper ---
 function refreshAIAssistantTabVisibility() {
-    // Load settings inputs
-    const inputKey = document.getElementById("input-ai-gemini-key");
-    const customPromptTextarea = document.getElementById("ai-custom-prompt");
-    const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
-    if (inputKey) {
-        if (isAssistant) {
-            inputKey.value = "••••••••••••••••••••••••••••••••";
-        } else {
-            inputKey.value = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+    const lockScreen = document.getElementById("ai-assistant-lock-screen");
+    const dashboardContent = document.getElementById("ai-assistant-dashboard-content");
+    if (!lockScreen || !dashboardContent) return;
+
+    const isAuth = sessionStorage.getItem("li_admin_authenticated") === "true";
+    if (isAuth) {
+        lockScreen.classList.add("hide");
+        dashboardContent.classList.remove("hide");
+        
+        // Load settings inputs
+        const inputKey = document.getElementById("input-ai-gemini-key");
+        const customPromptTextarea = document.getElementById("ai-custom-prompt");
+        const isAssistant = sessionStorage.getItem("li_admin_role") === "assistant";
+        if (inputKey) {
+            if (isAssistant) {
+                inputKey.value = "ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó";
+            } else {
+                inputKey.value = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+            }
         }
+        if (customPromptTextarea) {
+            customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
+        }
+        updateAIGeminiStatusDisplay();
+    } else {
+        lockScreen.classList.remove("hide");
+        dashboardContent.classList.add("hide");
     }
-    if (customPromptTextarea) {
-        customPromptTextarea.value = localStorage.getItem("li_gemini_custom_prompt") || "";
-    }
-    updateAIGeminiStatusDisplay();
-    initBackupKeyVault();
 }
 
 function refreshBugTriageTabVisibility() {
@@ -13915,33 +12697,16 @@ function refreshBugTriageTabVisibility() {
     }
 }
 
-// ── API Usage Tracking System (1-Min RPM & Daily RPD) ──
-const GEMINI_RPM_LIMIT = 15;
-const GEMINI_DAILY_QUOTA = 1500;
+// ÔöÇÔöÇ API Usage Tracking System ÔöÇÔöÇ
+const GEMINI_DAILY_QUOTA = 1500; // Free-tier Gemini Flash daily limit (approximate)
 
-function initAPILimitTracker() {
-    getDailyUsageData();
-
-    // Check/initialize RPM window
-    let windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
-    const now = Date.now();
-    if (!windowEnds || now >= windowEnds) {
-        windowEnds = now + 60000;
-        localStorage.setItem("li_gemini_window_ends", windowEnds.toString());
-        localStorage.setItem("li_gemini_rpm_count", "0");
-    }
-
-    // Start the timer loop (updates every second)
-    setInterval(updateRPMTimer, 1000);
-    updateAPIUsageBar();
-}
-
-function getDailyUsageData() {
-    const today = new Date().toISOString().slice(0, 10);
+function getUsageData() {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const raw = localStorage.getItem("li_gemini_usage");
     let data = null;
     try { data = JSON.parse(raw); } catch (e) {}
     if (!data || data.date !== today) {
+        // Reset for a new day
         data = { date: today, count: 0 };
         localStorage.setItem("li_gemini_usage", JSON.stringify(data));
     }
@@ -13949,60 +12714,24 @@ function getDailyUsageData() {
 }
 
 function trackGeminiAPICall() {
-    // Increment daily count
-    const dailyData = getDailyUsageData();
-    dailyData.count++;
-    localStorage.setItem("li_gemini_usage", JSON.stringify(dailyData));
-
-    // Increment RPM count
-    let rpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
-    rpmCount++;
-    localStorage.setItem("li_gemini_rpm_count", rpmCount.toString());
-
-    updateAPIUsageBar();
-}
-
-function updateRPMTimer() {
-    const now = Date.now();
-    let windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
-    
-    if (now >= windowEnds) {
-        // Reset window
-        let oldRpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
-        windowEnds = now + 60000;
-        localStorage.setItem("li_gemini_window_ends", windowEnds.toString());
-        localStorage.setItem("li_gemini_rpm_count", "0");
-        
-        if (oldRpmCount >= GEMINI_RPM_LIMIT) {
-            if (typeof showCustomNotification === "function") {
-                showCustomNotification("Gemini API rate limit has reset! 15 new requests available.", "success");
-            }
-        }
-    }
-    
+    const data = getUsageData();
+    data.count++;
+    localStorage.setItem("li_gemini_usage", JSON.stringify(data));
     updateAPIUsageBar();
 }
 
 function updateAPIUsageBar() {
-    const now = Date.now();
-    const windowEnds = parseInt(localStorage.getItem("li_gemini_window_ends") || "0");
-    const remainingMs = Math.max(0, windowEnds - now);
-    const remainingSecs = Math.ceil(remainingMs / 1000);
-
-    const rpmCount = parseInt(localStorage.getItem("li_gemini_rpm_count") || "0");
-    const dailyData = getDailyUsageData();
-
-    const pct = Math.min(Math.round((rpmCount / GEMINI_RPM_LIMIT) * 100), 100);
+    const data = getUsageData();
+    const count = data.count;
+    const pct = Math.min(Math.round((count / GEMINI_DAILY_QUOTA) * 100), 100);
 
     const barFill = document.getElementById("ai-usage-bar-fill");
     const countEl = document.getElementById("ai-usage-count");
     const statusEl = document.getElementById("ai-usage-status");
     const pctEl = document.getElementById("ai-usage-pct");
-    const dailyEl = document.getElementById("ai-usage-daily-count");
 
-    if (countEl) countEl.textContent = `${rpmCount} / ${GEMINI_RPM_LIMIT} requests`;
+    if (countEl) countEl.textContent = `${count.toLocaleString()} / ${GEMINI_DAILY_QUOTA.toLocaleString()} requests`;
     if (pctEl) pctEl.textContent = `${pct}%`;
-    if (dailyEl) dailyEl.textContent = `Daily Total: ${dailyData.count} / ${GEMINI_DAILY_QUOTA}`;
 
     if (barFill) {
         barFill.style.width = `${pct}%`;
@@ -14019,27 +12748,34 @@ function updateAPIUsageBar() {
     }
 
     if (statusEl) {
-        if (pct >= 100) {
-            statusEl.textContent = `🔴 Limit reached! Resets in ${remainingSecs}s`;
-            statusEl.style.color = "#ff453a";
-        } else if (pct >= 80) {
-            statusEl.textContent = `⚠ Running low! Resets in ${remainingSecs}s`;
+        if (pct < 30) {
+            statusEl.textContent = "Plenty of quota remaining";
+            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
+        } else if (pct < 50) {
+            statusEl.textContent = "Healthy usage level";
+            statusEl.style.color = "rgba(48, 209, 88, 0.8)";
+        } else if (pct < 70) {
+            statusEl.textContent = "Moderate ÔÇö consider slowing down";
+            statusEl.style.color = "rgba(255, 159, 10, 0.8)";
+        } else if (pct < 85) {
+            statusEl.textContent = "ÔÜá High usage ÔÇö prepare a backup key";
             statusEl.style.color = "rgba(255, 159, 10, 0.9)";
+        } else if (pct < 95) {
+            statusEl.textContent = "ÔÜá Critical ÔÇö switch keys soon!";
+            statusEl.style.color = "rgba(255, 69, 58, 0.9)";
         } else {
-            statusEl.textContent = `Resets in ${remainingSecs}s`;
-            statusEl.style.color = "rgba(255, 255, 255, 0.5)";
+            statusEl.textContent = "­ƒö┤ Quota exhausted ÔÇö switch API key now!";
+            statusEl.style.color = "#ff453a";
         }
     }
 }
-
-let isActiveKeyRevealed = false;
 
 function updateAIGeminiStatusDisplay() {
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
     const statusText = document.getElementById("ai-gemini-status-text");
     if (!statusIndicator || !statusText) return;
 
-    const savedKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+    const savedKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (savedKey) {
         statusIndicator.style.background = "#30d158"; // Green
         statusText.textContent = "Active (Connected)";
@@ -14049,51 +12785,6 @@ function updateAIGeminiStatusDisplay() {
     }
     // Also refresh usage bar on status update
     updateAPIUsageBar();
-
-    // Active key display & toggle logic
-    const activeKeyWrapper = document.getElementById("active-key-display-wrapper");
-    const activeKeyMaskedText = document.getElementById("active-key-masked-text");
-    const btnActiveKeyReveal = document.getElementById("btn-active-key-reveal");
-
-    if (activeKeyWrapper && activeKeyMaskedText && btnActiveKeyReveal) {
-        if (savedKey) {
-            activeKeyWrapper.style.display = "flex";
-            
-            // Default to always hidden/masked on status updates (e.g. slot switch, load, refresh)
-            isActiveKeyRevealed = false;
-
-            const maskKey = (key) => {
-                if (!key) return "";
-                if (key.length <= 8) return "••••••••";
-                return key.substring(0, 6) + "••••••••" + key.substring(key.length - 4);
-            };
-
-            const updateUI = () => {
-                if (isActiveKeyRevealed) {
-                    activeKeyMaskedText.textContent = savedKey;
-                    btnActiveKeyReveal.innerHTML = `<i class="fa-solid fa-eye"></i>`;
-                    btnActiveKeyReveal.style.color = "var(--text-primary)";
-                } else {
-                    activeKeyMaskedText.textContent = maskKey(savedKey);
-                    btnActiveKeyReveal.innerHTML = `<i class="fa-solid fa-eye-slash"></i>`;
-                    btnActiveKeyReveal.style.color = "var(--text-muted)";
-                }
-            };
-
-            updateUI();
-
-            // Replace old event listeners by cloning button
-            const newBtn = btnActiveKeyReveal.cloneNode(true);
-            btnActiveKeyReveal.parentNode.replaceChild(newBtn, btnActiveKeyReveal);
-            
-            newBtn.addEventListener("click", () => {
-                isActiveKeyRevealed = !isActiveKeyRevealed;
-                updateUI();
-            });
-        } else {
-            activeKeyWrapper.style.display = "none";
-        }
-    }
 }
 
 function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
@@ -14114,25 +12805,9 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
         progressInterval = null;
         startTime = null;
         
-        const state = btn.dataset.state || "spark";
-        if (state === "train") {
-            btn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
-            btn.style.background = "linear-gradient(135deg, rgba(48,209,88,0.15), rgba(48,209,88,0.05))";
-            btn.style.border = "1px solid rgba(48,209,88,0.3)";
-            btn.style.color = "#30d158";
-        } else if (state === "trained") {
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
-            btn.style.background = "linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05))";
-            btn.style.border = "1px solid rgba(45,212,191,0.3)";
-            btn.style.color = "#2dd4bf";
-            btn.disabled = true;
-        } else {
-            btn.innerHTML = originalHtml;
-            btn.style.background = ""; 
-            btn.style.boxShadow = "";
-            btn.style.border = "";
-            btn.style.color = "";
-        }
+        btn.innerHTML = originalHtml;
+        btn.style.background = ""; 
+        btn.style.boxShadow = "";
     };
 
     const startHolding = (e) => {
@@ -14142,26 +12817,15 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
         e.preventDefault();
         isTriggered = false;
         startTime = Date.now();
-        
-        const state = btn.dataset.state || "spark";
-        if (state === "train") {
-            btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
-        } else {
-            btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
-        }
+        btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
         
         const updateProgress = () => {
             const elapsed = Date.now() - startTime;
             const pct = Math.min((elapsed / holdDuration) * 100, 100);
             const remainingSecs = Math.max(((holdDuration - elapsed) / 1000), 0).toFixed(1);
             
-            if (state === "train") {
-                btn.style.background = `linear-gradient(90deg, rgba(48, 209, 88, 0.4) ${pct}%, rgba(48, 209, 88, 0.15) ${pct}%)`;
-                btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #30d158;"></i> Train ${remainingSecs}s`;
-            } else {
-                btn.style.background = `linear-gradient(90deg, rgba(167, 139, 250, 0.4) ${pct}%, rgba(167, 139, 250, 0.15) ${pct}%)`;
-                btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #a78bfa;"></i> Hold ${remainingSecs}s`;
-            }
+            btn.style.background = `linear-gradient(90deg, rgba(167, 139, 250, 0.4) ${pct}%, rgba(167, 139, 250, 0.15) ${pct}%)`;
+            btn.innerHTML = `<i class="fa-solid fa-hourglass-half fa-spin" style="color: #a78bfa;"></i> Hold ${remainingSecs}s`;
             
             if (pct >= 100) {
                 clearInterval(progressInterval);
@@ -14177,15 +12841,9 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
             progressInterval = null;
             holdTimer = null;
             
-            if (state === "train") {
-                btn.innerHTML = `<i class="fa-solid fa-check"></i> Submitting...`;
-                btn.style.background = "rgba(48, 209, 88, 0.2)";
-                btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
-            } else {
-                btn.innerHTML = `<i class="fa-solid fa-check"></i> Triggered!`;
-                btn.style.background = "rgba(167, 139, 250, 0.2)";
-                btn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.4)";
-            }
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Triggered!`;
+            btn.style.background = "rgba(48, 209, 88, 0.2)";
+            btn.style.boxShadow = "0 0 15px rgba(48, 209, 88, 0.4)";
             
             setTimeout(() => {
                 btn.style.background = "";
@@ -14224,7 +12882,7 @@ function updateAIAssistButtonsVisibility() {
 
 
 function initGeminiEngine() {
-    // ── Wire Admin Password Authentication Lock Portal button ──
+    // ÔöÇÔöÇ Wire Admin Password Authentication Lock Portal button ÔöÇÔöÇ
     const unlockBtn = document.getElementById("btn-ai-unlock-login");
     if (unlockBtn) {
         unlockBtn.addEventListener("click", () => {
@@ -14237,15 +12895,16 @@ function initGeminiEngine() {
         });
     }
 
-    // ── settings panel controls ──
+    // ÔöÇÔöÇ settings panel controls ÔöÇÔöÇ
     const inputKey = document.getElementById("input-ai-gemini-key");
     const btnToggleVisibility = document.getElementById("btn-toggle-ai-gemini-key-visibility");
     const btnSave = document.getElementById("btn-ai-gemini-save");
+    const btnTest = document.getElementById("btn-ai-gemini-test");
     const statusIndicator = document.getElementById("ai-gemini-status-indicator");
     const statusText = document.getElementById("ai-gemini-status-text");
     const customPromptTextarea = document.getElementById("ai-custom-prompt");
 
-    if (!inputKey || !btnSave) return;
+    if (!inputKey || !btnSave || !btnTest) return;
 
     // Toggle Visibility
     if (btnToggleVisibility) {
@@ -14271,7 +12930,7 @@ function initGeminiEngine() {
         }
     };
 
-    // ── Shared live API health check function ──
+    // ÔöÇÔöÇ Shared live API health check function ÔöÇÔöÇ
     const runLiveHealthCheck = (keyVal, opts = {}) => {
         const { silent = false, onResult = null } = opts;
         updateStatusDisplay("testing", "Testing connection...");
@@ -14308,7 +12967,7 @@ function initGeminiEngine() {
             }
             const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
             if (responseText) {
-                updateStatusDisplay("active", "Active (Connected ✓)");
+                updateStatusDisplay("active", "Active (Connected Ô£ô)");
                 if (!silent) {
                     showCustomConfirmDialog("Gemini connection test successful! Spark AI Engine is fully active and responding.", null, null, "OK", false);
                 }
@@ -14350,58 +13009,55 @@ function initGeminiEngine() {
         });
     };
 
-    // Save button listener — saves custom prompt and all 5 vault keys dynamically
+    // Save button listener ÔÇö saves key and auto-tests it
     btnSave.addEventListener("click", () => {
+        let keyVal = inputKey.value.trim();
         const customPromptVal = customPromptTextarea ? customPromptTextarea.value.trim() : "";
+        
+        if (keyVal === "ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó") {
+            // Skip overwriting the real key with masked placeholder dots
+            const actualStoredKey = localStorage.getItem("li_gemini_api_key");
+            if (actualStoredKey) {
+                // Auto-test the stored key silently
+                if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
+                showCustomNotification("Settings saved. Testing key...", "success");
+                runLiveHealthCheck(actualStoredKey, { silent: true });
+                return;
+            } else {
+                updateStatusDisplay("disconnected", "Disconnected (No Key)");
+            }
+        } else if (!keyVal) {
+            localStorage.removeItem("li_gemini_api_key");
+            updateStatusDisplay("disconnected", "Disconnected (No Key)");
+        } else {
+            localStorage.setItem("li_gemini_api_key", keyVal);
+            if (customPromptTextarea) localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
+            showCustomNotification("Key saved! Running live connection test...", "success");
+            // Auto-test the newly entered key
+            runLiveHealthCheck(keyVal, { silent: false });
+            return;
+        }
+
         if (customPromptTextarea) {
             localStorage.setItem("li_gemini_custom_prompt", customPromptVal);
         }
-
-        let hasInvalidKey = false;
-        for (let slot = 1; slot <= 5; slot++) {
-            const row = document.querySelector(`.vault-row[data-slot="${slot}"]`);
-            const input = row?.querySelector(`.vault-key-input`);
-            if (input) {
-                const val = input.value.trim();
-                if (val && !val.startsWith("AIzaSy")) {
-                    hasInvalidKey = true;
-                    showCustomNotification(`Slot ${slot}: Invalid Gemini API Key format. Must start with "AIzaSy".`, "error");
-                    continue;
-                }
-                if (val) {
-                    localStorage.setItem(`li_gemini_vault_key_${slot}`, val);
-                    input.placeholder = "••••••••••••••••••••••••••••••••";
-                } else {
-                    localStorage.removeItem(`li_gemini_vault_key_${slot}`);
-                    input.placeholder = `Empty Slot ${slot}`;
-                }
-            }
-        }
-
-        if (hasInvalidKey) return;
-
-        const activeSlot = localStorage.getItem("li_gemini_active_slot") || "1";
-        const keyVal = localStorage.getItem(`li_gemini_vault_key_${activeSlot}`);
-        
-        if (keyVal) {
-            localStorage.setItem("li_gemini_api_key", keyVal);
-            const mainInput = document.getElementById("input-ai-gemini-key");
-            if (mainInput) mainInput.value = keyVal;
-            
-            showCustomNotification("Settings saved. Testing active key...", "success");
-            updateAIGeminiStatusDisplay();
-            runLiveHealthCheck(keyVal, { silent: true });
-        } else {
-            localStorage.removeItem("li_gemini_api_key");
-            const mainInput = document.getElementById("input-ai-gemini-key");
-            if (mainInput) mainInput.value = "";
-            
-            showCustomNotification("Settings saved. No active key in primary slot.", "warning");
-            updateAIGeminiStatusDisplay();
-        }
+        showCustomNotification("Gemini Spark settings saved.", "success");
     });
 
-    // ── Sandbox Playground controls ──
+    // Test button listener ÔÇö runs a standalone diagnostic
+    btnTest.addEventListener("click", () => {
+        let keyVal = inputKey.value.trim();
+        if (keyVal === "ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó") {
+            keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
+        }
+        if (!keyVal) {
+            showCustomNotification("Please paste a Gemini API Key first.", "warning");
+            return;
+        }
+        runLiveHealthCheck(keyVal, { silent: false });
+    });
+
+    // ÔöÇÔöÇ Sandbox Playground controls ÔöÇÔöÇ
     const sandboxRaw = document.getElementById("ai-sandbox-raw");
     const sandboxCategory = document.getElementById("ai-sandbox-category");
     const sandboxOutputText = document.getElementById("ai-sandbox-output-text");
@@ -14466,9 +13122,8 @@ function initGeminiEngine() {
 
             if (!rawTextVal || !fixedTextVal) return;
 
-            validateTrainingAction(
-                rawTextVal,
-                fixedTextVal,
+            showCustomConfirmDialog(
+                `Train translation mapping for:\n\nOriginal: "${rawTextVal}"\n\nCorrected: "${fixedTextVal}"?`,
                 () => {
                     const trimmedRaw = rawTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
                     const details = {
@@ -14496,7 +13151,6 @@ function initGeminiEngine() {
     refreshAIAssistantTabVisibility();
     refreshBugTriageTabVisibility();
     updateAIAssistButtonsVisibility();
-    initAPILimitTracker();
 }
 
 function getDatabaseMatchesContext(rawText) {
@@ -14653,13 +13307,13 @@ function getCompletePolicyContext() {
 }
 
 function getGeminiSparkSuggestion(rawText, category, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(null);
         return;
     }
 
-    const customDirectives = "";
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     const dbContext = getDatabaseMatchesContext(rawText);
     const policyContext = getPolicyMatchesContext(rawText);
     const fullPolicyContext = getCompletePolicyContext();
@@ -14711,7 +13365,7 @@ You MUST strictly correct the ad and reply based ONLY on the provided LifeInvade
 6. Play Dice and Play Poker Rules:
    - If no Bet is specified: Use "Bet: Negotiable."
    - The maximum allowed bet is "$10 Million". Any bet above $10 Million must be changed to "Bet: Negotiable."
-7. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format if present.
+7. Format phone numbers in "Ôäû XX-XX-XXX" or "Ôäû XX-XX-XX" format if present.
 
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 ${dbContext}
@@ -14727,9 +13381,17 @@ Target category: "${category}"
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
-    geminiPostWithFailover({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json" }
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
     })
     .then(data => {
         trackGeminiAPICall();
@@ -14753,13 +13415,13 @@ Response format: Return ONLY a raw JSON object with exactly two keys: "text" (th
 }
 
 function getGeminiBugTriageSuggestion(rawText, expectedText, category, screenshotBase64, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(null);
         return;
     }
 
-    const customDirectives = "";
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     const dbContext = getDatabaseMatchesContext(rawText);
     const policyContext = getPolicyMatchesContext(rawText);
     const fullPolicyContext = getCompletePolicyContext();
@@ -14789,44 +13451,48 @@ Bug Report Details:
 ${expectedText ? `- Expected Output (User's desired fix/claim): "${expectedText}"` : ""}
 
 Task:
-1. Scan and analyze ALL 51 pages of the complete LifeInvader Official Policy Manual provided below to ensure absolute compliance with all spelling, terminology, and syntax rules.
-2. Automatically generate the exact, fully corrected advertisement text.
-3. Explain the main reason for the correction.
-4. Generate additional detailed reference notes citing the specific policy manual pages, rules, or lists applied for verification.
+1. Examine the provided screenshot (if available) and the raw input text to determine the formatting error.
+2. Analyze the LifeInvader Official Policy Manual reference below to find the correct spelling, terminology, and syntax rules.
+3. Automatically generate the exact, fully corrected advertisement text.
+4. Explain the reason for the correction (e.g. "Spelled Annis Silvia correctly", "Formatted price Negotiable").
 
-=== COMPLETE POLICY MANUAL REFERENCE ===
+=== POLICY MANUAL REFERENCE ===
 ${fullPolicyContext}
-=========================================
+==============================
 
 ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : ""}
 
-Response format: Return ONLY a raw JSON object with exactly three keys: "text" (the corrected ad text), "reason" (the explanation of which rule was applied), and "notes" (the detailed policy reference notes and page citations). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
+Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
     const parts = [{ text: promptText }];
     if (imagePart) {
         parts.push(imagePart);
     }
 
-    geminiPostWithFailover({
-        contents: [{ parts: parts }],
-        generationConfig: { responseMimeType: "application/json" }
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ parts: parts }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
     })
     .then(data => {
         trackGeminiAPICall();
         const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        let cleanText = responseText.trim();
-        if (cleanText.startsWith("```")) {
-            cleanText = cleanText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-        }
         try {
-            const parsed = JSON.parse(cleanText.trim());
+            const parsed = JSON.parse(responseText.trim());
             if (parsed && parsed.text) {
                 callback(parsed);
             } else {
                 callback(null);
             }
         } catch (e) {
-            callback({ text: responseText.trim(), reason: "AI bug resolution suggestion", notes: "Fallback response parsing" });
+            callback({ text: responseText.trim(), reason: "AI bug resolution suggestion" });
         }
     })
     .catch(err => {
@@ -14836,7 +13502,7 @@ Response format: Return ONLY a raw JSON object with exactly three keys: "text" (
 }
 
 function runGeminiCopilotTurn(report, category, userMessageText, callback) {
-    const keyVal = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+    const keyVal = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
     if (!keyVal) {
         callback(false, null);
         return;
@@ -14888,7 +13554,7 @@ function runGeminiCopilotTurn(report, category, userMessageText, callback) {
         });
     }
 
-    const customDirectives = "";
+    const customDirectives = localStorage.getItem("li_gemini_custom_prompt") || "";
     const fullPolicyContext = getCompletePolicyContext();
     const systemPrompt = `You are a strict and professional advertisement editor for LifeInvader.
 Your task is to correct and format the user's raw advertisement input strictly according to the official LifeInvader internal formatting policy:
@@ -14936,7 +13602,7 @@ You MUST strictly correct the ad and reply based ONLY on the provided LifeInvade
 6. Play Dice and Play Poker Rules:
    - If no Bet is specified: Use "Bet: Negotiable."
    - The maximum allowed bet is "$10 Million". Any bet above $10 Million must be changed to "Bet: Negotiable."
-7. Format phone numbers in "№ XX-XX-XXX" or "№ XX-XX-XX" format if present.
+7. Format phone numbers in "Ôäû XX-XX-XXX" or "Ôäû XX-XX-XX" format if present.
 
 =========================================
 COMPLETE LIFEINVADER OFFICIAL POLICY MANUAL REFERENCE:
@@ -14947,12 +13613,20 @@ ${customDirectives ? `\nADDITIONAL ADMIN DIRECTIVES:\n${customDirectives}\n` : "
 
 Response format: Return ONLY a raw JSON object with exactly two keys: "text" (the corrected ad text) and "reason" (the explanation of which rule was applied or how the suggestion was updated). Do NOT wrap it in markdown code blocks like \`\`\`json. Just return raw JSON.`;
 
-    geminiPostWithFailover({
-        contents: report.geminiChatHistory,
-        systemInstruction: {
-            parts: [{ text: systemPrompt }]
-        },
-        generationConfig: { responseMimeType: "application/json" }
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${keyVal}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: report.geminiChatHistory,
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
     })
     .then(data => {
         trackGeminiAPICall();
@@ -15099,15 +13773,6 @@ function renderTriageCards(reports, container) {
             let aiProposedFixHtml = "";
             if (report.aiProposal) {
                 const spellingListText = report.aiProposal.spellingList ? `<b>Generated Spelling Rules:</b> ${report.aiProposal.spellingList}` : "";
-                const notesBoxHtml = report.aiProposal.notes ? `
-                    <!-- Gemini Policy Verification Notes -->
-                    <div class="ai-proposed-notes-box" style="padding: 10px; border-radius: 8px; background: rgba(34, 211, 238, 0.05); border: 1px solid rgba(34, 211, 238, 0.25); color: #22d3ee; font-size: 11px; margin-top: 6px; text-align: left; box-shadow: inset 0 0 10px rgba(34, 211, 238, 0.02);">
-                        <div style="font-weight: 700; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; margin-bottom: 5px; color: #22d3ee;">
-                            <i class="fa-regular fa-file-lines"></i> Policy Verification & Citation Notes
-                        </div>
-                        <div style="line-height: 1.45; white-space: pre-line; opacity: 0.95;">${report.aiProposal.notes}</div>
-                    </div>
-                ` : "";
                 aiProposedFixHtml = `
                     <!-- Gemini Auto-Triage Suggestion Banner -->
                     <div class="ai-proposed-fix-banner" style="padding: 10px; border-radius: 8px; background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-size: 11.5px; margin-top: 6px; text-align: left; box-shadow: inset 0 0 10px rgba(167, 139, 250, 0.05);">
@@ -15122,7 +13787,6 @@ function renderTriageCards(reports, container) {
                             <span><i class="fa-solid fa-robot"></i> AI Proposed: <span>${report.aiProposal.timeFixed}</span></span>
                         </div>
                     </div>
-                    ${notesBoxHtml}
                 `;
             }
 
@@ -15170,7 +13834,7 @@ function renderTriageCards(reports, container) {
                     if (isModel) {
                         try {
                             const parsed = JSON.parse(msg.parts[0].text.trim());
-                            dispText = `✨ <b>AI suggestion:</b> "${parsed.text}"<br><span style="opacity:0.65;font-size:10px;">Reason: ${parsed.reason}</span>`;
+                            dispText = `Ô£¿ <b>AI suggestion:</b> "${parsed.text}"<br><span style="opacity:0.65;font-size:10px;">Reason: ${parsed.reason}</span>`;
                         } catch (e) {
                             dispText = msg.parts[0].text;
                         }
@@ -15192,24 +13856,11 @@ function renderTriageCards(reports, container) {
                 }).join("");
             }
 
-            let coverageBadgeHtml = "";
-            const mappingMatch = findTrainedMapping(report.rawInput);
-            if (mappingMatch.found) {
-                let label = "Already Covered";
-                if (mappingMatch.matchType === "canonical") {
-                    label = "Covered (Normalized)";
-                } else if (mappingMatch.matchType === "fuzzy") {
-                    label = `Covered (Fuzzy: ${mappingMatch.similarity}%)`;
-                }
-                coverageBadgeHtml = `<span class="coverage-badge" style="background: rgba(48, 209, 88, 0.12); color: #30d158; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; border: 1px solid rgba(48, 209, 88, 0.25); display: inline-flex; align-items: center; gap: 4px;" title="This ad raw input matches an existing mapping key: '${mappingMatch.originalKey}'"><i class="fa-solid fa-circle-check"></i> ${label}</span>`;
-            }
-
             card.innerHTML = `
                 <!-- Header -->
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="category-badge" style="background: ${catColor}22; color: ${catColor}; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid ${catColor}33;">${currentCategory}</span>
-                        ${coverageBadgeHtml}
                         <span style="font-size: 11px; color: var(--text-muted); opacity: 0.7;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i>${report.timestamp}</span>
                     </div>
                     <span style="font-size: 10px; color: var(--text-muted); opacity: 0.4; font-family: var(--font-mono, monospace);">#${idx + 1}</span>
@@ -15341,66 +13992,64 @@ function renderTriageCards(reports, container) {
             const manualTrainApplyBtn = card.querySelector(".btn-manual-train-apply");
             const ignoreBtn = card.querySelector(".btn-triage-ignore");
             
-            // ── Confirm / Resolve Button ──
+            // ÔöÇÔöÇ Confirm / Resolve Button ÔöÇÔöÇ
             if (confirmBtn) {
                 confirmBtn.addEventListener("click", () => {
                     const textEl = card.querySelector(".fixed-output-text");
                     const finalAdText = textEl ? textEl.textContent.trim() : "";
                     
-                    validateTrainingAction(report.rawInput, finalAdText, () => {
-                        let finalMethod = report.trainedMethod || "Trained manually";
-                        // If they edited the text directly, extract spelling corrections from it and override method to manual
-                        if (finalAdText && finalAdText !== lastPreviewText) {
-                            learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
-                            finalMethod = "Trained manually";
+                    let finalMethod = report.trainedMethod || "Trained manually";
+                    // If they edited the text directly, extract spelling corrections from it and override method to manual
+                    if (finalAdText && finalAdText !== lastPreviewText) {
+                        learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
+                        finalMethod = "Trained manually";
+                    }
+                    
+                    if (finalAdText) {
+                        // Register direct exact raw-to-fixed translation mapping for advanced learning
+                        const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
+                        const details = {
+                            text: finalAdText,
+                            author: getActiveEditorName(),
+                            method: finalMethod,
+                            timestamp: new Date().toLocaleString(),
+                            reporterTime: report.timestamp || "Unknown",
+                            category: currentCategory
+                        };
+                        customTranslations[trimmedRaw] = JSON.stringify(details);
+                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                    }
+                    
+                    // Save all staged corrections to the persistent database on confirm
+                    const hasSpelling = report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0;
+                    if (hasSpelling || finalAdText) {
+                        if (hasSpelling) {
+                            Object.assign(customSpelling, report.stagedSpelling);
+                            localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
                         }
-                        
-                        if (finalAdText) {
-                            // Register direct exact raw-to-fixed translation mapping for advanced learning
-                            const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
-                            const details = {
-                                text: finalAdText,
-                                author: getActiveEditorName(),
-                                method: finalMethod,
-                                timestamp: new Date().toLocaleString(),
-                                reporterTime: report.timestamp || "Unknown",
-                                category: currentCategory
-                            };
-                            customTranslations[trimmedRaw] = JSON.stringify(details);
-                            localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
+                        saveCustomDataToBackend();
+                        if (typeof renderCustomSpelling === "function") {
+                            renderCustomSpelling();
                         }
-                        
-                        // Save all staged corrections to the persistent database on confirm
-                        const hasSpelling = report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0;
-                        if (hasSpelling || finalAdText) {
-                            if (hasSpelling) {
-                                Object.assign(customSpelling, report.stagedSpelling);
-                                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
-                            }
-                            saveCustomDataToBackend();
-                            if (typeof renderCustomSpelling === "function") {
-                                renderCustomSpelling();
-                            }
-                            if (typeof renderCustomTranslations === "function") {
-                                renderCustomTranslations();
-                            }
-                            // Re-process the main ad editor immediately to reflect changes in real time
-                            if (typeof processAd === "function") {
-                                processAd();
-                            }
+                        if (typeof renderCustomTranslations === "function") {
+                            renderCustomTranslations();
                         }
-                        
-                        resolveBugReport(report, card);
-                    });
+                        // Re-process the main ad editor immediately to reflect changes in real time
+                        if (typeof processAd === "function") {
+                            processAd();
+                        }
+                    }
+                    
+                    resolveBugReport(report, card);
                 });
             }
             
-            // ── Train from Policy Button ──
+            // ÔöÇÔöÇ Train from Policy Button ÔöÇÔöÇ
             if (trainPolicyBtn) {
                 trainPolicyBtn.addEventListener("click", () => {
                     const trainedCorr = selfTrainFromPolicy(report.rawInput, currentCategory, report.stagedSpelling);
                     if (trainedCorr) {
-                        showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" → "${trainedCorr.right}" (previewing, click Confirm to save)`, "success");
+                        showCustomNotification(`Spelling trained automatically: "${trainedCorr.wrong}" ÔåÆ "${trainedCorr.right}" (previewing, click Confirm to save)`, "success");
                         report.trainedMethod = "Trained from policy";
                         report.manualOverrideText = null;
                         updateCardBody();
@@ -15412,7 +14061,7 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Train from Vehicles & Clothing Button ──
+            // ÔöÇÔöÇ Train from Vehicles & Clothing Button ÔöÇÔöÇ
             if (trainVehiclesClothingBtn) {
                 trainVehiclesClothingBtn.addEventListener("click", () => {
                     const success = trainFromDatabase(report.rawInput, "vehicles_clothing", report.stagedSpelling);
@@ -15427,7 +14076,7 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Train from Items Button ──
+            // ÔöÇÔöÇ Train from Items Button ÔöÇÔöÇ
             if (trainItemsBtn) {
                 trainItemsBtn.addEventListener("click", () => {
                     const success = trainFromDatabase(report.rawInput, "items", report.stagedSpelling);
@@ -15442,10 +14091,10 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Train via Gemini Spark Button ──
+            // ÔöÇÔöÇ Train via Gemini Spark Button ÔöÇÔöÇ
             if (trainGeminiBtn) {
                 trainGeminiBtn.addEventListener("click", () => {
-                    const localKey = localStorage.getItem("li_gemini_api_key") || FALLBACK_GEMINI_KEY;
+                    const localKey = localStorage.getItem("li_gemini_api_key") || "AIzaSyC4sbWW3XEWiadIl6NoohI0NlKezpurz54";
                     if (!localKey) {
                         showCustomNotification("Please configure a Gemini API key in the AI Assistant tab first.", "warning");
                         return;
@@ -15464,13 +14113,12 @@ function renderTriageCards(reports, container) {
                             learnFromSimilarExample(report.rawInput, suggestion.text, currentCategory, tempSpelling);
                             
                             const spellingList = Object.entries(tempSpelling)
-                                .map(([wrong, right]) => `"${wrong}" → "${right}"`)
+                                .map(([wrong, right]) => `"${wrong}" ÔåÆ "${right}"`)
                                 .join(", ");
 
                             report.aiProposal = {
                                 text: suggestion.text,
                                 reason: suggestion.reason || "Auto-detected correction",
-                                notes: suggestion.notes || "",
                                 spellingList: spellingList,
                                 timeFixed: new Date().toLocaleTimeString()
                             };
@@ -15489,7 +14137,7 @@ function renderTriageCards(reports, container) {
                 });
             }
 
-            // ── Gemini Copilot Interactive Chat Console Elements & Wireup ──
+            // ÔöÇÔöÇ Gemini Copilot Interactive Chat Console Elements & Wireup ÔöÇÔöÇ
             const copilotCloseBtn = card.querySelector(".btn-gemini-copilot-close");
             const copilotChatInput = card.querySelector(".input-gemini-copilot-chat");
             const copilotChatSendBtn = card.querySelector(".btn-gemini-copilot-chat-send");
@@ -15560,7 +14208,7 @@ function renderTriageCards(reports, container) {
                 });
             }
 
-            // ── Screenshot Attachment & Preview Bindings ──
+            // ÔöÇÔöÇ Screenshot Attachment & Preview Bindings ÔöÇÔöÇ
             const copilotFileInput = card.querySelector(".input-gemini-copilot-file");
             const copilotAttachBtn = card.querySelector(".btn-gemini-copilot-attach");
             const copilotPreviewBar = card.querySelector(".gemini-copilot-image-preview-bar");
@@ -15612,7 +14260,7 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Manual Train Toggle Button ──
+            // ÔöÇÔöÇ Manual Train Toggle Button ÔöÇÔöÇ
             if (manualToggleBtn && manualPanel) {
                 manualToggleBtn.addEventListener("click", () => {
                     report.manualPanelOpen = !report.manualPanelOpen;
@@ -15620,7 +14268,7 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Manual Train Apply Button ──
+            // ÔöÇÔöÇ Manual Train Apply Button ÔöÇÔöÇ
             if (manualTrainApplyBtn) {
                 manualTrainApplyBtn.addEventListener("click", () => {
                     const similarInput = card.querySelector(".manual-similar-input");
@@ -15646,7 +14294,7 @@ function renderTriageCards(reports, container) {
                 });
             }
             
-            // ── Ignore Button ──
+            // ÔöÇÔöÇ Ignore Button ÔöÇÔöÇ
             if (ignoreBtn) {
                 ignoreBtn.addEventListener("click", () => {
                     resolveBugReport(report, card, true); // silent / ignore resolve
@@ -15697,7 +14345,6 @@ function renderTriageCards(reports, container) {
 (function initTriagePanel() {
     const triageTabBtn = document.getElementById("tab-btn-bug-triage") || document.querySelector('.tab-btn[data-tab="tab-bug-triage"]');
     const refreshBtn = document.getElementById("btn-triage-refresh");
-    const clearAllBtn = document.getElementById("btn-triage-clear-all");
     const unlockLoginBtn = document.getElementById("btn-bug-unlock-login");
     
     if (triageTabBtn) {
@@ -15739,88 +14386,6 @@ function renderTriageCards(reports, container) {
             } else {
                 showCustomNotification("Please authenticate as admin first.", "warning");
             }
-        });
-    }
-
-    if (clearAllBtn) {
-        clearAllBtn.addEventListener("click", () => {
-            if (sessionStorage.getItem("li_admin_authenticated") === "true") {
-                showCustomConfirmDialog(
-                    "Are you sure you want to permanently clear all bug reports? This action cannot be undone.",
-                    () => {
-                        clearAllBtn.disabled = true;
-                        clearAllBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Clearing...`;
-                        const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode");
-                        
-                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "text/plain" },
-                            body: JSON.stringify({
-                                action: "clear_bug_reports",
-                                passcode: passcode
-                            })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === "success") {
-                                showCustomNotification("All bug reports cleared successfully!", "success");
-                                loadAndRenderBugTriage();
-                            } else {
-                                showCustomNotification("Error clearing bug reports: " + (data.message || "Failed."), "error");
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Error clearing bugs:", err);
-                            showCustomNotification("Error clearing bug reports.", "error");
-                        })
-                        .finally(() => {
-                            clearAllBtn.disabled = false;
-                            clearAllBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i> Clear All`;
-                        });
-                    },
-                    null,
-                    "Clear All",
-                    true
-                );
-            } else {
-                showCustomNotification("Please authenticate as admin first.", "warning");
-            }
-        });
-    }
-    // Auto-sync processing classes on buttons when they display spinners or are disabled
-    const buttonObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            const target = mutation.target;
-            if (target && target.tagName === "BUTTON") {
-                const hasSpinner = target.querySelector(".fa-spinner") !== null || target.innerHTML.includes("fa-spinner");
-                if (hasSpinner || target.disabled) {
-                    if (!target.classList.contains("processing")) {
-                        target.classList.add("processing");
-                    }
-                } else {
-                    if (target.classList.contains("processing")) {
-                        target.classList.remove("processing");
-                    }
-                }
-            }
-        });
-    });
-
-    if (document.body) {
-        buttonObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ["disabled", "class"]
-        });
-    } else {
-        document.addEventListener("DOMContentLoaded", () => {
-            buttonObserver.observe(document.body, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ["disabled", "class"]
-            });
         });
     }
 })();

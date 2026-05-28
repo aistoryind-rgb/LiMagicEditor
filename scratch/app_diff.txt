@@ -1,0 +1,372 @@
+﻿diff --git a/app.js b/app.js
+index 25ce230..40082f5 100644
+--- a/app.js
++++ b/app.js
+@@ -8165,12 +8165,13 @@ const CONFIG = {
+         return stored;
+     })(),
+     FIREBASE: {
+-        apiKey: localStorage.getItem('li_firebase_api_key') || "",
+-        authDomain: localStorage.getItem('li_firebase_auth_domain') || "",
+-        projectId: localStorage.getItem('li_firebase_project_id') || "",
+-        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "",
+-        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "",
+-        appId: localStorage.getItem('li_firebase_app_id') || ""
++        apiKey: localStorage.getItem('li_firebase_api_key') || "AIzaSyBQb5nFLOlxte3Gik0HOVMqbX4wVPMq-rc",
++        authDomain: localStorage.getItem('li_firebase_auth_domain') || "lifeinvdereditor.firebaseapp.com",
++        projectId: localStorage.getItem('li_firebase_project_id') || "lifeinvdereditor",
++        storageBucket: localStorage.getItem('li_firebase_storage_bucket') || "lifeinvdereditor.firebasestorage.app",
++        messagingSenderId: localStorage.getItem('li_firebase_messaging_sender_id') || "327923249616",
++        appId: localStorage.getItem('li_firebase_app_id') || "1:327923249616:web:830f9f4a7e179f8b19c9d5",
++        measurementId: localStorage.getItem('li_firebase_measurement_id') || "G-XWT3LNR438"
+     }
+ };
+ 
+@@ -8185,12 +8186,40 @@ function getFirebaseDb() {
+         throw new Error("Firebase configurations are missing.");
+     }
+     if (!fbApp) {
+-        fbApp = firebase.initializeApp(CONFIG.FIREBASE);
++        fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(CONFIG.FIREBASE);
+         fbDb = firebase.firestore();
+     }
+     return fbDb;
+ }
+ 
++async function uploadScreenshotToGoogleDrive(base64Data, prefix) {
++    if (!CONFIG.GOOGLE_SCRIPT_URL) {
++        console.warn("Google Script URL not configured. Cannot upload screenshot to Google Drive.");
++        return null;
++    }
++    try {
++        const fetchFn = window.__originalFetch || window.fetch;
++        const res = await fetchFn(CONFIG.GOOGLE_SCRIPT_URL, {
++            method: "POST",
++            headers: { "Content-Type": "text/plain" },
++            body: JSON.stringify({
++                action: "upload_screenshot",
++                screenshotBase64: base64Data,
++                prefix: prefix
++            })
++        });
++        const data = await res.json();
++        if (data.status === "success" && data.url) {
++            return data.url;
++        }
++        console.error("Google Drive upload response error:", data.message);
++        return null;
++    } catch (err) {
++        console.error("Failed to upload screenshot to Google Drive via Apps Script:", err);
++        return null;
++    }
++}
++
+ async function handleFirebaseRequest(payload) {
+     const db = getFirebaseDb();
+     const action = payload.action;
+@@ -8205,6 +8234,14 @@ async function handleFirebaseRequest(payload) {
+             return { status: "already_approved", message: "You already have access." };
+         }
+         
++        let screenshotVal = payload.screenshotBase64 || "";
++        if (screenshotVal && screenshotVal.startsWith("data:")) {
++            const uploadedUrl = await uploadScreenshotToGoogleDrive(screenshotVal, `access_request_${payload.id || clientUuid}`);
++            if (uploadedUrl) {
++                screenshotVal = uploadedUrl;
++            }
++        }
++
+         const timestamp = new Date().toISOString();
+         await docRef.set({
+             firstname: payload.firstname || "",
+@@ -8214,7 +8251,7 @@ async function handleFirebaseRequest(payload) {
+             status: "pending",
+             role: payload.role || "user",
+             timestamp: timestamp,
+-            screenshot: payload.screenshotBase64 || ""
++            screenshot: screenshotVal
+         }, { merge: true });
+         
+         return { status: "success", message: "Access request submitted successfully." };
+@@ -8305,11 +8342,31 @@ async function handleFirebaseRequest(payload) {
+     }
+ 
+     if (action === "bug_report") {
++        const inputRaw = (payload.rawInput || "").toString().trim();
++        const normalizedRaw = inputRaw.toLowerCase();
++
++        if (normalizedRaw) {
++            const snapshot = await db.collection("bug_reports").where("rawInputLower", "==", normalizedRaw).get();
++            if (!snapshot.empty) {
++                return { status: "already_submitted", message: "Bug report already submitted. A fix is expected within 10 minutes." };
++            }
++        }
++
++        let screenshotVal = payload.screenshotBase64 || "";
++        if (screenshotVal && screenshotVal.startsWith("data:")) {
++            const uploadedUrl = await uploadScreenshotToGoogleDrive(screenshotVal, `bug_report`);
++            if (uploadedUrl) {
++                screenshotVal = uploadedUrl;
++            }
++        }
++
+         await db.collection("bug_reports").add({
+             category: payload.category || "",
+             rawInput: payload.rawInput || "",
++            rawInputLower: normalizedRaw,
+             expectedOutput: payload.expectedOutput || "",
+-            timestamp: new Date().toISOString()
++            timestamp: new Date().toISOString(),
++            screenshot: screenshotVal
+         });
+         return { status: "success", message: "Bug report submitted." };
+     }
+@@ -8324,7 +8381,8 @@ async function handleFirebaseRequest(payload) {
+                 timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : "",
+                 category: data.category || "",
+                 rawInput: data.rawInput || "",
+-                expectedOutput: data.expectedOutput || ""
++                expectedOutput: data.expectedOutput || "",
++                screenshotBase64: data.screenshot || ""
+             });
+         });
+         reports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+@@ -8332,18 +8390,62 @@ async function handleFirebaseRequest(payload) {
+     }
+ 
+     if (action === "resolve_bug_report") {
+-        const id = payload.id;
+-        if (!id) throw new Error("Missing report ID.");
+-        await db.collection("bug_reports").doc(id).delete();
+-        return { status: "success", message: "Bug report resolved." };
++        const rawInput = (payload.rawInput || "").toString().trim();
++        const timestampStr = (payload.timestamp || "").toString().trim();
++
++        let docToDelete = null;
++
++        if (rawInput) {
++            const snapshot = await db.collection("bug_reports").where("rawInput", "==", rawInput).get();
++            if (!snapshot.empty) {
++                if (timestampStr) {
++                    const targetTimeMs = new Date(timestampStr).getTime();
++                    let minDiff = Infinity;
++
++                    snapshot.forEach(doc => {
++                        const docData = doc.data();
++                        if (docData.timestamp) {
++                            const docTimeMs = new Date(docData.timestamp).getTime();
++                            const diff = Math.abs(docTimeMs - targetTimeMs);
++                            if (diff < minDiff && diff < 10000) { // within 10 seconds
++                                minDiff = diff;
++                                docToDelete = doc;
++                            }
++                        }
++                    });
++                }
++
++                // Fallback: delete the first match if no timestamp match was confirmed
++                if (!docToDelete) {
++                    docToDelete = snapshot.docs[0];
++                }
++            }
++        }
++
++        // Also fallback to checking payload.id if provided
++        if (!docToDelete && payload.id) {
++            const doc = await db.collection("bug_reports").doc(payload.id).get();
++            if (doc.exists) {
++                docToDelete = doc;
++            }
++        }
++
++        if (docToDelete) {
++            await docToDelete.ref.delete();
++            return { status: "success", message: "Bug report resolved." };
++        } else {
++            return { status: "error", message: "Bug report not found in database." };
++        }
+     }
+ 
+     if (action === "clear_bug_reports") {
+         const snapshot = await db.collection("bug_reports").get();
+         const batch = db.batch();
+-        snapshot.forEach(doc => {
++
++        for (const doc of snapshot.docs) {
+             batch.delete(doc.ref);
+-        });
++        }
++
+         await batch.commit();
+         return { status: "success", message: "All bug reports cleared." };
+     }
+@@ -8381,17 +8483,25 @@ async function handleFirebaseRequest(payload) {
+         if (doc.exists) {
+             return {
+                 status: "success",
+-                spelling: doc.data().spelling || [],
+-                translations: doc.data().translations || [],
++                spelling: doc.data().spelling || {},
++                translations: doc.data().translations || {},
+                 templates: doc.data().templates || []
+             };
+         }
+-        return { status: "success", spelling: [], translations: [], templates: [] };
++        return { status: "success", spelling: {}, translations: {}, templates: [] };
+     }
+ 
+     if (action === "save_custom_data") {
+         const updateData = {};
+-        updateData[payload.type] = payload.data;
++        if (payload.spelling !== undefined) updateData.spelling = payload.spelling;
++        if (payload.templates !== undefined) updateData.templates = payload.templates;
++        if (payload.translations !== undefined) updateData.translations = payload.translations;
++
++        // Support fallback to type/data if used
++        if (payload.type && payload.data !== undefined) {
++            updateData[payload.type] = payload.data;
++        }
++
+         await db.collection("config").doc("custom_data").set(updateData, { merge: true });
+         return { status: "success", message: "Configurations saved successfully." };
+     }
+@@ -8430,6 +8540,7 @@ async function handleFirebaseRequest(payload) {
+ // Monkey patch window.fetch to support Firebase backend transparently
+ (() => {
+     const originalFetch = window.fetch;
++    window.__originalFetch = originalFetch;
+     window.fetch = async function(url, options) {
+         if (url === CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE === 'firebase') {
+             try {
+@@ -10171,8 +10282,12 @@ function initAdminPanel() {
+     const fbFields = document.getElementById("admin-firebase-fields");
+     const googleFields = document.getElementById("admin-google-fields");
+     const inputFbApiKey = document.getElementById("admin-fb-apikey");
++    const inputFbAuthDomain = document.getElementById("admin-fb-authdomain");
+     const inputFbProjectId = document.getElementById("admin-fb-projectid");
+     const inputFbStorageBucket = document.getElementById("admin-fb-storagebucket");
++    const inputFbMessagingSenderId = document.getElementById("admin-fb-messaging-sender-id");
++    const inputFbAppId = document.getElementById("admin-fb-appid");
++    const inputFbMeasurementId = document.getElementById("admin-fb-measurementid");
+     const inputGsUrl = document.getElementById("admin-gs-url");
+     const btnSaveBackend = document.getElementById("btn-admin-save-backend");
+ 
+@@ -10180,8 +10295,12 @@ function initAdminPanel() {
+         // Load initial values
+         selectBackendType.value = CONFIG.BACKEND_TYPE;
+         if (inputFbApiKey) inputFbApiKey.value = CONFIG.FIREBASE.apiKey;
++        if (inputFbAuthDomain) inputFbAuthDomain.value = CONFIG.FIREBASE.authDomain;
+         if (inputFbProjectId) inputFbProjectId.value = CONFIG.FIREBASE.projectId;
+         if (inputFbStorageBucket) inputFbStorageBucket.value = CONFIG.FIREBASE.storageBucket;
++        if (inputFbMessagingSenderId) inputFbMessagingSenderId.value = CONFIG.FIREBASE.messagingSenderId;
++        if (inputFbAppId) inputFbAppId.value = CONFIG.FIREBASE.appId;
++        if (inputFbMeasurementId) inputFbMeasurementId.value = CONFIG.FIREBASE.measurementId;
+         if (inputGsUrl) inputGsUrl.value = CONFIG.GOOGLE_SCRIPT_URL;
+ 
+         const toggleBackendFields = () => {
+@@ -10202,8 +10321,12 @@ function initAdminPanel() {
+         btnSaveBackend.addEventListener("click", () => {
+             const type = selectBackendType ? selectBackendType.value : "google";
+             const apiKey = inputFbApiKey ? inputFbApiKey.value.trim() : "";
++            const authDomain = inputFbAuthDomain ? inputFbAuthDomain.value.trim() : "";
+             const projectId = inputFbProjectId ? inputFbProjectId.value.trim() : "";
+             const storageBucket = inputFbStorageBucket ? inputFbStorageBucket.value.trim() : "";
++            const messagingSenderId = inputFbMessagingSenderId ? inputFbMessagingSenderId.value.trim() : "";
++            const appId = inputFbAppId ? inputFbAppId.value.trim() : "";
++            const measurementId = inputFbMeasurementId ? inputFbMeasurementId.value.trim() : "";
+             const gsUrl = inputGsUrl ? inputGsUrl.value.trim() : "";
+ 
+             if (type === "firebase" && (!apiKey || !projectId)) {
+@@ -10214,15 +10337,23 @@ function initAdminPanel() {
+             localStorage.setItem("li_backend_type", type);
+             localStorage.setItem("li_google_script_url", gsUrl);
+             localStorage.setItem("li_firebase_api_key", apiKey);
++            localStorage.setItem("li_firebase_auth_domain", authDomain);
+             localStorage.setItem("li_firebase_project_id", projectId);
+             localStorage.setItem("li_firebase_storage_bucket", storageBucket);
++            localStorage.setItem("li_firebase_messaging_sender_id", messagingSenderId);
++            localStorage.setItem("li_firebase_app_id", appId);
++            localStorage.setItem("li_firebase_measurement_id", measurementId);
+ 
+             // Update CONFIG
+             CONFIG.BACKEND_TYPE = type;
+             CONFIG.GOOGLE_SCRIPT_URL = gsUrl;
+             CONFIG.FIREBASE.apiKey = apiKey;
++            CONFIG.FIREBASE.authDomain = authDomain;
+             CONFIG.FIREBASE.projectId = projectId;
+             CONFIG.FIREBASE.storageBucket = storageBucket;
++            CONFIG.FIREBASE.messagingSenderId = messagingSenderId;
++            CONFIG.FIREBASE.appId = appId;
++            CONFIG.FIREBASE.measurementId = measurementId;
+ 
+             // Reset Firebase instances so they reinitialize with new configurations
+             fbApp = null;
+@@ -10853,6 +10984,33 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
+         details.appendChild(uuidInfo);
+         
+         card.appendChild(details);
++
++        if (req.screenshotBase64) {
++            const ssWrapper = document.createElement("div");
++            ssWrapper.style.marginTop = "10px";
++            ssWrapper.style.borderRadius = "6px";
++            ssWrapper.style.overflow = "hidden";
++            ssWrapper.style.border = "1px solid rgba(255, 255, 255, 0.08)";
++            ssWrapper.style.background = "rgba(0, 0, 0, 0.2)";
++            ssWrapper.style.maxHeight = "120px";
++            ssWrapper.style.display = "flex";
++            ssWrapper.style.justifyContent = "center";
++            ssWrapper.style.alignItems = "center";
++            ssWrapper.style.cursor = "pointer";
++            ssWrapper.style.transition = "border-color 0.2s";
++            ssWrapper.addEventListener("mouseover", () => ssWrapper.style.borderColor = "var(--color-primary)");
++            ssWrapper.addEventListener("mouseout", () => ssWrapper.style.borderColor = "rgba(255, 255, 255, 0.08)");
++            ssWrapper.addEventListener("click", () => window.open(req.screenshotBase64, "_blank"));
++
++            const img = document.createElement("img");
++            img.src = req.screenshotBase64;
++            img.style.maxWidth = "100%";
++            img.style.maxHeight = "120px";
++            img.style.objectFit = "contain";
++            ssWrapper.appendChild(img);
++
++            card.appendChild(ssWrapper);
++        }
+         
+         const actionsRow = document.createElement("div");
+         actionsRow.style.display = "flex";
+@@ -14967,6 +15125,20 @@ function renderTriageCards(reports, container) {
+                 }).join("");
+             }
+ 
++            let screenshotHtml = "";
++            if (report.screenshotBase64) {
++                screenshotHtml = `
++                    <!-- Screenshot Preview -->
++                    <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
++                        <div style="font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Attached Screenshot</div>
++                        <div style="position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.25); max-height: 180px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;" onclick="window.open('${report.screenshotBase64}', '_blank')" onmouseover="this.style.borderColor='var(--color-primary)'; this.style.boxShadow='0 0 10px rgba(167, 139, 250, 0.15)';" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'; this.style.boxShadow='none';">
++                            <img src="${report.screenshotBase64}" style="max-width: 100%; max-height: 180px; object-fit: contain;" alt="Bug Screenshot">
++                            <div style="position: absolute; bottom: 8px; right: 8px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.75); font-size: 9px; color: var(--text-primary); font-family: var(--font-heading); display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-expand"></i> Click to enlarge</div>
++                        </div>
++                    </div>
++                `;
++            }
++
+             card.innerHTML = `
+                 <!-- Header -->
+                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+@@ -14979,6 +15151,8 @@ function renderTriageCards(reports, container) {
+                 
+                 <!-- Side-by-side Raw vs Fixed Output -->
+                 ${diffHtml}
++
++                ${screenshotHtml}
+                 
+                 ${aiProposedFixHtml}
+                 
+@@ -15501,4 +15675,3 @@ function renderTriageCards(reports, container) {
+     }
+ })();
+ 
+-

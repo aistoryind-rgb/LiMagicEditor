@@ -1,0 +1,930 @@
+﻿diff --git a/.gitignore b/.gitignore
+index 5cbc8ce..e02a332 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,3 +2,4 @@
+ *~
+ *.log
+ .vscode/
++.firebase/
+diff --git a/app.js b/app.js
+index 2333aaf..c8fed76 100644
+--- a/app.js
++++ b/app.js
+@@ -2677,20 +2677,7 @@ function triggerLiveGeminiAssist() {
+ 
+     getGeminiSparkSuggestion(rawText, category, (suggestion) => {
+         if (suggestion && suggestion.text) {
+-            if (mainBtn) {
+-                mainBtn.disabled = false;
+-                mainBtn.dataset.state = "train";
+-                mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+-                mainBtn.classList.remove("glow-teal", "glow-red");
+-                mainBtn.classList.add("glow-green");
+-            }
+-            if (pipBtn) {
+-                pipBtn.disabled = false;
+-                pipBtn.dataset.state = "train";
+-                pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+-                pipBtn.classList.remove("glow-teal", "glow-red");
+-                pipBtn.classList.add("glow-green");
+-            }
++            setSparkButtonState("train");
+ 
+             const processedEl = document.getElementById("processed-ad-text");
+             if (processedEl) {
+@@ -2715,47 +2702,59 @@ function triggerLiveGeminiAssist() {
+                 showCustomNotification("Gemini Spark correction applied! Click 'Train' to save to database.", "success");
+             }
+         } else {
+-            if (mainBtn) {
+-                mainBtn.disabled = false;
+-                mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+-            }
+-            if (pipBtn) {
+-                pipBtn.disabled = false;
+-                pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+-            }
++            setSparkButtonState("spark");
+             showCustomNotification("Failed to retrieve AI suggestion. Please check API Key.", "error");
+         }
+     });
+ }
+ 
+-function resetSparkButtonsToDefaultState() {
++function getSparkButtons() {
++    const buttons = [];
+     const mainBtn = document.getElementById("btn-gemini-assist");
+-    if (mainBtn && mainBtn.dataset.state !== "spark") {
+-        mainBtn.dataset.state = "spark";
+-        mainBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+-        mainBtn.classList.remove("glow-green", "glow-teal", "glow-red");
+-        mainBtn.style.background = "";
+-        mainBtn.style.border = "";
+-        mainBtn.style.color = "";
+-        mainBtn.style.boxShadow = "";
+-        mainBtn.disabled = false;
+-    }
++    if (mainBtn) buttons.push(mainBtn);
+     if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
+         const pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
+-        if (pipBtn && pipBtn.dataset.state !== "spark") {
+-            pipBtn.dataset.state = "spark";
+-            pipBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+-            pipBtn.classList.remove("glow-green", "glow-teal", "glow-red");
+-            pipBtn.style.background = "";
+-            pipBtn.style.border = "";
+-            pipBtn.style.color = "";
+-            pipBtn.style.boxShadow = "";
+-            pipBtn.disabled = false;
++        if (pipBtn) buttons.push(pipBtn);
++    }
++    return buttons;
++}
++
++function setSparkButtonState(state) {
++    getSparkButtons().forEach(btn => {
++        btn.dataset.state = state;
++        btn.classList.remove("glow-green", "glow-teal", "glow-red");
++        btn.style.background = "";
++        btn.style.border = "";
++        btn.style.color = "";
++        btn.style.boxShadow = "";
++
++        if (state === "train") {
++            btn.disabled = false;
++            btn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
++            btn.classList.add("glow-green");
++        } else if (state === "training") {
++            btn.disabled = true;
++            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
++            btn.classList.add("glow-green");
++        } else if (state === "trained") {
++            btn.disabled = true;
++            btn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
++            btn.classList.add("glow-teal");
++        } else {
++            btn.disabled = false;
++            btn.dataset.state = "spark";
++            btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Spark`;
+         }
++    });
++}
++
++function resetSparkButtonsToDefaultState() {
++    if (getSparkButtons().some(btn => btn.dataset.state !== "spark")) {
++        setSparkButtonState("spark");
+     }
+ }
+ 
+-function submitSparkTraining(source) {
++async function submitSparkTraining(source) {
+     const rawAdEl = document.getElementById("raw-ad");
+     const rawAdText = rawAdEl ? rawAdEl.value.trim() : "";
+     const processedAdEl = document.getElementById("processed-ad-text");
+@@ -2765,104 +2764,54 @@ function submitSparkTraining(source) {
+ 
+     const expectedOutput = `[Spark Training Report]\nRaw Ad Content: "${rawAdText}"\nCorrect Text: "${correctedText}"`;
+ 
+-    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+-        showCustomNotification("Google Apps Script URL not configured.", "error");
++    if (!rawAdText || !correctedText || correctedText.includes("Processed ad will appear")) {
++        showCustomNotification("Run Spark and review the corrected output before training.", "warning");
++        setSparkButtonState("train");
+         return;
+     }
+ 
+-    const mainBtn = document.getElementById("btn-gemini-assist");
+-    let pipBtn = null;
+-    if (typeof pipWindowInstance !== "undefined" && pipWindowInstance && !pipWindowInstance.closed) {
+-        pipBtn = pipWindowInstance.document.getElementById("pip-btn-ai-assist");
+-    }
+-
+-    if (mainBtn) {
+-        mainBtn.disabled = true;
+-        mainBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
+-    }
+-    if (pipBtn) {
+-        pipBtn.disabled = true;
+-        pipBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
++    if (!CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE !== 'firebase') {
++        showCustomNotification("Google Apps Script URL not configured.", "error");
++        return;
+     }
+ 
++    setSparkButtonState("training");
+     showCustomNotification("Submitting Spark training to database...", "info");
+ 
+-    generateBugReportCardBlob(rawAdText, activeCategory, "Spark Correction Training", timestamp).then((screenshotBase64) => {
+-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+-            method: "POST",
+-            headers: {
+-                "Content-Type": "text/plain"
+-            },
+-            body: JSON.stringify({
+-                action: "bug_report",
+-                category: activeCategory,
+-                rawInput: rawAdText,
+-                expectedOutput: expectedOutput,
+-                screenshotBase64: screenshotBase64
+-            })
+-        })
+-        .then(response => response.json())
+-        .then(data => {
+-            if (data.status === "success" || data.status === "already_submitted") {
+-                if (mainBtn) {
+-                    mainBtn.dataset.state = "trained";
+-                    mainBtn.disabled = true;
+-                    mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+-                    mainBtn.classList.remove("glow-green", "glow-red");
+-                    mainBtn.classList.add("glow-teal");
+-                    mainBtn.style.background = "";
+-                    mainBtn.style.border = "";
+-                    mainBtn.style.color = "";
+-                }
+-                if (pipBtn) {
+-                    pipBtn.dataset.state = "trained";
+-                    pipBtn.disabled = true;
+-                    pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+-                    pipBtn.classList.remove("glow-green", "glow-red");
+-                    pipBtn.classList.add("glow-teal");
+-                    pipBtn.style.background = "";
+-                    pipBtn.style.border = "";
+-                    pipBtn.style.color = "";
+-                }
+-                showCustomNotification("Spark training submitted successfully! ÔÅ│", "success");
+-            } else {
+-                if (mainBtn) {
+-                    mainBtn.disabled = false;
+-                    mainBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+-                }
+-                if (pipBtn) {
+-                    pipBtn.disabled = false;
+-                    pipBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Train`;
+-                }
+-                showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
+-            }
+-        })
+-        .catch(err => {
+-            console.error("Training upload error:", err);
+-            // Fallback success
+-            if (mainBtn) {
+-                mainBtn.dataset.state = "trained";
+-                mainBtn.disabled = true;
+-                mainBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+-                mainBtn.classList.remove("glow-green", "glow-red");
+-                mainBtn.classList.add("glow-teal");
+-                mainBtn.style.background = "";
+-                mainBtn.style.border = "";
+-                mainBtn.style.color = "";
+-            }
+-            if (pipBtn) {
+-                pipBtn.dataset.state = "trained";
+-                pipBtn.disabled = true;
+-                pipBtn.innerHTML = `<i class="fa-solid fa-check"></i> Trained`;
+-                pipBtn.classList.remove("glow-green", "glow-red");
+-                pipBtn.classList.add("glow-teal");
+-                pipBtn.style.background = "";
+-                pipBtn.style.border = "";
+-                pipBtn.style.color = "";
+-            }
+-            showCustomNotification("Spark training submitted successfully! ÔÅ│", "success");
+-        });
+-    });
++    try {
++        const payload = {
++            action: "bug_report",
++            category: activeCategory,
++            rawInput: rawAdText,
++            expectedOutput: expectedOutput,
++            source: `spark_training_${source || "main"}`,
++            screenshotBase64: ""
++        };
++        let data;
++        if (CONFIG.BACKEND_TYPE === 'firebase') {
++            data = await handleFirebaseRequest(payload);
++        } else {
++            payload.screenshotBase64 = await generateBugReportCardBlob(rawAdText, activeCategory, "Spark Correction Training", timestamp);
++            const response = await fetch(CONFIG.GOOGLE_SCRIPT_URL, {
++                method: "POST",
++                headers: { "Content-Type": "text/plain" },
++                body: JSON.stringify(payload)
++            });
++            data = await response.json();
++        }
++
++        if (data.status === "success" || data.status === "already_submitted") {
++            setSparkButtonState("trained");
++            showCustomNotification("Spark training submitted successfully!", "success");
++        } else {
++            setSparkButtonState("train");
++            showCustomNotification("Error submitting training data: " + (data.message || "Failed to submit."), "error");
++        }
++    } catch (err) {
++        console.error("Training upload error:", err);
++        setSparkButtonState("train");
++        showCustomNotification("Error submitting training data: " + (err.message || "Please try again."), "error");
++    }
+ }
+ 
+ function processAd() {
+@@ -7663,6 +7612,11 @@ function initFloatingClipboard() {
+                 const mainBtnGeminiAssist = document.getElementById("btn-gemini-assist");
+                 if (pipBtnAiAssist && mainBtnGeminiAssist) {
+                     pipBtnAiAssist.disabled = mainBtnGeminiAssist.disabled;
++                    pipBtnAiAssist.dataset.state = mainBtnGeminiAssist.dataset.state || "spark";
++                    pipBtnAiAssist.innerHTML = mainBtnGeminiAssist.innerHTML;
++                    ["glow-green", "glow-teal", "glow-red"].forEach(cls => {
++                        pipBtnAiAssist.classList.toggle(cls, mainBtnGeminiAssist.classList.contains(cls));
++                    });
+                 }
+ 
+                 // Action Toggle Buttons State
+@@ -8229,7 +8183,7 @@ function getFirebaseDb() {
+         throw new Error("Firebase configurations are missing.");
+     }
+     if (!fbApp) {
+-        fbApp = firebase.initializeApp(CONFIG.FIREBASE);
++        fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(CONFIG.FIREBASE);
+         fbDb = firebase.firestore();
+     }
+     return fbDb;
+@@ -8244,22 +8198,29 @@ async function handleFirebaseRequest(payload) {
+         if (!clientUuid) throw new Error("Missing client UUID.");
+         
+         const docRef = db.collection("access_requests").doc(clientUuid);
+-        const doc = await docRef.get();
+-        if (doc.exists && doc.data().status === "approved") {
+-            return { status: "already_approved", message: "You already have access." };
++        try {
++            const doc = await docRef.get();
++            if (doc.exists && doc.data().status === "approved") {
++                return { status: "already_approved", message: "You already have access." };
++            }
++        } catch (err) {
++            console.warn("Could not check existing access request before submit:", err);
+         }
+         
+         const timestamp = new Date().toISOString();
+-        await docRef.set({
++        const requestData = {
+             firstname: payload.firstname || "",
+             lastname: payload.lastname || "",
+             id: payload.id || "",
+             clientUuid: clientUuid,
+             status: "pending",
+             role: payload.role || "user",
+-            timestamp: timestamp,
+-            screenshot: payload.screenshotBase64 || ""
+-        }, { merge: true });
++            timestamp: timestamp
++        };
++        if (payload.screenshotBase64 && payload.screenshotBase64.length < 700000) {
++            requestData.screenshot = payload.screenshotBase64;
++        }
++        await docRef.set(requestData, { merge: true });
+         
+         return { status: "success", message: "Access request submitted successfully." };
+     }
+@@ -8331,10 +8292,11 @@ async function handleFirebaseRequest(payload) {
+         const clientUuid = payload.clientUuid;
+         if (!clientUuid) throw new Error("Missing client UUID.");
+         await db.collection("access_requests").doc(clientUuid).set({
+-            status: "rejected",
+-            role: ""
++            status: payload.preserveUser ? "revoked" : "rejected",
++            role: "",
++            revokedAt: payload.preserveUser ? new Date().toISOString() : ""
+         }, { merge: true });
+-        return { status: "success", message: "Access request rejected." };
++        return { status: "success", message: payload.preserveUser ? "User access deactivated and preserved." : "Access request rejected." };
+     }
+ 
+     if (action === "set_user_role") {
+@@ -8351,12 +8313,14 @@ async function handleFirebaseRequest(payload) {
+     }
+ 
+     if (action === "bug_report") {
+-        await db.collection("bug_reports").add({
++        db.collection("bug_reports").add({
+             category: payload.category || "",
+             rawInput: payload.rawInput || "",
+             expectedOutput: payload.expectedOutput || "",
++            source: payload.source || "bug_report",
++            screenshot: payload.screenshotBase64 || "",
+             timestamp: new Date().toISOString()
+-        });
++        }).catch(err => console.error("Firestore bug report write error:", err));
+         return { status: "success", message: "Bug report submitted." };
+     }
+ 
+@@ -8395,13 +8359,13 @@ async function handleFirebaseRequest(payload) {
+     }
+ 
+     if (action === "log_ad") {
+-        await db.collection("ad_history").add({
++        db.collection("ad_history").add({
+             adText: payload.adText || "",
+             category: payload.category || "",
+             status: payload.status || "",
+             reason: payload.reason || "",
+             timestamp: new Date().toISOString()
+-        });
++        }).catch(err => console.error("Firestore log ad error:", err));
+         return { status: "success", message: "Ad logged." };
+     }
+ 
+@@ -8479,6 +8443,7 @@ async function handleFirebaseRequest(payload) {
+ // Monkey patch window.fetch to support Firebase backend transparently
+ (() => {
+     const originalFetch = window.fetch;
++    window.__originalFetch = originalFetch;
+     window.fetch = async function(url, options) {
+         const isGoogleScript = (url === CONFIG.GOOGLE_SCRIPT_URL || (typeof url === 'string' && url.includes("script.google.com/macros/s/")));
+         if (isGoogleScript && CONFIG.BACKEND_TYPE === 'firebase') {
+@@ -8488,20 +8453,16 @@ async function handleFirebaseRequest(payload) {
+                     payload = JSON.parse(options.body);
+                 }
+                 const resData = await handleFirebaseRequest(payload);
+-                return {
+-                    ok: true,
++                return new Response(JSON.stringify(resData), {
+                     status: 200,
+-                    json: async () => resData,
+-                    text: async () => JSON.stringify(resData)
+-                };
++                    headers: { 'Content-Type': 'application/json' }
++                });
+             } catch (e) {
+                 console.error("Firebase backend handler error:", e);
+-                return {
+-                    ok: false,
++                return new Response(JSON.stringify({ status: "error", message: e.message || "Firebase Database error" }), {
+                     status: 500,
+-                    json: async () => ({ status: "error", message: e.message || "Firebase Database error" }),
+-                    text: async () => JSON.stringify({ status: "error", message: e.message || "Firebase Database error" })
+-                };
++                    headers: { 'Content-Type': 'application/json' }
++                });
+             }
+         }
+         return originalFetch.apply(this, arguments);
+@@ -8674,21 +8635,26 @@ function initAccessGate() {
+ 
+     let statusPollInterval = null;
+ 
+-    function checkCurrentAccessStatus(showFeedback = false) {
+-        if (!CONFIG.GOOGLE_SCRIPT_URL) return;
++    async function checkCurrentAccessStatus(showFeedback = false) {
++        if (!CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE !== 'firebase') return;
+ 
+         const clientUuid = getOrCreateClientUuid();
+-        
+-        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+-            method: "POST",
+-            headers: { "Content-Type": "text/plain" },
+-            body: JSON.stringify({
++        try {
++            const payload = {
+                 action: "check_access",
+                 clientUuid: clientUuid
+-            })
+-        })
+-        .then(r => r.json())
+-        .then(data => {
++            };
++            let data;
++            if (CONFIG.BACKEND_TYPE === 'firebase') {
++                data = await handleFirebaseRequest(payload);
++            } else {
++                const response = await fetch(CONFIG.GOOGLE_SCRIPT_URL, {
++                    method: "POST",
++                    headers: { "Content-Type": "text/plain" },
++                    body: JSON.stringify(payload)
++                });
++                data = await response.json();
++            }
+             if (data.status === "success") {
+                 if (data.approved) {
+                     localStorage.setItem("li_approved_token", "APPROVED");
+@@ -8728,6 +8694,15 @@ function initAccessGate() {
+                         console.log("Access status check: user is admin, bypassing deauthorization.");
+                         return;
+                     }
++                    if (localStorage.getItem("li_approved_token") === "APPROVED" && data.requestStatus === "none") {
++                        document.documentElement.classList.add("user-approved");
++                        document.documentElement.classList.remove("user-unauthorized");
++                        if (gate) gate.classList.add("hide");
++                        if (showFeedback) {
++                            showCustomNotification("Existing access preserved while user records are migrated.", "info");
++                        }
++                        return;
++                    }
+                     localStorage.removeItem("li_approved_token");
+                     document.documentElement.classList.remove("user-approved");
+                     document.documentElement.classList.add("user-unauthorized");
+@@ -8755,8 +8730,7 @@ function initAccessGate() {
+                     }
+                 }
+             }
+-        })
+-        .catch(err => {
++        } catch (err) {
+             console.error("Access verification error:", err);
+             const savedToken = localStorage.getItem("li_approved_token");
+             if (savedToken === "APPROVED") {
+@@ -8767,7 +8741,7 @@ function initAccessGate() {
+                 document.documentElement.classList.remove("user-approved");
+                 document.documentElement.classList.add("user-unauthorized");
+             }
+-        });
++        }
+     }
+     
+     // Initial verification
+@@ -8897,7 +8871,7 @@ function initAccessGate() {
+     let isSubmitting = false;
+     
+     if (btnRequestSubmit) {
+-        btnRequestSubmit.addEventListener("click", () => {
++        btnRequestSubmit.addEventListener("click", async () => {
+             if (isSubmitting) return;
+             
+             const firstname = inputFirstname ? inputFirstname.value.trim() : "";
+@@ -8915,82 +8889,90 @@ function initAccessGate() {
+                 return;
+             }
+             
+-            if (CONFIG.GOOGLE_SCRIPT_URL) {
+-                isSubmitting = true;
+-                btnRequestSubmit.disabled = true;
+-                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+-                
+-                const timestamp = new Date().toLocaleString();
+-                const clientUuid = getOrCreateClientUuid();
++            if (!CONFIG.GOOGLE_SCRIPT_URL && CONFIG.BACKEND_TYPE !== 'firebase') {
++                showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
++                return;
++            }
++
++            isSubmitting = true;
++            btnRequestSubmit.disabled = true;
++            btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
++
++            const timestamp = new Date().toLocaleString();
++            const clientUuid = getOrCreateClientUuid();
++
++            try {
++                const screenshotBase64 = CONFIG.BACKEND_TYPE === 'firebase'
++                    ? ""
++                    : await generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp);
++                const payload = {
++                    action: "access_request",
++                    firstname: firstname,
++                    lastname: lastname,
++                    server: server,
++                    id: id,
++                    clientUuid: clientUuid,
++                    screenshotBase64: screenshotBase64
++                };
++                let data;
+                 
+-                generateAccessRequestCardBlob(firstname, lastname, id, clientUuid, timestamp).then((screenshotBase64) => {
+-                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
++                if (CONFIG.BACKEND_TYPE === 'firebase') {
++                    data = await handleFirebaseRequest(payload);
++                } else {
++                    const response = await fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                         method: "POST",
+                         headers: { "Content-Type": "text/plain" },
+-                        body: JSON.stringify({
+-                            action: "access_request",
+-                            firstname: firstname,
+-                            lastname: lastname,
+-                            server: server,
+-                            id: id,
+-                            clientUuid: clientUuid,
+-                            screenshotBase64: screenshotBase64
+-                        })
+-                    })
+-                    .then(r => r.json())
+-                    .then(data => {
+-                        isSubmitting = false;
+-                        btnRequestSubmit.disabled = false;
+-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+-                        if (data.status === "success") {
+-                            localStorage.setItem("li_request_firstname", firstname);
+-                            localStorage.setItem("li_request_lastname", lastname);
+-                            localStorage.setItem("li_request_id", id);
+-                            transitionToApproveScreen();
+-                            startPolling();
+-                        } else if (data.status === "already_approved") {
+-                            // User already has access - unlock directly
+-                            localStorage.setItem("li_approved_token", "APPROVED");
+-                            
+-                            // Clear polling if active
+-                            if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
+-                                clearInterval(statusPollInterval);
+-                                statusPollInterval = null;
+-                            }
++                        body: JSON.stringify(payload)
++                    });
++                    data = await response.json();
++                }
+ 
+-                            // Unlock DOM instantly
+-                            document.documentElement.classList.add("user-approved");
+-                            document.documentElement.classList.remove("user-unauthorized");
+-                            if (gate) gate.classList.add("hide");
+-                            
+-                            // Update URL query string dynamically without reload
+-                            try {
+-                                window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
+-                            } catch(e) {
+-                                console.error("replaceState failed:", e);
+-                            }
++                if (data.status === "success") {
++                    localStorage.setItem("li_request_firstname", firstname);
++                    localStorage.setItem("li_request_lastname", lastname);
++                    localStorage.setItem("li_request_id", id);
++                    transitionToApproveScreen();
++                    showCustomNotification("Access request submitted. Waiting for admin approval.", "success");
++                    startPolling();
++                } else if (data.status === "already_approved") {
++                    // User already has access - unlock directly
++                    localStorage.setItem("li_approved_token", "APPROVED");
+ 
+-                            showCustomAlertDialog("You already have access! Welcome back.", null, "success");
+-                        } else {
+-                            showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
+-                            localStorage.removeItem("li_request_firstname");
+-                            localStorage.removeItem("li_request_lastname");
+-                            localStorage.removeItem("li_request_id");
+-                        }
+-                    })
+-                    .catch(err => {
+-                        console.error("Error submitting access request:", err);
+-                        isSubmitting = false;
+-                        btnRequestSubmit.disabled = false;
+-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+-                        showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
+-                        localStorage.removeItem("li_request_firstname");
+-                        localStorage.removeItem("li_request_lastname");
+-                        localStorage.removeItem("li_request_id");
+-                    });
+-                });
+-            } else {
+-                showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
++                    // Clear polling if active
++                    if (typeof statusPollInterval !== "undefined" && statusPollInterval) {
++                        clearInterval(statusPollInterval);
++                        statusPollInterval = null;
++                    }
++
++                    // Unlock DOM instantly
++                    document.documentElement.classList.add("user-approved");
++                    document.documentElement.classList.remove("user-unauthorized");
++                    if (gate) gate.classList.add("hide");
++
++                    // Update URL query string dynamically without reload
++                    try {
++                        window.history.replaceState({}, document.title, window.location.pathname + "?approved=true");
++                    } catch(e) {
++                        console.error("replaceState failed:", e);
++                    }
++
++                    showCustomAlertDialog("You already have access! Welcome back.", null, "success");
++                } else {
++                    showCustomAlertDialog("Error submitting request: " + (data.message || "Failed to submit request."), null, "error");
++                    localStorage.removeItem("li_request_firstname");
++                    localStorage.removeItem("li_request_lastname");
++                    localStorage.removeItem("li_request_id");
++                }
++            } catch (err) {
++                console.error("Error submitting access request:", err);
++                showCustomAlertDialog("Could not submit the request: " + (err.message || "Please try again later."), null, "error");
++                localStorage.removeItem("li_request_firstname");
++                localStorage.removeItem("li_request_lastname");
++                localStorage.removeItem("li_request_id");
++            } finally {
++                isSubmitting = false;
++                btnRequestSubmit.disabled = false;
++                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+             }
+         });
+     }
+@@ -8998,6 +8980,9 @@ function initAccessGate() {
+     function transitionToApproveScreen() {
+         if (screenRequest) screenRequest.classList.remove("active");
+         if (screenApprove) screenApprove.classList.add("active");
++        if (gate) gate.classList.remove("hide");
++        document.documentElement.classList.remove("user-approved");
++        document.documentElement.classList.add("user-unauthorized");
+         if (statusText) {
+             statusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pending Approval`;
+             statusText.style.color = "#ffb703";
+@@ -10764,14 +10749,15 @@ function loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin) {
+         body: JSON.stringify(requestBody)
+     })
+     .then(r => r.json())
+-    .then(data => {
++    .then(async data => {
+         if (data.status === "success") {
++            data.requests = await mergeLegacyAccessRequests(data.requests || [], requestBody, passcode);
+             const serverIsSuperAdmin = data.isSuperAdmin !== undefined ? data.isSuperAdmin : isSuperAdmin;
+             const pendingRequests = data.requests.filter(r => r.status === "pending");
+             renderAccessRequestsList(container, pendingRequests, passcode, authUuid);
+             
+             if (usersContainer) {
+-                const approvedUsers = data.requests.filter(r => r.status === "approved");
++                const approvedUsers = data.requests.filter(r => ["approved", "revoked"].includes((r.status || "").toLowerCase()));
+                 renderApprovedUsersList(usersContainer, approvedUsers, passcode, authUuid, serverIsSuperAdmin);
+             }
+         } else {
+@@ -10788,6 +10774,59 @@ function loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin) {
+     });
+ }
+ 
++async function mergeLegacyAccessRequests(firebaseRequests, requestBody, passcode) {
++    if (CONFIG.BACKEND_TYPE !== 'firebase' || !window.__originalFetch || !passcode) {
++        return firebaseRequests;
++    }
++
++    try {
++        const response = await window.__originalFetch(CONFIG.GOOGLE_SCRIPT_URL, {
++            method: "POST",
++            headers: { "Content-Type": "text/plain" },
++            body: JSON.stringify(requestBody)
++        });
++        const legacyData = await response.json();
++        if (legacyData.status !== "success" || !Array.isArray(legacyData.requests)) {
++            return firebaseRequests;
++        }
++
++        const byKey = new Map();
++        const getKey = (req) => req.clientUuid || `${req.id || ""}|${req.firstname || ""}|${req.lastname || ""}`;
++        firebaseRequests.forEach(req => byKey.set(getKey(req), req));
++
++        const db = getFirebaseDb();
++        const syncs = [];
++        legacyData.requests.forEach(req => {
++            const key = getKey(req);
++            if (!key || byKey.has(key)) return;
++            const migrated = {
++                timestamp: req.timestamp || new Date().toISOString(),
++                firstname: req.firstname || "",
++                lastname: req.lastname || "",
++                id: req.id || "",
++                clientUuid: req.clientUuid || "",
++                status: req.status || "pending",
++                role: req.role || "user",
++                migratedFrom: "google_apps_script"
++            };
++            byKey.set(key, migrated);
++            if (migrated.clientUuid) {
++                syncs.push(db.collection("access_requests").doc(migrated.clientUuid).set(migrated, { merge: true }));
++            }
++        });
++
++        if (syncs.length) {
++            Promise.all(syncs).catch(err => console.error("Legacy user migration error:", err));
++            showCustomNotification(`Imported ${syncs.length} previous user record${syncs.length > 1 ? "s" : ""} into Firebase.`, "info");
++        }
++
++        return Array.from(byKey.values());
++    } catch (err) {
++        console.error("Legacy access request merge error:", err);
++        return firebaseRequests;
++    }
++}
++
+ function renderAccessRequestsList(container, requests, passcode, authUuid) {
+     if (!container) return;
+     container.innerHTML = "";
+@@ -10986,9 +11025,13 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+         card.style.transition = "transform 0.2s, box-shadow 0.2s";
+         
+         const isAssistantAdmin = (req.role || "").toLowerCase() === "assistant_admin";
++        const isRevoked = (req.status || "").toLowerCase() === "revoked";
+         
+         // Add a subtle left border for assistant admins
+-        if (isAssistantAdmin) {
++        if (isRevoked) {
++            card.style.borderLeft = "3px solid #e63946";
++            card.style.opacity = "0.78";
++        } else if (isAssistantAdmin) {
+             card.style.borderLeft = "3px solid #f0a500";
+         }
+         
+@@ -11008,6 +11051,21 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+         name.textContent = `${req.firstname} ${req.lastname}`;
+         nameRow.appendChild(name);
+         
++        if (isRevoked) {
++            const badge = document.createElement("span");
++            badge.style.fontSize = "9px";
++            badge.style.fontWeight = "700";
++            badge.style.padding = "2px 8px";
++            badge.style.borderRadius = "4px";
++            badge.style.background = "rgba(230, 57, 70, 0.15)";
++            badge.style.color = "#e63946";
++            badge.style.border = "1px solid rgba(230, 57, 70, 0.3)";
++            badge.style.textTransform = "uppercase";
++            badge.style.letterSpacing = "0.5px";
++            badge.innerHTML = `<i class="fa-solid fa-user-lock" style="margin-right: 3px;"></i>Deactivated`;
++            nameRow.appendChild(badge);
++        }
++
+         if (isAssistantAdmin) {
+             const badge = document.createElement("span");
+             badge.style.fontSize = "9px";
+@@ -11069,8 +11127,15 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+             btnRole.style.fontSize = "11px";
+             btnRole.style.cursor = "pointer";
+             btnRole.style.minWidth = "120px";
++            btnRole.disabled = isRevoked;
+             
+-            if (isAssistantAdmin) {
++            if (isRevoked) {
++                btnRole.style.background = "rgba(120, 120, 130, 0.12)";
++                btnRole.style.color = "var(--text-muted)";
++                btnRole.style.border = "1px solid rgba(120, 120, 130, 0.25)";
++                btnRole.style.cursor = "not-allowed";
++                btnRole.innerHTML = `<i class="fa-solid fa-lock"></i> Admin Locked`;
++            } else if (isAssistantAdmin) {
+                 btnRole.style.background = "rgba(240, 165, 0, 0.15)";
+                 btnRole.style.color = "#f0a500";
+                 btnRole.style.border = "1px solid rgba(240, 165, 0, 0.3)";
+@@ -11133,6 +11198,53 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+             
+             actionsRow.appendChild(btnRole);
+             
++            if (isRevoked) {
++                const btnRestore = document.createElement("button");
++                btnRestore.type = "button";
++                btnRestore.className = "btn-preset";
++                btnRestore.style.flex = "1";
++                btnRestore.style.padding = "6px 10px";
++                btnRestore.style.borderRadius = "4px";
++                btnRestore.style.background = "rgba(46, 196, 182, 0.15)";
++                btnRestore.style.color = "#2ec4b6";
++                btnRestore.style.border = "1px solid rgba(46, 196, 182, 0.3)";
++                btnRestore.style.fontWeight = "600";
++                btnRestore.style.fontSize = "11px";
++                btnRestore.style.cursor = "pointer";
++                btnRestore.style.minWidth = "120px";
++                btnRestore.innerHTML = `<i class="fa-solid fa-user-check"></i> Restore Access`;
++                btnRestore.addEventListener("click", () => {
++                    btnRestore.disabled = true;
++                    btnRestore.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
++
++                    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
++                        method: "POST",
++                        headers: { "Content-Type": "text/plain" },
++                        body: JSON.stringify(buildAuthBody({
++                            action: "approve_access_request",
++                            clientUuid: req.clientUuid
++                        }))
++                    })
++                    .then(r => r.json())
++                    .then(data => {
++                        if (data.status === "success") {
++                            loadAndRenderAccessRequests(passcode, authUuid, isSuperAdmin);
++                        } else {
++                            showCustomAlertDialog("Restore failed: " + data.message, null, "error");
++                            btnRestore.disabled = false;
++                            btnRestore.innerHTML = `<i class="fa-solid fa-user-check"></i> Restore Access`;
++                        }
++                    })
++                    .catch(err => {
++                        console.error("Restore access error:", err);
++                        showCustomAlertDialog("Network error restoring access.", null, "error");
++                        btnRestore.disabled = false;
++                        btnRestore.innerHTML = `<i class="fa-solid fa-user-check"></i> Restore Access`;
++                    });
++                });
++                actionsRow.appendChild(btnRestore);
++            }
++
+             // Revoke Access button
+             const btnRevoke = document.createElement("button");
+             btnRevoke.type = "button";
+@@ -11147,11 +11259,15 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+             btnRevoke.style.fontSize = "11px";
+             btnRevoke.style.cursor = "pointer";
+             btnRevoke.style.minWidth = "120px";
+-            btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
++            btnRevoke.disabled = isRevoked;
++            btnRevoke.innerHTML = isRevoked
++                ? `<i class="fa-solid fa-box-archive"></i> Preserved`
++                : `<i class="fa-solid fa-user-slash"></i> Deactivate Access`;
+             
+             btnRevoke.addEventListener("click", () => {
++                if (isRevoked) return;
+                 showCustomConfirmDialog(
+-                    `Are you sure you want to permanently revoke system access for ${req.firstname} ${req.lastname}? This action cannot be undone.`,
++                    `Deactivate access for ${req.firstname} ${req.lastname}? Their user card and history will stay preserved in this panel, and you can restore access later.`,
+                     () => {
+                         btnRevoke.disabled = true;
+                         btnRevoke.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+@@ -11161,7 +11277,8 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+                             headers: { "Content-Type": "text/plain" },
+                             body: JSON.stringify(buildAuthBody({
+                                 action: "reject_access_request",
+-                                clientUuid: req.clientUuid
++                                clientUuid: req.clientUuid,
++                                preserveUser: true
+                             }))
+                         })
+                         .then(r => r.json())
+@@ -11171,18 +11288,18 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
+                             } else {
+                                 showCustomAlertDialog("Revocation failed: " + data.message, null, "error");
+                                 btnRevoke.disabled = false;
+-                                btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
++                                btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Deactivate Access`;
+                             }
+                         })
+                         .catch(err => {
+                             console.error("Revoke access error:", err);
+                             showCustomAlertDialog("Network error revoking access.", null, "error");
+                             btnRevoke.disabled = false;
+-                            btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Revoke Access`;
++                            btnRevoke.innerHTML = `<i class="fa-solid fa-user-slash"></i> Deactivate Access`;
+                         });
+                     },
+                     null,
+-                    "Revoke Access",
++                    "Deactivate Access",
+                     true
+                 );
+             });
+@@ -13893,6 +14010,7 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
+     let progressInterval = null;
+     let startTime = null;
+     let isTriggered = false;
++    let lastHoldTriggerAt = 0;
+     const holdDuration = 2000; // 2 seconds
+     
+     const resetState = () => {
+@@ -13963,6 +14081,7 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
+         
+         holdTimer = setTimeout(() => {
+             isTriggered = true;
++            lastHoldTriggerAt = Date.now();
+             if (progressInterval) clearInterval(progressInterval);
+             progressInterval = null;
+             holdTimer = null;
+@@ -13990,6 +14109,12 @@ function setupHoldToTriggerButton(btn, originalHtml, onTriggerComplete) {
+     
+     btn.addEventListener("mousedown", startHolding);
+     btn.addEventListener("touchstart", startHolding, { passive: false });
++    btn.addEventListener("click", (e) => {
++        if ((btn.dataset.state || "spark") !== "train") return;
++        if (Date.now() - lastHoldTriggerAt < 1000) return;
++        e.preventDefault();
++        submitSparkTraining(btn.id === "pip-btn-ai-assist" ? "pip" : "main");
++    });
+     
+     btn.addEventListener("mouseup", resetState);
+     btn.addEventListener("mouseleave", resetState);

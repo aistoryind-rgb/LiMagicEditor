@@ -11822,6 +11822,15 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
             </div>`;
         return;
     }
+
+    // Deduplicate pending requests by ID (keep the latest one)
+    const uniqueRequestsMap = new Map();
+    requests.forEach(req => {
+        if (req.id) {
+            uniqueRequestsMap.set(req.id, req);
+        }
+    });
+    const uniqueRequests = Array.from(uniqueRequestsMap.values());
     
     function buildAuthBody(extraFields) {
         const body = {};
@@ -11830,7 +11839,7 @@ function renderAccessRequestsList(container, requests, passcode, authUuid) {
         return Object.assign(body, extraFields);
     }
     
-    requests.forEach(req => {
+    uniqueRequests.forEach(req => {
         const card = document.createElement("div");
         card.className = "access-request-card";
         card.style.background = "rgba(255, 255, 255, 0.02)";
@@ -11989,6 +11998,15 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
             </div>`;
         return;
     }
+
+    // Deduplicate approved users by ID (keep the latest request for each unique ID)
+    const uniqueRequestsMap = new Map();
+    requests.forEach(req => {
+        if (req.id) {
+            uniqueRequestsMap.set(req.id, req);
+        }
+    });
+    const uniqueRequests = Array.from(uniqueRequestsMap.values());
     
     function buildAuthBody(extraFields) {
         const body = {};
@@ -11997,7 +12015,7 @@ function renderApprovedUsersList(container, requests, passcode, authUuid, isSupe
         return Object.assign(body, extraFields);
     }
     
-    requests.forEach(req => {
+    uniqueRequests.forEach(req => {
         const card = document.createElement("div");
         card.className = "access-request-card";
         card.style.background = "rgba(255, 255, 255, 0.02)";

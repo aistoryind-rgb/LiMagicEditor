@@ -4074,15 +4074,24 @@ function smartDictLookup(input, dictionary, options = {}) {
     }
     
     // Tier 3: Semantic Canonical (strip prices + spaces)
+    // IMPORTANT: Only match if the number of meaningful tokens are compatible.
+    // e.g. "sell gun shop 300m" vs trained "sell gun shop" — same semantic key
+    // after price stripping, but they are different ads because 300m is a real price.
     if (stripPrices) {
         const semanticInput = getSemanticCanonicalKey(input);
+        const inputTokenCount = extractMeaningfulTokens(input).length;
         if (semanticInput && semanticInput.length >= 4) {
             for (const [key, val] of entries) {
                 if (getSemanticCanonicalKey(key) === semanticInput) {
-                    return {
-                        found: true, value: getVal(val),
-                        matchType: "semantic", originalKey: key
-                    };
+                    const keyTokenCount = extractMeaningfulTokens(key).length;
+                    // Reject if the input has significantly more meaningful tokens
+                    // (a price-bearing ad is a different ad, not the same ad)
+                    if (Math.abs(inputTokenCount - keyTokenCount) <= 1) {
+                        return {
+                            found: true, value: getVal(val),
+                            matchType: "semantic", originalKey: key
+                        };
+                    }
                 }
             }
         }
@@ -4092,6 +4101,7 @@ function smartDictLookup(input, dictionary, options = {}) {
     const inputTokens = extractMeaningfulTokens(input);
     let bestTokenMatch = null;
     let highestTokenScore = 0;
+    let bestRequiredScore = minTokenCoverage;
     
     if (inputTokens.length >= 1) {
         for (const [key, val] of entries) {
@@ -4114,6 +4124,7 @@ function smartDictLookup(input, dictionary, options = {}) {
             
             if (score >= requiredScore && score > highestTokenScore) {
                 highestTokenScore = score;
+                bestRequiredScore = requiredScore;
                 bestTokenMatch = {
                     found: true, value: getVal(val),
                     matchType: "token-coverage",
@@ -4124,7 +4135,8 @@ function smartDictLookup(input, dictionary, options = {}) {
         }
     }
     
-    if (bestTokenMatch && highestTokenScore >= minTokenCoverage) {
+    // Use the correct per-token-count requiredScore as the final guard (not the loose minTokenCoverage)
+    if (bestTokenMatch && highestTokenScore >= bestRequiredScore) {
         return bestTokenMatch;
     }
     

@@ -3529,22 +3529,188 @@ function isTemplateAd(text) {
     return getClosestMatch(cleanText, combinedTemplates, 0.65) !== null;
 }
 
-function runValidationPipeline(ctx, override) {
-    // 0. Advanced direct translation mapping matching (Advanced Learning Method)
-    const trimmedRaw = ctx.raw.replace(/\s+/g, ' ').trim().toLowerCase();
+function getCanonicalKey(text) {
+    if (!text) return "";
+    return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findTrainedMapping(rawText) {
+    if (!rawText || !customTranslations) return { found: false };
+    
+    const trimmedRaw = rawText.replace(/\s+/g, ' ').trim().toLowerCase();
+    
+    // Tier 1: Exact Match (spaces normalized)
     if (customTranslations[trimmedRaw]) {
         const val = customTranslations[trimmedRaw];
         let fixedText = val;
         if (val && val.startsWith("{") && val.endsWith("}")) {
             try {
                 const parsed = JSON.parse(val);
-                if (parsed && parsed.text) {
-                    fixedText = parsed.text;
-                }
+                fixedText = parsed.text || val;
             } catch (e) {}
         }
-        ctx.logs.push({ text: `Matched trained translation: <strong>${fixedText}</strong>`, type: 'policy' });
-        ctx.finalText = fixedText;
+        return {
+            found: true,
+            fixedText: fixedText,
+            matchType: "exact",
+            originalKey: trimmedRaw
+        };
+    }
+    
+    const canonicalInput = getCanonicalKey(rawText);
+    const entries = Object.entries(customTranslations);
+    if (entries.length === 0) return { found: false };
+    
+    // Tier 2: Canonical Match (ignores space/punctuation shifts)
+    if (canonicalInput) {
+        for (const [key, val] of entries) {
+            if (getCanonicalKey(key) === canonicalInput) {
+                let fixedText = val;
+                if (val && val.startsWith("{") && val.endsWith("}")) {
+                    try {
+                        const parsed = JSON.parse(val);
+                        fixedText = parsed.text || val;
+                    } catch (e) {}
+                }
+                return {
+                    found: true,
+                    fixedText: fixedText,
+                    matchType: "canonical",
+                    originalKey: key
+                };
+            }
+        }
+    }
+    
+    // Tier 3: Fuzzy Match (Levenshtein Distance)
+    let bestMatch = null;
+    let highestSimilarity = 0;
+    
+    for (const [key, val] of entries) {
+        const cleanKey = key.toLowerCase().replace(/\s+/g, ' ').trim();
+        const dist = levenshteinDistance(trimmedRaw, cleanKey);
+        const maxLength = Math.max(trimmedRaw.length, cleanKey.length);
+        const similarity = maxLength > 0 ? (1 - dist / maxLength) : 0;
+        
+        if (similarity >= 0.85 && similarity > highestSimilarity) {
+            highestSimilarity = similarity;
+            let fixedText = val;
+            if (val && val.startsWith("{") && val.endsWith("}")) {
+                try {
+                    const parsed = JSON.parse(val);
+                    fixedText = parsed.text || val;
+                } catch (e) {}
+            }
+            bestMatch = {
+                found: true,
+                fixedText: fixedText,
+                matchType: "fuzzy",
+                similarity: Math.round(similarity * 100),
+                originalKey: key
+            };
+        }
+    }
+    
+    if (bestMatch) {
+        return bestMatch;
+    }
+    
+    return { found: false };
+}
+
+function validateTrainingAction(rawTextVal, fixedTextVal, onProceed) {
+    if (!rawTextVal || !fixedTextVal) return;
+
+    const trimmedRaw = rawTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
+    const trimmedFixed = fixedTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
+
+    // 1. Identity Prevention
+    if (trimmedRaw === trimmedFixed) {
+        showCustomNotification("The ad is already valid as-is. Training an identity mapping is unnecessary.", "warning");
+        return;
+    }
+
+    // 2. Input Quality Check
+    const alphaOnly = rawTextVal.replace(/[^a-zA-Z]/g, "");
+    if (rawTextVal.trim().length < 4 || alphaOnly.length < 2) {
+        showCustomNotification("This input is too short or lacks readable text, making it unsuitable for training.", "warning");
+        return;
+    }
+
+    // 3. Duplicate / Near-Duplicate checks
+    const match = findTrainedMapping(rawTextVal);
+    if (match.found) {
+        const trimmedExistingFixed = match.fixedText.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (trimmedExistingFixed === trimmedFixed) {
+            showCustomNotification(`A similar mapping already exists: "${match.originalKey}" -> "${match.fixedText}". Duplicate training is blocked.`, "warning");
+            return;
+        } else {
+            // Different correction - prompt to overwrite
+            showCustomConfirmDialog(
+                `A similar mapping already exists with a different correction:\n\nOriginal: "${match.originalKey}"\nExisting Correction: "${match.fixedText}"\n\nDo you want to overwrite it with the new correction?\nNew Correction: "${fixedTextVal}"`,
+                () => {
+                    // Let's delete the old key if it is different, to keep DB clean, and then proceed.
+                    if (match.originalKey !== trimmedRaw) {
+                        delete customTranslations[match.originalKey];
+                    }
+                    onProceed();
+                }
+            );
+            return;
+        }
+    }
+
+    // 4. Default Rule Coverage check
+    const tempTranslations = customTranslations;
+    customTranslations = {};
+    let alreadyCorrect = false;
+    try {
+        const mockCtx = {
+            raw: rawTextVal,
+            logs: [],
+            finalText: "",
+            status: "pending",
+            category: "Other"
+        };
+        runValidationPipeline(mockCtx, "auto");
+        if (mockCtx.status === "passed" && mockCtx.finalText.replace(/\s+/g, ' ').trim().toLowerCase() === trimmedFixed) {
+            alreadyCorrect = true;
+        }
+    } catch(e) {
+        console.error("Default rule redundancy check failed:", e);
+    } finally {
+        customTranslations = tempTranslations;
+    }
+
+    if (alreadyCorrect) {
+        showCustomConfirmDialog(
+            `Warning: This ad is already correctly handled by standard policy rules. Custom training is redundant.\n\nDo you still want to proceed with custom training?`,
+            onProceed
+        );
+        return;
+    }
+
+    // If all checks pass, show normal confirm dialog
+    showCustomConfirmDialog(
+        `Train translation mapping for:\n\nOriginal: "${rawTextVal}"\n\nCorrected: "${fixedTextVal}"?`,
+        onProceed
+    );
+}
+
+function runValidationPipeline(ctx, override) {
+    // 0. Advanced direct translation mapping matching (Advanced Learning Method)
+    const match = findTrainedMapping(ctx.raw);
+    if (match.found) {
+        let logMsg = "";
+        if (match.matchType === "exact") {
+            logMsg = `Matched trained translation: <strong>${match.fixedText}</strong>`;
+        } else if (match.matchType === "canonical") {
+            logMsg = `Matched trained translation (normalized): <strong>${match.fixedText}</strong>`;
+        } else if (match.matchType === "fuzzy") {
+            logMsg = `Matched trained translation (fuzzy, ${match.similarity}% similarity): <strong>${match.fixedText}</strong>`;
+        }
+        ctx.logs.push({ text: logMsg, type: 'policy' });
+        ctx.finalText = match.fixedText;
         ctx.category = override === "auto" ? detectCategory(ctx.finalText) : override;
         ctx.status = "passed";
         
@@ -14276,8 +14442,9 @@ function initGeminiEngine() {
 
             if (!rawTextVal || !fixedTextVal) return;
 
-            showCustomConfirmDialog(
-                `Train translation mapping for:\n\nOriginal: "${rawTextVal}"\n\nCorrected: "${fixedTextVal}"?`,
+            validateTrainingAction(
+                rawTextVal,
+                fixedTextVal,
                 () => {
                     const trimmedRaw = rawTextVal.replace(/\s+/g, ' ').trim().toLowerCase();
                     const details = {
@@ -15001,11 +15168,24 @@ function renderTriageCards(reports, container) {
                 }).join("");
             }
 
+            let coverageBadgeHtml = "";
+            const mappingMatch = findTrainedMapping(report.rawInput);
+            if (mappingMatch.found) {
+                let label = "Already Covered";
+                if (mappingMatch.matchType === "canonical") {
+                    label = "Covered (Normalized)";
+                } else if (mappingMatch.matchType === "fuzzy") {
+                    label = `Covered (Fuzzy: ${mappingMatch.similarity}%)`;
+                }
+                coverageBadgeHtml = `<span class="coverage-badge" style="background: rgba(48, 209, 88, 0.12); color: #30d158; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; border: 1px solid rgba(48, 209, 88, 0.25); display: inline-flex; align-items: center; gap: 4px;" title="This ad raw input matches an existing mapping key: '${mappingMatch.originalKey}'"><i class="fa-solid fa-circle-check"></i> ${label}</span>`;
+            }
+
             card.innerHTML = `
                 <!-- Header -->
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <span class="category-badge" style="background: ${catColor}22; color: ${catColor}; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid ${catColor}33;">${currentCategory}</span>
+                        ${coverageBadgeHtml}
                         <span style="font-size: 11px; color: var(--text-muted); opacity: 0.7;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i>${report.timestamp}</span>
                     </div>
                     <span style="font-size: 10px; color: var(--text-muted); opacity: 0.4; font-family: var(--font-mono, monospace);">#${idx + 1}</span>
@@ -15143,49 +15323,51 @@ function renderTriageCards(reports, container) {
                     const textEl = card.querySelector(".fixed-output-text");
                     const finalAdText = textEl ? textEl.textContent.trim() : "";
                     
-                    let finalMethod = report.trainedMethod || "Trained manually";
-                    // If they edited the text directly, extract spelling corrections from it and override method to manual
-                    if (finalAdText && finalAdText !== lastPreviewText) {
-                        learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
-                        finalMethod = "Trained manually";
-                    }
-                    
-                    if (finalAdText) {
-                        // Register direct exact raw-to-fixed translation mapping for advanced learning
-                        const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
-                        const details = {
-                            text: finalAdText,
-                            author: getActiveEditorName(),
-                            method: finalMethod,
-                            timestamp: new Date().toLocaleString(),
-                            reporterTime: report.timestamp || "Unknown",
-                            category: currentCategory
-                        };
-                        customTranslations[trimmedRaw] = JSON.stringify(details);
-                        localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
-                    }
-                    
-                    // Save all staged corrections to the persistent database on confirm
-                    const hasSpelling = report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0;
-                    if (hasSpelling || finalAdText) {
-                        if (hasSpelling) {
-                            Object.assign(customSpelling, report.stagedSpelling);
-                            localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                    validateTrainingAction(report.rawInput, finalAdText, () => {
+                        let finalMethod = report.trainedMethod || "Trained manually";
+                        // If they edited the text directly, extract spelling corrections from it and override method to manual
+                        if (finalAdText && finalAdText !== lastPreviewText) {
+                            learnFromSimilarExample(report.rawInput, finalAdText, currentCategory, report.stagedSpelling);
+                            finalMethod = "Trained manually";
                         }
-                        saveCustomDataToBackend();
-                        if (typeof renderCustomSpelling === "function") {
-                            renderCustomSpelling();
+                        
+                        if (finalAdText) {
+                            // Register direct exact raw-to-fixed translation mapping for advanced learning
+                            const trimmedRaw = report.rawInput.replace(/\s+/g, ' ').trim().toLowerCase();
+                            const details = {
+                                text: finalAdText,
+                                author: getActiveEditorName(),
+                                method: finalMethod,
+                                timestamp: new Date().toLocaleString(),
+                                reporterTime: report.timestamp || "Unknown",
+                                category: currentCategory
+                            };
+                            customTranslations[trimmedRaw] = JSON.stringify(details);
+                            localStorage.setItem("li_custom_translations", JSON.stringify(customTranslations));
                         }
-                        if (typeof renderCustomTranslations === "function") {
-                            renderCustomTranslations();
+                        
+                        // Save all staged corrections to the persistent database on confirm
+                        const hasSpelling = report.stagedSpelling && Object.keys(report.stagedSpelling).length > 0;
+                        if (hasSpelling || finalAdText) {
+                            if (hasSpelling) {
+                                Object.assign(customSpelling, report.stagedSpelling);
+                                localStorage.setItem("li_custom_spelling", JSON.stringify(customSpelling));
+                            }
+                            saveCustomDataToBackend();
+                            if (typeof renderCustomSpelling === "function") {
+                                renderCustomSpelling();
+                            }
+                            if (typeof renderCustomTranslations === "function") {
+                                renderCustomTranslations();
+                            }
+                            // Re-process the main ad editor immediately to reflect changes in real time
+                            if (typeof processAd === "function") {
+                                processAd();
+                            }
                         }
-                        // Re-process the main ad editor immediately to reflect changes in real time
-                        if (typeof processAd === "function") {
-                            processAd();
-                        }
-                    }
-                    
-                    resolveBugReport(report, card);
+                        
+                        resolveBugReport(report, card);
+                    });
                 });
             }
             

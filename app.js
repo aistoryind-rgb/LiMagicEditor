@@ -8914,6 +8914,7 @@ async function handleFirebaseRequest(payload) {
         const requestData = {
             firstname: payload.firstname || "",
             lastname: payload.lastname || "",
+            server: payload.server || "",
             id: payload.id || "",
             clientUuid: clientUuid,
             status: "pending",
@@ -9019,6 +9020,7 @@ async function handleFirebaseRequest(payload) {
                 firstname: data.firstname || "",
                 lastname: data.lastname || "",
                 id: data.id || "",
+                server: data.server || "",
                 clientUuid: data.clientUuid || "",
                 status: data.status || "pending",
                 role: data.role || "user",
@@ -10520,6 +10522,28 @@ function initAdminPanel() {
     const textareaBackup = document.getElementById("admin-backup-textarea");
 
     if (!btnAuth) return;
+
+    // Activity Log Sub-Tabs Switch
+    const logSubtabBtns = document.querySelectorAll(".log-subtab-btn");
+    const logSubtabContents = document.querySelectorAll(".log-subtab-content");
+    if (logSubtabBtns.length > 0 && logSubtabContents.length > 0) {
+        logSubtabBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const logType = btn.getAttribute("data-log-type");
+                
+                logSubtabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                
+                logSubtabContents.forEach(content => {
+                    if (content.id === `log-content-${logType}`) {
+                        content.classList.remove("hide");
+                    } else {
+                        content.classList.add("hide");
+                    }
+                });
+            });
+        });
+    }
 
     // Admin Tabs Logic
     const tabBtns = document.querySelectorAll(".admin-tab-btn");
@@ -12284,7 +12308,151 @@ function logAdToBackend(rawInput, finalAd, status) {
     });
 }
 
+function refreshUserLogs() {
+    const tbody = document.getElementById("user-logs-table-body");
+    if (!tbody) return;
+    
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;"><i class="fa-solid fa-sync fa-spin"></i> Loading access logs...</td></tr>`;
+    
+    if (!CONFIG.GOOGLE_SCRIPT_URL) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">Server URL not configured.</td></tr>`;
+        return;
+    }
+    
+    const passcode = sessionStorage.getItem("li_admin_passcode") || localStorage.getItem("li_admin_passcode") || "";
+    const clientUuid = getOrCreateClientUuid();
+    
+    fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+            action: "get_access_requests",
+            passcode: passcode,
+            authUuid: clientUuid
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "success") {
+            const requests = data.requests || [];
+            if (requests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">No user joins logs found.</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = "";
+            requests.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.style.cursor = "pointer";
+                tr.title = "Click to copy user ID";
+                
+                const tdTime = document.createElement("td");
+                tdTime.textContent = item.timestamp || "";
+                tr.appendChild(tdTime);
+                
+                const tdName = document.createElement("td");
+                tdName.textContent = `${item.firstname} ${item.lastname}`.trim() || "Unknown";
+                tdName.style.fontWeight = "600";
+                tr.appendChild(tdName);
+                
+                const tdId = document.createElement("td");
+                tdId.textContent = item.id || "";
+                tr.appendChild(tdId);
+                
+                const tdServer = document.createElement("td");
+                tdServer.style.textAlign = "center";
+                if (item.server) {
+                    const serverSpan = document.createElement("span");
+                    serverSpan.style.fontSize = "10px";
+                    serverSpan.style.color = "var(--text-secondary)";
+                    serverSpan.style.background = "rgba(255,255,255,0.05)";
+                    serverSpan.style.padding = "2px 6px";
+                    serverSpan.style.borderRadius = "4px";
+                    serverSpan.style.border = "1px solid var(--border-color)";
+                    serverSpan.textContent = item.server;
+                    tdServer.appendChild(serverSpan);
+                } else {
+                    tdServer.textContent = "—";
+                }
+                tr.appendChild(tdServer);
+                
+                const tdRole = document.createElement("td");
+                const roleSpan = document.createElement("span");
+                roleSpan.style.fontSize = "10px";
+                roleSpan.style.fontWeight = "600";
+                roleSpan.style.textTransform = "uppercase";
+                const role = item.role || "user";
+                if (role === "super_admin") {
+                    roleSpan.style.color = "#ff3b30";
+                    roleSpan.textContent = "SUPER ADMIN";
+                } else if (role === "assistant_admin") {
+                    roleSpan.style.color = "#a78bfa";
+                    roleSpan.textContent = "ADMIN";
+                } else {
+                    roleSpan.style.color = "var(--text-muted)";
+                    roleSpan.textContent = "USER";
+                }
+                tdRole.appendChild(roleSpan);
+                tr.appendChild(tdRole);
+                
+                const tdStatus = document.createElement("td");
+                tdStatus.style.textAlign = "center";
+                const statusSpan = document.createElement("span");
+                statusSpan.style.padding = "2px 6px";
+                statusSpan.style.borderRadius = "4px";
+                statusSpan.style.fontSize = "10px";
+                statusSpan.style.fontWeight = "600";
+                statusSpan.style.textTransform = "uppercase";
+                
+                const status = item.status || "pending";
+                if (status === "approved") {
+                    statusSpan.style.background = "rgba(48, 209, 88, 0.1)";
+                    statusSpan.style.color = "#30d158";
+                    statusSpan.textContent = "APPROVED";
+                } else if (status === "rejected") {
+                    statusSpan.style.background = "rgba(255, 69, 58, 0.1)";
+                    statusSpan.style.color = "#ff453a";
+                    statusSpan.textContent = "REJECTED";
+                } else if (status === "revoked") {
+                    statusSpan.style.background = "rgba(255, 149, 0, 0.1)";
+                    statusSpan.style.color = "#ff9500";
+                    statusSpan.textContent = "REVOKED";
+                } else {
+                    statusSpan.style.background = "rgba(255, 255, 255, 0.1)";
+                    statusSpan.style.color = "var(--text-secondary)";
+                    statusSpan.textContent = "PENDING";
+                }
+                tdStatus.appendChild(statusSpan);
+                tr.appendChild(tdStatus);
+                
+                tr.addEventListener("click", () => {
+                    navigator.clipboard.writeText(item.id || "").then(() => {
+                        const originalBg = tr.style.background;
+                        tr.style.background = "rgba(10, 132, 255, 0.2)";
+                        showHistoryToast("User ID copied to clipboard!");
+                        setTimeout(() => {
+                            tr.style.background = originalBg;
+                        }, 1000);
+                    }).catch(err => {
+                        console.error("Failed to copy:", err);
+                    });
+                });
+                
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff453a; padding: 20px;">Error: ${data.message}</td></tr>`;
+        }
+    })
+    .catch(err => {
+        console.error("Error fetching access requests logs:", err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff453a; padding: 20px;">Network error loading access logs.</td></tr>`;
+    });
+}
+
 function refreshMainHistory() {
+    refreshUserLogs();
+    
     const tbody = document.getElementById("history-table-body");
     if (!tbody) return;
     

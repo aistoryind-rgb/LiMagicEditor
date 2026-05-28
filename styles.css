@@ -4042,4 +4042,52 @@ textarea:focus, input:focus, select:focus {
     transition: all 0.2s ease;
 }
 
+/* Log Sub-Tabs Styles */
+.log-subtabs-nav {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.log-subtab-btn {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.log-subtab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.log-subtab-btn.active {
+    background: rgba(167, 139, 250, 0.12) !important;
+    border-color: rgba(167, 139, 250, 0.4) !important;
+    color: #a78bfa !important;
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.1);
+}
+
+.log-subtab-content {
+    animation: fadeIn 0.3s ease;
+}
+
+.log-subtab-content.hide {
+    display: none !important;
+}
+
 

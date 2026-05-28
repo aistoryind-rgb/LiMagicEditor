@@ -9957,150 +9957,170 @@ function initAccessGate() {
     
     if (btnRequestSubmit) {
         btnRequestSubmit.addEventListener("click", () => {
-            if (isSubmitting) return;
-            
-            const id = inputId ? inputId.value.trim() : "";
-            const firstname = inputFirstname ? inputFirstname.value.trim() : "";
-            const lastname = inputLastname ? inputLastname.value.trim() : "";
-            const server = "EN3";
-            
-            if (!id) {
-                showCustomNotification("Please enter your In-Game ID.", "warning");
-                return;
-            }
-            
-            if (!/^[a-zA-Z0-9]{1,20}$/.test(id)) {
-                showCustomNotification("In-Game ID must be alphanumeric (max 20 characters).", "warning");
-                return;
-            }
+            try {
+                if (isSubmitting) return;
+                
+                const id = inputId ? inputId.value.trim() : "";
+                const firstname = inputFirstname ? inputFirstname.value.trim() : "";
+                const lastname = inputLastname ? inputLastname.value.trim() : "";
+                const server = "EN3";
+                
+                console.log("Verify & Enter clicked. ID:", id);
+                
+                if (!id) {
+                    showCustomNotification("Please enter your In-Game ID.", "warning");
+                    return;
+                }
+                
+                if (!/^[a-zA-Z0-9]{1,20}$/.test(id)) {
+                    showCustomNotification("In-Game ID must be alphanumeric (max 20 characters).", "warning");
+                    return;
+                }
 
-            // Generate deterministic UUID based on In-Game ID to allow logins on any device
-            const deterministicUuid = `00000000-0000-0000-0000-${id.padStart(12, '0')}`;
-            localStorage.setItem("li_client_uuid", deterministicUuid);
-            sessionStorage.setItem("li_client_uuid", deterministicUuid);
+                // Generate deterministic UUID based on In-Game ID to allow logins on any device
+                const deterministicUuid = `00000000-0000-0000-0000-${id.padStart(12, '0')}`;
+                console.log("Deterministic UUID generated:", deterministicUuid);
+                localStorage.setItem("li_client_uuid", deterministicUuid);
+                sessionStorage.setItem("li_client_uuid", deterministicUuid);
 
-            const nameRow = document.getElementById("access-name-row");
-            const isLoginMode = nameRow && nameRow.classList.contains("hide");
+                const nameRow = document.getElementById("access-name-row");
+                const isLoginMode = nameRow && nameRow.classList.contains("hide");
 
-            if (isLoginMode) {
+                if (isLoginMode) {
+                    if (CONFIG.GOOGLE_SCRIPT_URL) {
+                        isSubmitting = true;
+                        btnRequestSubmit.disabled = true;
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking Access...`;
+
+                        console.log("Fetching check_access from:", CONFIG.GOOGLE_SCRIPT_URL);
+                        fetch(CONFIG.GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain" },
+                            body: JSON.stringify({
+                                action: "check_access",
+                                clientUuid: deterministicUuid,
+                                registerSession: false
+                            })
+                        })
+                        .then(r => {
+                            console.log("Response status:", r.status);
+                            return r.json();
+                        })
+                        .then(data => {
+                            console.log("Response data:", data);
+                            isSubmitting = false;
+                            btnRequestSubmit.disabled = false;
+                            btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
+
+                            if (data.status === "success" && data.approved) {
+                                localStorage.setItem("li_approved_token", "APPROVED");
+                                localStorage.setItem("li_request_firstname", data.firstname || "User");
+                                localStorage.setItem("li_request_lastname", data.lastname || "Approved");
+                                localStorage.setItem("li_request_id", id);
+                                localStorage.setItem("li_request_server", server);
+
+                                document.documentElement.classList.add("user-approved");
+                                document.documentElement.classList.remove("user-unauthorized");
+                                if (gate) gate.classList.add("hide");
+
+                                checkCurrentAccessStatus(false, true);
+                                startPolling();
+                                
+                                showCustomNotification("Welcome back! Access granted.", "success");
+                            } else {
+                                nameRow.classList.remove("hide");
+                                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                                showCustomNotification("ID not approved yet. Please enter details to request access.", "warning");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Access verification fetch error:", err);
+                            isSubmitting = false;
+                            btnRequestSubmit.disabled = false;
+                            btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
+                            
+                            // Fallback to request access mode so they are never blocked
+                            if (nameRow) {
+                                nameRow.classList.remove("hide");
+                                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                            }
+                            
+                            showCustomAlertDialog("Access verification failed: " + err.message + ". Switch to Access Request mode.", null, "error");
+                        });
+                    } else {
+                        showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
+                    }
+                    return;
+                }
+
+                // Otherwise, submit a new access request with name fields
+                if (!firstname || !lastname) {
+                    showCustomNotification("Please fill out all fields.", "warning");
+                    return;
+                }
+                
                 if (CONFIG.GOOGLE_SCRIPT_URL) {
                     isSubmitting = true;
                     btnRequestSubmit.disabled = true;
-                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking Access...`;
-
+                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+                    
                     fetch(CONFIG.GOOGLE_SCRIPT_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain" },
                         body: JSON.stringify({
-                            action: "check_access",
+                            action: "access_request",
+                            firstname: firstname,
+                            lastname: lastname,
+                            server: server,
+                            id: id,
                             clientUuid: deterministicUuid,
-                            registerSession: false
+                            screenshotBase64: ""
                         })
                     })
                     .then(r => r.json())
                     .then(data => {
                         isSubmitting = false;
                         btnRequestSubmit.disabled = false;
-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
-
-                        if (data.status === "success" && data.approved) {
-                            localStorage.setItem("li_approved_token", "APPROVED");
-                            localStorage.setItem("li_request_firstname", data.firstname || "User");
-                            localStorage.setItem("li_request_lastname", data.lastname || "Approved");
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                        if (data.status === "success") {
+                            localStorage.setItem("li_request_firstname", firstname);
+                            localStorage.setItem("li_request_lastname", lastname);
                             localStorage.setItem("li_request_id", id);
                             localStorage.setItem("li_request_server", server);
-
+                            transitionToApproveScreen();
+                            startPolling();
+                        } else if (data.status === "already_approved") {
+                            localStorage.setItem("li_approved_token", "APPROVED");
+                            localStorage.setItem("li_request_firstname", firstname);
+                            localStorage.setItem("li_request_lastname", lastname);
+                            localStorage.setItem("li_request_id", id);
+                            localStorage.setItem("li_request_server", server);
+                            
                             document.documentElement.classList.add("user-approved");
                             document.documentElement.classList.remove("user-unauthorized");
                             if (gate) gate.classList.add("hide");
-
+                            
                             checkCurrentAccessStatus(false, true);
                             startPolling();
-                            
-                            showCustomNotification("Welcome back! Access granted.", "success");
+
+                            showCustomAlertDialog("You already have access! Welcome back.", null, "success");
                         } else {
-                            nameRow.classList.remove("hide");
-                            btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                            showCustomNotification("ID not approved yet. Please enter details to request access.", "warning");
+                            showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
                         }
                     })
                     .catch(err => {
-                        console.error("Access verification error:", err);
+                        console.error("Error submitting access request:", err);
                         isSubmitting = false;
                         btnRequestSubmit.disabled = false;
-                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-key"></i> Verify & Enter`;
-                        showCustomNotification("Connection error. Please try again.", "error");
+                        btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
+                        showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
                     });
                 } else {
                     showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
                 }
-                return;
-            }
-
-            // Otherwise, submit a new access request with name fields
-            if (!firstname || !lastname) {
-                showCustomNotification("Please fill out all fields.", "warning");
-                return;
-            }
-            
-            if (CONFIG.GOOGLE_SCRIPT_URL) {
-                isSubmitting = true;
-                btnRequestSubmit.disabled = true;
-                btnRequestSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
-                
-                fetch(CONFIG.GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify({
-                        action: "access_request",
-                        firstname: firstname,
-                        lastname: lastname,
-                        server: server,
-                        id: id,
-                        clientUuid: deterministicUuid,
-                        screenshotBase64: ""
-                    })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    isSubmitting = false;
-                    btnRequestSubmit.disabled = false;
-                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    if (data.status === "success") {
-                        localStorage.setItem("li_request_firstname", firstname);
-                        localStorage.setItem("li_request_lastname", lastname);
-                        localStorage.setItem("li_request_id", id);
-                        localStorage.setItem("li_request_server", server);
-                        transitionToApproveScreen();
-                        startPolling();
-                    } else if (data.status === "already_approved") {
-                        localStorage.setItem("li_approved_token", "APPROVED");
-                        localStorage.setItem("li_request_firstname", firstname);
-                        localStorage.setItem("li_request_lastname", lastname);
-                        localStorage.setItem("li_request_id", id);
-                        localStorage.setItem("li_request_server", server);
-                        
-                        document.documentElement.classList.add("user-approved");
-                        document.documentElement.classList.remove("user-unauthorized");
-                        if (gate) gate.classList.add("hide");
-                        
-                        checkCurrentAccessStatus(false, true);
-                        startPolling();
-
-                        showCustomAlertDialog("You already have access! Welcome back.", null, "success");
-                    } else {
-                        showCustomAlertDialog("Error submitting request: " + data.message, null, "error");
-                    }
-                })
-                .catch(err => {
-                    console.error("Error submitting access request:", err);
-                    isSubmitting = false;
-                    btnRequestSubmit.disabled = false;
-                    btnRequestSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Submit Access Request`;
-                    showCustomAlertDialog("Could not connect to the server. Please try again later.", null, "error");
-                });
-            } else {
-                showCustomAlertDialog("No Web App URL configured. Please configure it in Developer Settings.", null, "warning");
+            } catch (clickErr) {
+                console.error("Click handler error:", clickErr);
+                alert("Security Gate Error: " + clickErr.message + "\n" + clickErr.stack);
             }
         });
     }

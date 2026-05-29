@@ -2,14 +2,6 @@ import {
   VEHICLE_DB 
 } from './vehicleDb';
 import { 
-  CLOTHING_DB 
-} from './clothingDb';
-import { 
-  ITEMS_DB, 
-  BUSINESSES_DB, 
-  OFFICIAL_PLACES, 
-  UNOFFICIAL_PLACES, 
-  REAL_ESTATE_ORDER, 
   ILLEGAL_ITEMS, 
   REJECTION_ONLY_ITEMS, 
   BANNED_CONTENT, 
@@ -238,12 +230,12 @@ export class AdProcessor {
     }
 
     // Fix house numbers
-    corrected = corrected.replace(/\b(house|apartment|mansion|penthouse|shop)\s*(?:no\.?|number|num\.?|#)?\s*(\d+)\b/gi, (match, prop, num) => {
+    corrected = corrected.replace(/\b(house|apartment|mansion|penthouse|shop)\s*(?:no\.?|number|num\.?|#)?\s*(\d+)\b/gi, (_match, prop, num) => {
       return `${prop.charAt(0).toUpperCase() + prop.slice(1).toLowerCase()} №${num}`;
     });
 
     // Restore protected prices
-    corrected = corrected.replace(/__PROTECTED_PRICE_(\d+)__/g, (match, idx) => {
+    corrected = corrected.replace(/__PROTECTED_PRICE_(\d+)__/g, (_match, idx) => {
       return protectedPrices[parseInt(idx)];
     });
 

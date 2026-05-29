@@ -33,7 +33,7 @@ const App: React.FC = () => {
 
   // Handle manual output corrections by user
   const handleTextModified = (newText: string) => {
-    // Allows interactive fine-tuning directly in the ContentEditable element
+    console.log("Interactive edit modified by user:", newText);
   };
 
   const handleApproved = () => {

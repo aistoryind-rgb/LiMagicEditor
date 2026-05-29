@@ -272,7 +272,25 @@ export class AdProcessor {
     // 2. Blacklist / Prohibited Checks
     const lowerText = processed.toLowerCase();
     for (const illegal of ILLEGAL_ITEMS) {
-      if (lowerText.includes(illegal)) {
+      const escaped = illegal.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      if (regex.test(lowerText)) {
+        // Business context whitelist bypass (e.g. "gun store", "weapon shop", "gunshop" are legal)
+        const businessKeywords = ["store", "shop", "business", "club", "market", "company", "station", "studio", "salon", "gunshop", "weaponshop"];
+        const isInBusinessContext = businessKeywords.some(bk => lowerText.includes(bk));
+        if (isInBusinessContext) {
+          const knownBusinessPhrases = [
+            "ammunition store", "ammo store", "gun store", "weapon store", "gun shop", "weapon shop",
+            "gunshop", "weaponshop", "electric station", "service station", "gas station", "rifle club",
+            "fight club"
+          ];
+          const cleanText = lowerText.replace(/[^a-z0-9\s]/g, '');
+          const isLegitBusiness = knownBusinessPhrases.some(phrase => cleanText.includes(phrase));
+          if (isLegitBusiness) {
+            logs.push(`ℹ️ Blacklist bypassed: Legitimate business name "${illegal}" detected`);
+            continue;
+          }
+        }
         status = 'blacklisted';
         blacklistReason = `Prohibited Item Found: "${illegal.toUpperCase()}". LifeInvader policies ban the advertisement of weapons, drugs, ammunition, body scanners, and EMS gear.`;
         logs.push(`🚨 Blacklist Warning: Found prohibited term "${illegal}"`);
@@ -282,7 +300,9 @@ export class AdProcessor {
 
     if (status !== 'blacklisted') {
       for (const rej of REJECTION_ONLY_ITEMS) {
-        if (lowerText.includes(rej)) {
+        const escaped = rej.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+        if (regex.test(lowerText)) {
           status = 'rejected';
           rejectionReason = `Policy Violation: Advertising "${rej.toUpperCase()}" is prohibited. This item must be rejected immediately according to the handbook.`;
           logs.push(`❌ Rejection Rule triggered: Prohibited item "${rej}"`);
@@ -293,7 +313,9 @@ export class AdProcessor {
 
     if (status === 'passed') {
       for (const banned of BANNED_CONTENT) {
-        if (lowerText.includes(banned)) {
+        const escaped = banned.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+        if (regex.test(lowerText)) {
           status = 'rejected';
           rejectionReason = `Content Policy: The reference to "${banned.toUpperCase()}" is explicitly banned on advertisement panels.`;
           logs.push(`❌ Content Policy rejection: Found banned reference "${banned}"`);

@@ -5,7 +5,8 @@ import {
   ILLEGAL_ITEMS, 
   REJECTION_ONLY_ITEMS, 
   BANNED_CONTENT, 
-  SPELLING_CORRECTIONS 
+  SPELLING_CORRECTIONS,
+  OFFICIAL_TEMPLATES
 } from './rules';
 
 export interface ProcessedAdResult {
@@ -331,7 +332,14 @@ export class AdProcessor {
       logs.push(`Category manually overridden to: <strong>${category}</strong>`);
     } else {
       // Auto detect
-      if (lowerText.includes("house") || lowerText.includes("apartment") || lowerText.includes("re ") || lowerText.includes("garage") || lowerText.includes("penthouse")) {
+      if (lowerText.includes("biz") || lowerText.includes("business") || lowerText.includes("office") || 
+          lowerText.includes("store") || lowerText.includes("shop") || lowerText.includes("cowshed") || 
+          lowerText.includes("plantation") || lowerText.includes("oil well") || lowerText.includes("farm") || 
+          lowerText.includes("atm") || lowerText.includes("gunstore") || lowerText.includes("gunshop") ||
+          lowerText.includes("weapon shop") || lowerText.includes("gun store") || lowerText.includes("ammunition") ||
+          lowerText.includes("ammunation") || lowerText.includes("car wash") || lowerText.includes("car sharing")) {
+        category = "Businesses";
+      } else if (lowerText.includes("house") || lowerText.includes("apartment") || lowerText.includes("re ") || lowerText.includes("garage") || lowerText.includes("penthouse")) {
         category = "Real Estate";
       } else if (lowerText.includes("car") || lowerText.includes("vehicle") || lowerText.includes("chiron") || lowerText.includes("sandking") || lowerText.includes("m5") || lowerText.includes("drift")) {
         category = "Auto";
@@ -361,11 +369,35 @@ export class AdProcessor {
       logs.push(`Auto-detected category: <strong>${category}</strong>`);
     }
 
-    // 4. Formatting Output Text according to strict GRP grammar
+    // 4. Businesses Template Validation
+    let businessMatchedTemplate = "";
+    if (status === 'passed' && category === 'Businesses') {
+      let cleanAdBody = processed.replace(/^(?:buying|selling|trading|renting|buy|sell|trade|rent)\s+/i, "").trim();
+      let tempAdBody = cleanAdBody.replace(/\b(?:price|budget)?\s*(?:negotiable|negable|negoitable|nego|neg)\b/gi, "")
+                                  .replace(/\b(?:for|at|price|budget)?\s*[\$\d\.,kKmMbB\s]+(?:each)?\b/gi, "")
+                                  .trim();
+      
+      const matched = this.getClosestMatch(tempAdBody, OFFICIAL_TEMPLATES, 0.65) || 
+                      this.getClosestMatch(cleanAdBody, OFFICIAL_TEMPLATES, 0.65);
+      
+      if (!matched) {
+        status = 'rejected';
+        rejectionReason = "Template not found in database. Contact LI to create a new template.";
+        logs.push(`❌ Rejected: Business template not recognized.`);
+      } else {
+        businessMatchedTemplate = matched;
+        logs.push(`ℹ️ Matched template: <strong>${matched}</strong>`);
+      }
+    }
+
+    // 5. Formatting Output Text according to strict GRP grammar
     let outputText = processed;
+    if (businessMatchedTemplate) {
+      outputText = businessMatchedTemplate;
+    }
 
     // Prices and action capitalization
-    if (status === 'passed') {
+    if (status === 'passed' && !businessMatchedTemplate) {
       // Ensure it starts with capitalized Action
       const actionPrefix = action === "Buying" ? "Buying" : "Selling";
       const regexPrefix = new RegExp(`^(?:buying|selling|trading|renting|buy|sell|trade|rent)\\s+`, "i");

@@ -15,6 +15,22 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   rawText
 }) => {
   const [copied, setCopied] = useState(false);
+  const [rejectionCopied, setRejectionCopied] = useState(false);
+  const [blacklistCopied, setBlacklistCopied] = useState(false);
+
+  const handleCopyRejection = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setRejectionCopied(true);
+      setTimeout(() => setRejectionCopied(false), 2000);
+    });
+  };
+
+  const handleCopyBlacklist = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setBlacklistCopied(true);
+      setTimeout(() => setBlacklistCopied(false), 2000);
+    });
+  };
 
   const handleCopy = () => {
     if (!processedResult.processedText) return;
@@ -133,7 +149,21 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
                   onClick={onNavigateToPolicy}
                   style={{ flexGrow: 1, textAlign: 'center', background: 'rgba(255, 159, 10, 0.1)', color: 'var(--color-warning)' }}
                 >
-                  <i className="fa-solid fa-book-open"></i> Open Policy Handbook
+                  <i className="fa-solid fa-book-open"></i> Handbook
+                </button>
+                <button
+                  className="btn-preset"
+                  onClick={() => handleCopyRejection(processedResult.rejectionReason)}
+                  style={{ 
+                    flexGrow: 2, 
+                    textAlign: 'center', 
+                    background: rejectionCopied ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255, 159, 10, 0.25)', 
+                    color: rejectionCopied ? '#30d158' : 'var(--color-warning)',
+                    fontWeight: 700,
+                    border: '1px solid var(--color-warning)'
+                  }}
+                >
+                  <i className={rejectionCopied ? "fa-solid fa-check" : "fa-solid fa-copy"}></i> {rejectionCopied ? "Copied!" : "Copy Reason"}
                 </button>
               </div>
             </div>
@@ -154,7 +184,21 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
                   onClick={onNavigateToPolicy}
                   style={{ flexGrow: 1, textAlign: 'center', background: 'rgba(255, 59, 48, 0.1)', color: 'var(--color-primary)' }}
                 >
-                  <i className="fa-solid fa-circle-question"></i> View Blacklist Guidelines
+                  <i className="fa-solid fa-circle-question"></i> Guidelines
+                </button>
+                <button
+                  className="btn-preset"
+                  onClick={() => handleCopyBlacklist(processedResult.blacklistReason)}
+                  style={{ 
+                    flexGrow: 2, 
+                    textAlign: 'center', 
+                    background: blacklistCopied ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255, 59, 48, 0.25)', 
+                    color: blacklistCopied ? '#30d158' : 'var(--color-primary)',
+                    fontWeight: 700,
+                    border: '1px solid var(--color-primary)'
+                  }}
+                >
+                  <i className={blacklistCopied ? "fa-solid fa-check" : "fa-solid fa-copy"}></i> {blacklistCopied ? "Copied!" : "Copy Reason"}
                 </button>
               </div>
             </div>

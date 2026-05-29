@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProcessedAdResult } from '../engine/adProcessor.ts';
+import { ProcessedAdResult } from '../engine/adProcessor';
 
 interface OutputPanelProps {
   processedResult: ProcessedAdResult;

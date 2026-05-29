@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PRESET_BUTTONS_DEFAULT } from '../engine/rules.ts';
+import { PRESET_BUTTONS_DEFAULT } from '../engine/rules';
 
 interface EditorPanelProps {
   rawText: string;

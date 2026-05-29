@@ -1,9 +1,9 @@
 import { 
   VEHICLE_DB 
-} from './vehicleDb.ts';
+} from './vehicleDb';
 import { 
   CLOTHING_DB 
-} from './clothingDb.ts';
+} from './clothingDb';
 import { 
   ITEMS_DB, 
   BUSINESSES_DB, 
@@ -14,7 +14,7 @@ import {
   REJECTION_ONLY_ITEMS, 
   BANNED_CONTENT, 
   SPELLING_CORRECTIONS 
-} from './rules.ts';
+} from './rules';
 
 export interface ProcessedAdResult {
   status: 'passed' | 'rejected' | 'blacklisted' | 'pending';

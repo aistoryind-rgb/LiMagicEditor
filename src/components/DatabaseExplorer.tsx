@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { VEHICLE_DB } from '../engine/vehicleDb.ts';
-import { CLOTHING_DB } from '../engine/clothingDb.ts';
-import { ITEMS_DB, BUSINESSES_DB } from '../engine/rules.ts';
+import { VEHICLE_DB } from '../engine/vehicleDb';
+import { CLOTHING_DB } from '../engine/clothingDb';
+import { ITEMS_DB, BUSINESSES_DB } from '../engine/rules';
 
 export const DatabaseExplorer: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');

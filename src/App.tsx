@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AccessGate } from './components/AccessGate.tsx';
-import { EditorPanel } from './components/EditorPanel.tsx';
-import { OutputPanel } from './components/OutputPanel.tsx';
-import { DatabaseExplorer } from './components/DatabaseExplorer.tsx';
-import { PolicyBook } from './components/PolicyBook.tsx';
-import { AdminPanel } from './components/AdminPanel.tsx';
-import { FloatingPip } from './components/FloatingPip.tsx';
-import { AdProcessor, ProcessedAdResult } from './engine/adProcessor.ts';
+import { AccessGate } from './components/AccessGate';
+import { EditorPanel } from './components/EditorPanel';
+import { OutputPanel } from './components/OutputPanel';
+import { DatabaseExplorer } from './components/DatabaseExplorer';
+import { PolicyBook } from './components/PolicyBook';
+import { AdminPanel } from './components/AdminPanel';
+import { FloatingPip } from './components/FloatingPip';
+import { AdProcessor, ProcessedAdResult } from './engine/adProcessor';
 
 const App: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(() => {
